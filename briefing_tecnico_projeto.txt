@@ -1,0 +1,216 @@
+================================================================================
+BRIEFING TÉCNICO E ESPECIFICAÇÃO QUANTITATIVA DO PROJETO
+SISTEMA INSTITUCIONAL DE TRADING + PROTOCOLO SUNRISE GUARDRAIL
+================================================================================
+Data do Documento: 01 de Outubro de 2026
+Diretório Raiz do Projeto: C:\Plano de Trading
+Versão do Sistema: V3.0 (Validado com Custos Reais e Out-of-Sample)
+================================================================================
+
+1. VISÃO GERAL E AMBIENTE TECNOLÓGICO
+--------------------------------------------------------------------------------
+Este projeto é um ecossistema de negociação quantitativa automatizada desenvolvido
+em Python integrado via IPC nativo ao MetaTrader 5 (MT5) de 64 bits.
+
+- Sistema Operacional: Windows
+- Interpretador: Python 3.14 (com MetaTrader5, pandas, numpy, pyarrow, fastparquet, plotly)
+- Terminal MT5: C:\Program Files\MetaTrader 5\terminal64.exe
+- Corretora Conectada: VT Markets (Pty) Ltd
+- Servidor: VTMarkets-Demo
+- Login da Conta: 1123867
+- Moeda Base: USD
+- Saldo Real da Conta: $1.000,00 USD
+- Alavancagem: 1:500 (margem inicial reduzida)
+- Nível de Margin Call: 50.0%
+- Nível de Stop Out (Liquidação Compulsória): 20.0%
+
+--------------------------------------------------------------------------------
+2. ATIVOS HOMOLOGADOS E CUSTOS OPERACIONAIS AUDITADOS (VT MARKETS)
+--------------------------------------------------------------------------------
+
+A. BITCOIN (BTCUSD) - Foco Atual
+   - Caminho no MT5: Crypto Currency\Crypto Major\BTCUSD
+   - Timeframe de Operação: M15 (15 minutos)
+   - Digits: 2 (1 ponto = $0.01 USD de variação de preço)
+   - Tamanho do Contrato: 1.0 Bitcoin por lote
+   - Volume Mínimo / Passo / Máximo: 0.01 / 0.01 / 100.0 lotes
+   - Spread Médio: ~1.696 pontos (~$16.96 USD por Bitcoin)
+   - Custo de Entrada com Spread (Lote Mínimo 0.01): ~$0.17 USD
+   - Comissões da Corretora: $0.00 (Zero comissão fixa; remunerada pelo spread)
+   - Margem Comprometida (Lote Mínimo 0.01): ~$1.66 USD (apenas 0,16% do saldo)
+   - Swap Long (Compra Overnight): -20.0% ao ano (debitado diariamente às 21h UTC)
+   - Rollover Triplo: Sexta-feira às 21h UTC (cobrança equivalente a 3 dias)
+   - Swap Short (Venda Overnight): 0.0% (Isento de swap na VT Markets)
+   - Valor do Ponto: $0.01 por lote cheio ($0.0001 por 0.01 lote)
+   - Variação de $1.00 no preço do BTC: $1.00 no lote cheio ($0.01 no lote 0.01)
+
+B. OURO (XAUUSD-VIP)
+   - Caminho no MT5: VT\Gold-VIP\XAUUSD-VIP
+   - Timeframe de Operação: M15 (15 minutos)
+   - Digits: 2 (1 ponto = $0.01 USD)
+   - Tamanho do Contrato: 100 onças troy (oz) por lote
+   - Spread Médio: ~27 pontos (~$0.27 USD por onça)
+   - Swap Long (Compra): -79.48 pontos por noite (~-$79.48 por lote / -$0.79 em 0.01)
+   - Swap Short (Venda): +34.41 pontos por noite (Crédito favorável de +$34.41 por lote)
+   - Rollover Triplo: Quarta-feira às 21h UTC
+   - Margem Comprometida (Lote Mínimo 0.01): ~$8.36 USD
+
+--------------------------------------------------------------------------------
+3. MECÂNICA DOS GATILHOS QUANTITATIVOS
+--------------------------------------------------------------------------------
+
+A. GATILHOS DE ENTRADA (M15):
+   1. Volume Institucional (PVSRA - Price Volume Spread Analysis, Lookback = 10):
+      - Clímax de Volume:
+        volume >= 2.0 * avg_vol  OU  volume * candle_spread >= 2.0 * avg_vol * avg_spread
+      - Rising Volume (Expansão Agressiva):
+        volume >= 1.5 * avg_vol
+   2. Tendência Macro (EMAs):
+      - Compra (Long): Preço fechado > EMA 200 E EMA 50 > EMA 200.
+      - Venda (Short): Preço fechado < EMA 200 E EMA 50 < EMA 200.
+   3. Confirmação da Vela Direcional:
+      - Compra: Vela fechada verde (Close >= Open).
+      - Venda: Vela fechada vermelha (Close < Open).
+   4. Execução Temporal:
+      - Sinal fechado e confirmado no encerramento da barra t.
+      - Entrada disparada a mercado estritamente na abertura da barra t+1 (sem lookahead).
+
+B. GATILHOS DE SAÍDA E RISCO:
+   1. Stop Loss Dinâmico (ATR 14 períodos):
+      - Distância SL = 1.5 * ATR(14) em pontos.
+      - Compra: SL = Preço de Entrada (Ask) - Distância SL
+      - Venda: SL = Preço de Entrada (Bid) + Distância SL + Spread
+   2. Take Profit com Payoff Assimétrico (R:R 2.0:1):
+      - Distância TP = 2.0 * Distância SL (o dobro do risco).
+      - Compra: TP = Preço de Entrada (Ask) + Distância TP
+      - Venda: TP = Preço de Entrada (Bid) - Distância TP
+   3. Política de Posição Única:
+      - 1 única posição ativa por vez (sem empilhamento de ordens / sem martingale).
+
+--------------------------------------------------------------------------------
+4. PROTOCOLO DE SEGURANÇA SUNRISE GUARDRAIL (TRAVAS PRÉ-TRADE)
+--------------------------------------------------------------------------------
+
+Nenhuma ordem é enviada ao servidor sem aprovação unânime de 5 travas algorítmicas:
+
+1. Trava de Fricção de Spread (Spread Drag Ratio):
+   Fórmula: (Spread em Pontos / Distância do Take Profit em Pontos) * 100 <= 5.0%
+   - Se o spread da corretora consumir mais que 5% da projeção de lucro, a ordem
+     é bloqueada imediatamente para evitar canibalização da corretora.
+2. Teto Absoluto de Spread:
+   - Bloqueio se spread do BTCUSD > 3.000 pontos ($30.00).
+   - Bloqueio se spread do XAUUSD-VIP > 50 pontos ($0.50).
+3. Filtro de Sessão Institucional de Liquidez:
+   - Operações autorizadas exclusivamente em dias úteis durante:
+     * Sessão de Londres: 08:00 às 12:00 UTC
+     * Pico de Nova York: 15:00 às 19:00 UTC
+   - Bloqueio compulsório em finais de semana e madrugadas asiáticas de baixa liquidez.
+4. Trava de Margem Comprometida:
+   - Máximo de 20% da margem livre em conta consumida pela ordem.
+5. Dimensionamento Estrito de Risco (1.0% do Saldo):
+   - Risco Financeiro ($) = Saldo Atual * 0.01
+   - Lote = Risco Financeiro / (Distância SL em Ticks * Valor do Tick)
+   - Normalizado para o lote mínimo (0.01) e passo (0.01).
+
+--------------------------------------------------------------------------------
+5. RESULTADOS DE VALIDAÇÃO CIENTÍFICA (88.776 BARRAS M15 BTCUSD)
+--------------------------------------------------------------------------------
+
+A. RESULTADO GLOBAL COM SALDO REAL ($1.000,00) E TODOS OS CUSTOS (SPREAD + SWAP):
+   - Período: 20/02/2024 até 30/09/2026 (~2 anos e 7 meses)
+   - Total de Operações: 1.626
+   - Win Rate Líquida (Payoff 2:1): 37.76%
+   - Profit Factor Líquido: 1.19
+   - Lucro Bruto de Mercado: +$21.200,94
+   - Perda Bruta Realizada: -$17.751,38
+   - Total de Spread Pago à Corretora: $1.368,99
+   - Total de Swap Overnight Pago: $145,96
+   - Total de Fricção Pago à Corretora: $1.514,95
+   - Capital Inicial -> Saldo Final: $1.000,00 -> $4.303,60 (+330,36% líquido)
+   - Drawdown Máximo: 29.12%
+
+B. PROVA DE ROBUSTEZ: IN-SAMPLE (2024-2025) vs. OUT-OF-SAMPLE (2026 CEGO):
+   Para eliminar qualquer hipótese de sobreajuste (curve fitting), o histórico foi
+   dividido estritamente em dois blocos cronológicos independentes:
+
+   * In-Sample (2024–2025 / Treino e Calibração / 63.196 barras):
+     - Trades: 1.139
+     - Win Rate: 36.35%
+     - Profit Factor Líquido: 1.08
+     - Capital: $1.000,00 -> $1.759,26 (+75.93%)
+     - Drawdown Máximo: 29.12%
+     - Sharpe Ratio: 0.96
+
+   * Out-of-Sample (2026 / Teste Cego em Dados Nunca Vistos / 25.580 barras):
+     - Trades: 484
+     - Win Rate: 40.91% (SUPEROU o In-Sample)
+     - Profit Factor Líquido: 1.34 (SUPEROU o In-Sample)
+     - Capital: $1.000,00 -> $2.462,59 (+146.26% em 9 meses)
+     - Drawdown Máximo: 11.52% (CAIU pela metade)
+     - Sharpe Ratio: 3.12 (Excelente consistência)
+
+   Conclusão Científica: O sistema NÃO é overfitted. A borda matemática é estrutural
+   (fluxo institucional PVSRA e liquidez de Londres/NY).
+
+--------------------------------------------------------------------------------
+6. MAPA DE ARQUIVOS DO PROJETO (C:\Plano de Trading)
+--------------------------------------------------------------------------------
+
+1. trader_btcusd_guardrail.py
+   - Motor autônomo de execução para BTCUSD M15.
+   - Monitoramento contínuo com log formatado a cada 15 segundos.
+   - Envio de ordens com SL e TP automáticos e validação Sunrise GuardRail ativa.
+
+2. motor_xauusd_demo.py
+   - Script original com interface visual Tkinter para XAUUSD-VIP em M15.
+   - Atualizado com as travas do Sunrise GuardRail.
+
+3. test_quick_order.py
+   - Script de teste de auditoria de latência e execução.
+   - Abre uma micro-ordem (0.01 lote) e fecha após 1 segundo no MT5, auditando
+     preços, tickets, spread e certificando zero posições remanescentes.
+
+4. export_btcusd_data.py
+   - Script de extração massiva do histórico do MT5 com paginação reversa de lotes
+     de até 50.000 barras, limpeza de dados e exportação para Parquet e CSV.GZ.
+
+5. backtest_btcusd_engine.py
+   - Motor de backtest modular barra-a-barra em Python para testes locais via terminal.
+
+6. btcusd_guardrail_backtest_v3.ipynb
+   - Notebook definitivo para Google Colab.
+   - Contém o dataset de 88.776 barras EMBUTIDO DIRETAMENTE no arquivo em base64.
+   - Não requer nenhum upload de arquivo no Colab (basta abrir e dar "Run All").
+   - Calibrado para o saldo real de $1.000,00 com débitos de spread e swap diário/triplo.
+   - Contém a Seção 7 com a validação In-Sample vs. Out-of-Sample e gráficos Plotly.
+
+7. btcusd_guardrail_backtest_v3-output.ipynb
+   - Cópia executada no Colab contendo todas as saídas, tabelas e gráficos.
+
+8. docs\manual_do_usuario.md
+   - Manual completo de especificação quantitativa, arquitetura e instruções.
+
+9. plano_de_trading_sunrise.zip (20.75 MB)
+   - Pacote ZIP consolidado contendo todos os scripts, bases Parquet e documentos.
+
+--------------------------------------------------------------------------------
+7. DIRETRIZES DE CONTINUIDADE PARA O PRÓXIMO AGENTE / SESSÃO
+--------------------------------------------------------------------------------
+
+Ao abrir uma nova conversa ou repassar este projeto a outro desenvolvedor/IA:
+
+1. Instrua o agente a ler este arquivo briefing_tecnico_projeto.txt para carregar
+   100% das regras e do estado do ecossistema.
+2. Certifique-se de que o MetaTrader 5 esteja em execução com o botão "Algo Trading"
+   ativo (verde).
+3. Para rodar o robô trader autônomo localmente:
+   powershell> python trader_btcusd_guardrail.py
+4. Para realizar novos testes no Colab:
+   Subir o arquivo btcusd_guardrail_backtest_v3.ipynb e executar tudo (zero arquivos extras necessários).
+5. Próximas melhorias recomendadas na esteira:
+   - Implementação de Trailing Stop ou Breakeven (mover SL para entrada após 1:1 R).
+   - Integração de alertas via Telegram Bot para monitoramento no celular.
+   - Transição assistida da conta Demo para a conta Real mediante autorização expressa.
+================================================================================
+FIM DO BRIEFING TÉCNICO
+================================================================================

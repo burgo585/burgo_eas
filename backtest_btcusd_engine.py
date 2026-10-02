@@ -41,10 +41,13 @@ def prepare_indicators(df, atr_period=14, lookback_pvsra=10, ema_fast=50, ema_sl
 
     return df
 
-def run_simulation(df, rr_ratio=2.0, atr_multiplier=1.5, risk_percent=1.0, initial_balance=10000.0, point_value=0.01):
+def run_simulation(df, rr_ratio=2.0, atr_multiplier=1.5, risk_percent=1.0, initial_balance=10000.0, point_value=0.01, session_filter=False, max_spread_drag_pct=5.0):
     """
     Executa simulação barra a barra sem viés de antecipação (lookahead bias).
     Entrada na abertura da barra t+1 após o sinal fechado na barra t.
+    Inclui validações de segurança Sunrise GuardRail:
+      - Trava de Spread Drag (< 5% do alvo de TP)
+      - Filtro de Janela Institucional de Liquidez (Londres e NY nos dias úteis)
     """
     n = len(df)
     opens = df['open'].values
@@ -57,6 +60,11 @@ def run_simulation(df, rr_ratio=2.0, atr_multiplier=1.5, risk_percent=1.0, initi
     ema_fasts = df['ema_fast'].values
     ema_slows = df['ema_slow'].values
     dates = df['datetime'].values if 'datetime' in df.columns else np.arange(n)
+    
+    # Horas e dias para filtro institucional
+    dt_series = pd.to_datetime(dates)
+    hours = dt_series.hour.values
+    dows = dt_series.dayofweek.values
 
     trades = []
     in_position = False
@@ -86,7 +94,6 @@ def run_simulation(df, rr_ratio=2.0, atr_multiplier=1.5, risk_percent=1.0, initi
                 hit_tp = h >= tp_price
 
                 if hit_sl and hit_tp:
-                    # Conservador: bateu SL antes
                     exit_price = sl_price
                     outcome = "SL"
                     exit_trade = True
@@ -154,6 +161,14 @@ def run_simulation(df, rr_ratio=2.0, atr_multiplier=1.5, risk_percent=1.0, initi
 
         # 2. VERIFICAÇÃO DE NOVO SINAL (Apenas se desposicionado)
         if not in_position and not np.isnan(atrs[i]) and atrs[i] > 0:
+            # Trava GuardRail 1: Sessão Institucional (Londres 8-12h e NY 15-19h em dias úteis)
+            if session_filter:
+                is_london = (8 <= hours[i] < 12)
+                is_ny = (15 <= hours[i] < 19)
+                is_weekday = (dows[i] < 5)
+                if not ((is_london or is_ny) and is_weekday):
+                    continue
+
             c = closes[i]
             o = opens[i]
             pvsra = pvsras[i]
@@ -169,22 +184,30 @@ def run_simulation(df, rr_ratio=2.0, atr_multiplier=1.5, risk_percent=1.0, initi
                 spread = spreads[i + 1]
                 atr = atrs[i]
 
-                pos_type = 1 if buy_signal else -1
-                entry_idx = i + 1
-                trade_risk_amount = balance * (risk_percent / 100.0)
-
                 sl_distance = atr * atr_multiplier
                 if sl_distance <= 0:
                     continue
 
+                tp_distance = sl_distance * rr_ratio
+
+                # Trava GuardRail 2: Spread Drag
+                spread_drag_pct = (spread / tp_distance) * 100.0
+                if max_spread_drag_pct is not None and spread_drag_pct > max_spread_drag_pct:
+                    # Bloqueado pelo GuardRail por canibalização de lucro
+                    continue
+
+                pos_type = 1 if buy_signal else -1
+                entry_idx = i + 1
+                trade_risk_amount = balance * (risk_percent / 100.0)
+
                 if pos_type == 1:
                     entry_price = next_open + spread # Paga spread na compra
                     sl_price = entry_price - sl_distance
-                    tp_price = entry_price + (sl_distance * rr_ratio)
+                    tp_price = entry_price + tp_distance
                 else:
                     entry_price = next_open          # Venda entra no bid
                     sl_price = entry_price + sl_distance + spread
-                    tp_price = entry_price - (sl_distance * rr_ratio)
+                    tp_price = entry_price - tp_distance
 
                 in_position = True
 
