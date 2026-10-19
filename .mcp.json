@@ -1,0 +1,25 @@
+{
+  "mcpServers": {
+    "metaeditor": {
+      "type": "http",
+      "url": "http://127.0.0.1:22345/mcp",
+      "headers": {
+        "Authorization": "Bearer tqR1jKRLYvBaOgyeUewC5azre29Vr1IrPi23WTPqep"
+      }
+    },
+    "terminal": {
+      "type": "http",
+      "url": "http://127.0.0.1:22346/mcp",
+      "headers": {
+        "Authorization": "Bearer tqR1jKRLYvBaOgyeUewC5azre29Vr1IrPi23WTPqep"
+      }
+    },
+    "marketdata": {
+      "type": "http",
+      "url": "https://www.metatrader.com/mcp",
+      "headers": {
+        "Authorization": "Bearer mq-ebe8e9298e1d120007e9246bfd0d300f"
+      }
+    }
+  }
+}
