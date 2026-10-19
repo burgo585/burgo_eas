@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Central de Gestão de Risco & Educação Financeira | Sunrise Quant</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="dark-theme">
+
+  <!-- ==================== HEADER INSTITUCIONAL ==================== -->
+  <header class="app-header">
+    <div class="header-brand">
+      <div class="logo-glow-wrapper">
+        <span class="logo-icon">🌟</span>
+      </div>
+      <div>
+        <div class="brand-title-row">
+          <h1>CENTRAL DE GESTÃO DE RISCO & EDUCAÇÃO FINANCEIRA</h1>
+          <span class="version-tag">ENTERPRISE v2.4</span>
+        </div>
+        <p class="subtitle">Sunrise Institutional Risk & Cost Engine • Ativos Foco: <strong>XAUUSD (Ouro)</strong>, <strong>BTCUSD (Bitcoin)</strong> & <strong>NAS100 (Nasdaq)</strong></p>
+      </div>
+    </div>
+    <nav class="nav-tabs">
+      <button class="nav-btn active" data-tab="tab-calculator">
+        <span class="icon">🧮</span> Calculadora & Raio-X
+      </button>
+      <button class="nav-btn" data-tab="tab-drawdown">
+        <span class="icon">📊</span> Assimetria & Ruína
+      </button>
+      <button class="nav-btn" data-tab="tab-macro">
+        <span class="icon">📅</span> Radar Macroeconômico
+        <span class="nav-pulse-dot" id="nav-macro-dot"></span>
+      </button>
+      <button class="nav-btn" data-tab="tab-learning">
+        <span class="icon">📚</span> Central de Aprendizado
+      </button>
+    </nav>
+  </header>
+
+  <main class="app-container">
+
+    <!-- ==================== ABA 1: CALCULADORA & RAIO-X (COMERCIAL / INSTITUCIONAL) ==================== -->
+    <section id="tab-calculator" class="tab-content active">
+      
+      <!-- FAIXA DE AUDITORIA, CREDIBILIDADE & CONFIANÇA -->
+      <div class="compliance-banner">
+        <div class="compliance-badge badge-audit">
+          <span class="dot-live"></span>
+          <span><strong>MOTOR INSTITUCIONAL ONLINE</strong> • Latência: <strong>0.8ms</strong></span>
+        </div>
+        <div class="compliance-badge badge-prop">
+          <span class="badge-icon">🛡️</span>
+          <span><strong>AUDITORIA DE MESAS PROPRIETÁRIAS:</strong> FTMO • FundedNext • MFFU • Apex</span>
+        </div>
+        <div class="compliance-badge badge-secure">
+          <span class="badge-icon">🔒</span>
+          <span><strong>BLINDAGEM DE CAPITAL:</strong> Filtro de Ruína Matemática Ativo</span>
+        </div>
+      </div>
+
+      <!-- BARRA DE PRESETS RÁPIDOS DE ALTA CONVERSÃO -->
+      <div class="presets-bar">
+        <div class="preset-label">
+          <span class="lightning">⚡</span> <strong>Setups Pré-Configurados:</strong>
+        </div>
+        <div class="preset-pills" id="preset-buttons-container">
+          <!-- Gerado via JavaScript -->
+        </div>
+        <div class="preset-select-wrapper">
+          <select id="preset-dropdown" class="custom-select">
+            <option value="">⚡ Carregar Setup Estratégico...</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- SELETOR COMERCIAL DE ATIVOS (CARDS EM DESTAQUE COM IDENTIDADE VISUAL) -->
+      <div class="assets-selector">
+        <button class="asset-btn asset-btn-gold active" data-symbol="XAUUSD">
+          <div class="asset-card-glow"></div>
+          <div class="asset-card-header">
+            <span class="asset-icon">🥇</span>
+            <span class="asset-tag">XAUUSD</span>
+            <span class="asset-check">✓ Ativo</span>
+          </div>
+          <div class="asset-card-title">Ouro Spot (Gold)</div>
+          <div class="asset-card-details">
+            <span>Contrato: <strong>100 oz</strong></span>
+            <span>•</span>
+            <span>1 Pip: <strong>$10.00/lt</strong></span>
+            <span>•</span>
+            <span>Spread Típico: <strong>1.5-2.5p</strong></span>
+          </div>
+        </button>
+
+        <button class="asset-btn asset-btn-btc" data-symbol="BTCUSD">
+          <div class="asset-card-glow"></div>
+          <div class="asset-card-header">
+            <span class="asset-icon">🏛️</span>
+            <span class="asset-tag">BTCUSD</span>
+            <span class="asset-check">✓ Ativo</span>
+          </div>
+          <div class="asset-card-title">Bitcoin Crypto</div>
+          <div class="asset-card-details">
+            <span>Contrato: <strong>1 BTC</strong></span>
+            <span>•</span>
+            <span>1 Ponto: <strong>$1.00/lt</strong></span>
+            <span>•</span>
+            <span>Volatilidade: <strong>Alta</strong></span>
+          </div>
+        </button>
+
+        <button class="asset-btn asset-btn-nas" data-symbol="NAS100">
+          <div class="asset-card-glow"></div>
+          <div class="asset-card-header">
+            <span class="asset-icon">⚡</span>
+            <span class="asset-tag">NAS100</span>
+            <span class="asset-check">✓ Ativo</span>
+          </div>
+          <div class="asset-card-title">Nasdaq 100 Index</div>
+          <div class="asset-card-details">
+            <span>Contrato: <strong>1 Contrato</strong></span>
+            <span>•</span>
+            <span>1 Ponto: <strong>$1.00/lt</strong></span>
+            <span>•</span>
+            <span>Pico: <strong>Sessão NY</strong></span>
+          </div>
+        </button>
+      </div>
+
+      <!-- GRID PRINCIPAL: ENTRADAS QUANTITATIVAS + PAINEL INSTITUCIONAL DE RESULTADOS -->
+      <div class="calculator-grid">
+        
+        <!-- COLUNA 1: ENTRADAS & GOVERNANÇA DE RISCO -->
+        <div class="panel card form-panel">
+          <div class="panel-header">
+            <div class="panel-header-title">
+              <span class="panel-icon">⚙️</span>
+              <div>
+                <h3>Parâmetros Operacionais</h3>
+                <small>Calibração matemática da ordem</small>
+              </div>
+            </div>
+            <span class="badge badge-symbol" id="active-symbol-badge">XAUUSD</span>
+          </div>
+
+          <div class="form-body">
+            
+            <!-- Linha 1: Saldo e Atalhos de Capital -->
+            <div class="form-group mb-3">
+              <div class="label-row">
+                <label for="input-capital">Capital da Conta ($ USD)</label>
+                <span class="label-subtext">Base do cálculo</span>
+              </div>
+              <div class="input-prefix">
+                <span class="prefix">$</span>
+                <input type="number" id="input-capital" value="1000" min="10" step="50">
+              </div>
+              <!-- Atalhos rápidos de capital -->
+              <div class="capital-quick-row">
+                <button type="button" class="btn-cap-pill" onclick="setCapital(500)">$500</button>
+                <button type="button" class="btn-cap-pill active" onclick="setCapital(1000)">$1k</button>
+                <button type="button" class="btn-cap-pill" onclick="setCapital(5000)">$5k</button>
+                <button type="button" class="btn-cap-pill" onclick="setCapital(10000)">$10k</button>
+                <button type="button" class="btn-cap-pill btn-cap-prop" onclick="setCapital(50000)">$50k Mesa</button>
+                <button type="button" class="btn-cap-pill btn-cap-prop" onclick="setCapital(100000)">$100k Mesa</button>
+              </div>
+            </div>
+
+            <!-- Linha 2: Termômetro / Medidor Visual de Risco (Risk Gauge) -->
+            <div class="form-group mb-3">
+              <div class="label-row">
+                <label for="input-risk">Risco por Operação (%)</label>
+                <span class="risk-zone-badge" id="risk-zone-badge">🛡️ Conservador (Mesa)</span>
+              </div>
+              <div class="input-suffix">
+                <input type="number" id="input-risk" value="1.0" min="0.1" max="10" step="0.1">
+                <span class="suffix">%</span>
+              </div>
+
+              <!-- BARRA DE GRADIENTE VISUAL DO RISCO (TERMÔMETRO) -->
+              <div class="risk-gauge-container">
+                <div class="risk-gauge-bar" id="risk-gauge-bar" style="width: 25%;"></div>
+                <div class="risk-gauge-markers">
+                  <span title="Mesa / Prop">0.5%</span>
+                  <span title="Padrão Institucional">1.0%</span>
+                  <span title="Agressivo">1.5%</span>
+                  <span title="Limite Máximo">2.0%</span>
+                  <span title="Zona de Ruína">&gt;2.5%</span>
+                </div>
+              </div>
+
+              <!-- Atalhos de Risco -->
+              <div class="quick-risk-btns">
+                <button type="button" class="btn-micro" onclick="setRisk(0.5)">0.5% (Prop Firm)</button>
+                <button type="button" class="btn-micro active" onclick="setRisk(1.0)">1.0% (Padrão)</button>
+                <button type="button" class="btn-micro" onclick="setRisk(1.5)">1.5% (Agressivo)</button>
+                <button type="button" class="btn-micro btn-danger-soft" onclick="setRisk(2.0)">2.0% (Teto)</button>
+              </div>
+            </div>
+
+            <!-- Linha 3: Tipo de Ordem e Alavancagem -->
+            <div class="form-row">
+              <div class="form-group">
+                <label>Direção da Ordem</label>
+                <div class="toggle-group">
+                  <button type="button" class="toggle-btn toggle-buy active" id="btn-buy" onclick="setOrderType('BUY')">
+                    <span class="toggle-icon">▲</span> COMPRA (BUY)
+                  </button>
+                  <button type="button" class="toggle-btn toggle-sell" id="btn-sell" onclick="setOrderType('SELL')">
+                    <span class="toggle-icon">▼</span> VENDA (SELL)
+                  </button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="input-leverage">Alavancagem Corretora</label>
+                <select id="input-leverage" class="custom-select">
+                  <option value="50">1:50 (Mesa / Prop Firm)</option>
+                  <option value="100">1:100 (Hedge Fund Padrão)</option>
+                  <option value="200">1:200</option>
+                  <option value="500" selected>1:500 (Varejo Alta)</option>
+                  <option value="1000">1:1000</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Linha 4: Stop Loss e Take Profit em Pips/Pontos -->
+            <div class="form-row">
+              <div class="form-group">
+                <label for="input-stop">Distância Stop Loss (pips)</label>
+                <input type="number" id="input-stop" value="20" min="1" step="1">
+              </div>
+              <div class="form-group">
+                <label for="input-tp">Distância Take Profit (pips)</label>
+                <input type="number" id="input-tp" value="40" min="1" step="1">
+              </div>
+            </div>
+
+            <!-- Atalhos de R:R (Take Profit) -->
+            <div class="quick-rr-btns">
+              <span class="label-hint">Assimetria R:R:</span>
+              <button type="button" class="btn-micro" onclick="setTargetRR(1.5)">1:1.5</button>
+              <button type="button" class="btn-micro active" onclick="setTargetRR(2.0)">1:2.0</button>
+              <button type="button" class="btn-micro" onclick="setTargetRR(3.0)">1:3.0</button>
+              <button type="button" class="btn-micro" onclick="setTargetRR(4.0)">1:4.0</button>
+            </div>
+
+            <!-- Linha 5: Timeframe ATR e Volatilidade -->
+            <div class="form-row">
+              <div class="form-group">
+                <label>Filtro de Ruído ATR (Timeframe)</label>
+                <div class="tf-pills">
+                  <button type="button" class="tf-btn" onclick="setTimeframe('M1')">M1</button>
+                  <button type="button" class="tf-btn" onclick="setTimeframe('M5')">M5</button>
+                  <button type="button" class="tf-btn active" onclick="setTimeframe('M15')">M15</button>
+                  <button type="button" class="tf-btn" onclick="setTimeframe('H1')">H1</button>
+                  <button type="button" class="tf-btn" onclick="setTimeframe('H4')">H4</button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="input-spread">Spread da Corretora (pips)</label>
+                <input type="number" id="input-spread" value="2.0" min="0" step="0.1">
+              </div>
+            </div>
+
+            <!-- Linha 6: Fator Swing (Dias Aberto / Swap) e Lote Manual -->
+            <div class="form-row">
+              <div class="form-group">
+                <label for="input-days">Dias Posicionado (Swap Noturno)</label>
+                <input type="number" id="input-days" value="0" min="0" max="30" step="1">
+                <small class="field-hint">0 = Day Trade | &gt;0 = Swing Trade</small>
+              </div>
+              <div class="form-group">
+                <label for="input-manual-lot">Lote Forçado / Manual</label>
+                <input type="number" id="input-manual-lot" placeholder="Auto Dinâmico" min="0.01" step="0.01">
+                <small class="field-hint">Vazio = Lote Matemático Seguro</small>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- COLUNA 2: CARTÃO INSTITUCIONAL DE RESULTADOS (RAIO-X DE ALTA FIDELIDADE) -->
+        <div class="panel card results-panel">
+          
+          <div class="results-header">
+            <div>
+              <div class="res-tag-live">RAIO-X QUANTITATIVO EM TEMPO REAL</div>
+              <h2 id="res-title">🧮 GESTÃO AVANÇADA: XAUUSD BUY (1:500)</h2>
+              <p class="subtitle" id="res-subtitle">Dimensionamento de Risco Institucional, Alavancagem e Fricção de Corretora</p>
+            </div>
+            <div id="res-status-badge" class="status-badge badge-green">✅ Parâmetros Seguros</div>
+          </div>
+
+          <!-- BOLETA DE EXECUÇÃO RÁPIDA (ALTA FIDELIDADE COM 1 CLIQUE) -->
+          <div class="boleta-container">
+            <div class="boleta-header">
+              <div class="boleta-header-left">
+                <span class="boleta-badge">ORDEM PRONTA</span>
+                <span>BOLETA DE EXECUÇÃO (MT5 / CTRADER / PROP FIRM):</span>
+              </div>
+              <button class="btn-copy" id="btn-copy-boleta" onclick="copyBoleta()">
+                <span id="copy-icon">📋</span> <span id="copy-text">Copiar Boleta</span>
+              </button>
+            </div>
+            <div class="boleta-box" id="boleta-box-content">
+              [ 0.05 LOTES ]  SL: 20p  |  TP: 40p  (BUY)
+            </div>
+            <div class="boleta-meta-row">
+              <div class="boleta-meta" id="boleta-meta-content">
+                XAUUSD | BUY | 0.05 Lotes | SL: 20p | TP: 40p
+              </div>
+              <div class="boleta-tag-secure">🛡️ SL Acoplado no Envio</div>
+            </div>
+          </div>
+
+          <!-- NOVO: SIMULADOR VISUAL DE ASSIMETRIA MATEMÁTICA (VISUAL PAYOFF) -->
+          <div class="payoff-visualizer-card">
+            <div class="payoff-header">
+              <span>⚖️ ASSIMETRIA MATEMÁTICA REAL (STOP vs TAKE COM CUSTOS)</span>
+              <span class="payoff-rr" id="val-rr-badge">1 : 2.00 R:R</span>
+            </div>
+            <div class="payoff-bars-wrapper">
+              <!-- Barra Cenário Stop -->
+              <div class="payoff-bar-group">
+                <div class="payoff-bar-label">
+                  <span class="text-danger font-bold">🛑 SE BATER STOP (PERDA REAL):</span>
+                  <strong class="text-danger-strong" id="payoff-sl-val">-$11.20 (-1.1%)</strong>
+                </div>
+                <div class="payoff-track">
+                  <div class="payoff-fill payoff-fill-loss" id="payoff-bar-loss" style="width: 35%;"></div>
+                </div>
+                <small class="payoff-detail-text">Nominal: -$10.00 + Fricção Corretora: -$1.20</small>
+              </div>
+
+              <!-- Barra Cenário Take -->
+              <div class="payoff-bar-group">
+                <div class="payoff-bar-label">
+                  <span class="text-success font-bold">🎯 SE BATER TAKE (LUCRO LÍQUIDO):</span>
+                  <strong class="text-success-strong" id="payoff-tp-val">+$18.80 (+1.9%)</strong>
+                </div>
+                <div class="payoff-track">
+                  <div class="payoff-fill payoff-fill-gain" id="payoff-bar-gain" style="width: 65%;"></div>
+                </div>
+                <small class="payoff-detail-text">Bruto: +$20.00 - Fricção Corretora: -$1.20</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- CARDS DE MÉTRICAS DETALHADAS (GRID 2x3 INSTITUCIONAL) -->
+          <div class="metrics-grid">
+            
+            <!-- 1. STOP LOSS -->
+            <div class="metric-card card-sl">
+              <div class="metric-title-row">
+                <span class="metric-icon">🛑</span>
+                <span class="metric-title">CENÁRIO STOP LOSS</span>
+              </div>
+              <div class="metric-body">
+                <div class="metric-line">
+                  <span>Perda Nominal:</span>
+                  <strong class="text-danger" id="val-sl-nominal">-$10.00 (-1.0%)</strong>
+                </div>
+                <div class="metric-line">
+                  <span>Perda Real c/ Custos:</span>
+                  <strong class="text-danger-strong" id="val-sl-real">-$11.20 (-1.1%)</strong>
+                </div>
+                <div class="metric-line">
+                  <span>Distância Técnica:</span>
+                  <span id="val-sl-dist">20 pips</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. TAKE PROFIT -->
+            <div class="metric-card card-tp">
+              <div class="metric-title-row">
+                <span class="metric-icon">🎯</span>
+                <span class="metric-title">CENÁRIO TAKE PROFIT</span>
+              </div>
+              <div class="metric-body">
+                <div class="metric-line">
+                  <span>Lucro Bruto:</span>
+                  <strong class="text-success" id="val-tp-nominal">+$20.00 (+2.0%)</strong>
+                </div>
+                <div class="metric-line">
+                  <span>Lucro Líquido Real:</span>
+                  <strong class="text-success-strong" id="val-tp-real">+$18.80 (+1.9%)</strong>
+                </div>
+                <div class="metric-line">
+                  <span>Relação Risco:Retorno:</span>
+                  <strong class="text-highlight" id="val-rr-ratio">1:2.00</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. CONTA & MARGEM -->
+            <div class="metric-card card-margin">
+              <div class="metric-title-row">
+                <span class="metric-icon">💰</span>
+                <span class="metric-title">CONTA & MARGEM</span>
+              </div>
+              <div class="metric-body">
+                <div class="metric-line">
+                  <span>Saldo / Alavancagem:</span>
+                  <span><span id="val-margin-balance">$1000</span> (<span id="val-margin-lev">1:500</span>)</span>
+                </div>
+                <div class="metric-line">
+                  <span>Margem Retida:</span>
+                  <strong id="val-margin-req">$26.50</strong>
+                </div>
+                <div class="metric-line">
+                  <span>Margem Livre:</span>
+                  <span><span id="val-margin-free">$973.50</span> (Real: <strong id="val-real-lev">1.3x</strong>)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 4. VOLATILIDADE & ATR -->
+            <div class="metric-card card-volatility">
+              <div class="metric-title-row">
+                <span class="metric-icon">📊</span>
+                <span class="metric-title">VOLATILIDADE & RUÍDO</span>
+              </div>
+              <div class="metric-body">
+                <div class="metric-line">
+                  <span>ATR (<span id="val-atr-tf">M15</span>):</span>
+                  <strong id="val-atr-pips">30.0p</strong>
+                </div>
+                <div class="metric-line">
+                  <span>Stop vs ATR:</span>
+                  <strong id="val-stop-atr">0.67x ATR</strong>
+                </div>
+                <div class="metric-line">
+                  <span>Probabilidade TP:</span>
+                  <span><span id="val-prob-tp">48.2%</span> (EV: <strong id="val-ev-r">+0.42R</strong>)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 5. RAIO-X DE CUSTOS & FRICÇÃO -->
+            <div class="metric-card card-friction">
+              <div class="metric-title-row">
+                <span class="metric-icon">🏦</span>
+                <span class="metric-title">RAIO-X DE FRICÇÃO</span>
+              </div>
+              <div class="metric-body">
+                <div class="metric-line">
+                  <span>Spread (<span id="val-spread-pips">2.0p</span>):</span>
+                  <span class="text-danger" id="val-spread-usd">-$1.00</span>
+                </div>
+                <div class="metric-line">
+                  <span>Comissão / Swap:</span>
+                  <span><span id="val-comm-usd">-$0.30</span> / <span id="val-swap-usd">$0.00</span></span>
+                </div>
+                <div class="metric-line">
+                  <span>Mordida Corretora:</span>
+                  <strong class="text-danger" id="val-friction-total">-$1.30</strong> (<span id="val-friction-pct">6.5%</span>)
+                </div>
+              </div>
+            </div>
+
+            <!-- 6. PARECER DE RISCO & GOVERNANÇA -->
+            <div class="metric-card card-governance">
+              <div class="metric-title-row">
+                <span class="metric-icon">🛡️</span>
+                <span class="metric-title">PARECER DE AUDITORIA</span>
+              </div>
+              <div class="metric-body" id="governance-body">
+                <p class="gov-text" id="val-gov-verdict">✅ Parâmetros Seguros: Risco e margem sob controle.</p>
+                <div class="gov-alerts" id="gov-alerts-container">
+                  <!-- Alertas dinâmicos -->
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- SELOS DE CONFORMIDADE INSTITUCIONAL -->
+          <div class="audit-trust-badges-row">
+            <div class="trust-badge-pill">
+              <span class="check-green">✓</span> Aprovado para Mesas Proprietárias
+            </div>
+            <div class="trust-badge-pill">
+              <span class="check-green">✓</span> Risco Matemático Limitado &le; 1.0%
+            </div>
+            <div class="trust-badge-pill">
+              <span class="check-green">✓</span> Fricção de Custos Contabilizada
+            </div>
+          </div>
+
+          <!-- BOTÕES DE AÇÃO RÁPIDA INFERIORES -->
+          <div class="card-bottom-actions">
+            <button class="action-btn" onclick="setTargetRR(2.0)">🎯 Alvo 1:2.0</button>
+            <button class="action-btn" onclick="setRisk(0.5)">🛡️ Risco 0.5% (Mesa)</button>
+            <button class="action-btn" onclick="toggleSwing3d()">🌙 Simular Swing (3d)</button>
+            <button class="action-btn" onclick="toggleOrderType()">🔄 Inverter BUY/SELL</button>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ==================== ABA 2: ASSIMETRIA & RUÍNA ==================== -->
+    <section id="tab-drawdown" class="tab-content">
+      
+      <div class="panel card section-header-panel">
+        <h2>📊 MATEMÁTICA DA SOBREVIVÊNCIA & RECUPERAÇÃO DE CAPITAL</h2>
+        <p class="subtitle">Entenda cientificamente por que proteger o patrimônio é a única forma de atingir a longevidade estatística e consistência institucional.</p>
+      </div>
+
+      <div class="drawdown-grid">
+        
+        <!-- CARD 1: SIMULADOR INTERATIVO DE DRAWDOWN -->
+        <div class="panel card">
+          <div class="panel-header">
+            <h3>🎛️ Simulador Interativo de Perda de Conta</h3>
+          </div>
+          <div class="sim-body">
+            <label for="slider-loss">Arraste para simular o nível de perda sofrido na conta:</label>
+            <div class="slider-box">
+              <input type="range" id="slider-loss" min="5" max="95" value="30" step="5" oninput="updateDrawdownSim(this.value)">
+              <div class="slider-value-display">
+                Perda: <strong id="sim-loss-display" class="text-danger">30%</strong>
+              </div>
+            </div>
+
+            <div class="recovery-box">
+              <div class="recovery-label">Para empatar (voltar ao saldo inicial), você precisará fazer:</div>
+              <div class="recovery-number" id="sim-gain-display">+42.8% de Lucro</div>
+              <div class="recovery-formula">
+                $$\text{Lucro Necessário} = \frac{\text{Perda}}{100 - \text{Perda}} \times 100$$
+              </div>
+            </div>
+
+            <div class="recovery-comparison" id="sim-scenario-desc">
+              Com uma perda de 30%, o seu capital caiu de $1.000 para $700. Fazer $300 sobre $700 exige +42.8% de rentabilidade líquida!
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 2: TABELA DE ASSIMETRIA -->
+        <div class="panel card">
+          <div class="panel-header">
+            <h3>📈 1. Esforço de Recuperação por Nível de Perda (Drawdown)</h3>
+          </div>
+          <div class="table-responsive">
+            <table class="styled-table" id="table-drawdown">
+              <thead>
+                <tr>
+                  <th>Nível de Perda</th>
+                  <th>Exige para Empatar</th>
+                  <th>Impacto Psicológico & Matemático</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Inserido via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- CARD 3: RESISTÊNCIA A SEQUÊNCIAS DE PERDAS (ZONA DE RUÍNA) -->
+      <div class="panel card mt-4">
+        <div class="panel-header">
+          <h3>🛑 2. Resistência a Sequências de Perdas (Stops Consecutivos)</h3>
+        </div>
+        <div class="table-responsive">
+          <table class="styled-table" id="table-stops-survival">
+            <thead>
+              <tr>
+                <th>Risco por Trade</th>
+                <th>Stops Nominais até 100%</th>
+                <th>Stops até Perder Metade (50%)</th>
+                <th>Status de Sobrevivência</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Inserido via JS -->
+            </tbody>
+          </table>
+        </div>
+        <div class="rule-box mt-3">
+          💡 <strong>Regra de Ouro:</strong> O trader e desenvolvedor profissional protege o patrimônio para permanecer no jogo; o lucro sustentável é consequência direta da longevidade estatística.
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ==================== ABA 3: RADAR MACROECONÔMICO ==================== -->
+    <section id="tab-macro" class="tab-content">
+      
+      <div class="panel card section-header-panel">
+        <div class="macro-header-flex">
+          <div>
+            <h2>📅 RADAR MACROECONÔMICO & CALENDÁRIO DE VOLATILIDADE</h2>
+            <p class="subtitle">Notícias de Alto e Médio Impacto da Semana • Horário de Brasília (UTC-3) • Ativos Monitorados: <strong>XAUUSD</strong>, <strong>NAS100</strong> & <strong>BTCUSD</strong></p>
+          </div>
+          <div class="live-clock-badge">
+            <span class="clock-icon">⏱️</span> <span id="macro-clock-display">Carregando horário de Brasília...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- BANNER DE STATUS DO PROTOCOLO DE SEGURANÇA (AO VIVO) -->
+      <div class="macro-status-banner banner-safe" id="macro-status-banner">
+        <div class="status-banner-content">
+          <div class="status-indicator-dot" id="status-indicator-dot"></div>
+          <div>
+            <h3 id="macro-status-title">🟢 ZONA OPERACIONAL LIBERADA</h3>
+            <p id="macro-status-desc">Avaliando eventos de alto impacto da semana...</p>
+          </div>
+        </div>
+        <div class="protocol-rule-badge">
+          🛡️ Protocolo: <strong>±15 min</strong> sem ordens novas
+        </div>
+      </div>
+
+      <!-- CARD DE DESTAQUE: PRÓXIMO GRANDE EVENTO DA SEMANA (CONTAGEM REGRESSIVA) -->
+      <div class="next-event-highlight-card" id="next-event-card">
+        <div class="next-event-badge-row">
+          <span class="badge-next-live">🔥 PRÓXIMO GRANDE GATILHO DE VOLATILIDADE</span>
+          <span class="countdown-badge" id="next-event-countdown">Aguardando dados...</span>
+        </div>
+        <div class="next-event-title-row">
+          <h3 id="next-event-title">CPI - Índice de Preços ao Consumidor (Inflação) dos EUA</h3>
+          <span class="next-event-time" id="next-event-time">Terça-feira às 09:30 BRT</span>
+        </div>
+        <p class="next-event-note" id="next-event-note">
+          💡 Gatilho de volatilidade máxima. Spreads do XAUUSD e NAS100 abrem expressivamente. Trave robôs e evite ordens a mercado nos 15 minutos anteriores.
+        </p>
+        <div class="next-event-assets" id="next-event-assets">
+          <span class="asset-badge-micro asset-gold">XAUUSD</span>
+          <span class="asset-badge-micro asset-nas">NAS100</span>
+          <span class="asset-badge-micro asset-btc">BTCUSD</span>
+        </div>
+      </div>
+
+      <!-- BARRA DE PESQUISA E FILTROS DO CALENDÁRIO -->
+      <div class="calendar-controls-bar">
+        <div class="search-box-macro">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="macro-search-input" placeholder="Buscar notícia por nome, moeda ou ativo (ex: CPI, Fed, Ouro, NFP, Juros)..." oninput="handleMacroSearch(this.value)">
+        </div>
+        <div class="calendar-filters-bar">
+          <div class="filter-group">
+            <button class="filter-btn active" data-filter="all" onclick="filterMacroEvents('all')">📅 Todos da Semana</button>
+            <button class="filter-btn" data-filter="high" onclick="filterMacroEvents('high')">🔴 Alto Impacto (Tier 1)</button>
+            <button class="filter-btn" data-filter="today" onclick="filterMacroEvents('today')">📆 Apenas Hoje</button>
+            <button class="filter-btn" data-filter="usd" onclick="filterMacroEvents('usd')">🇺🇸 Dólar (USD / XAU, NAS, BTC)</button>
+          </div>
+          <div class="events-count-badge">
+            <span id="events-count-display">Carregando eventos...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- GRID COM CALENDÁRIO COMPLETO E RESUMO DE SESSÕES -->
+      <div class="macro-main-grid">
+        
+        <!-- COLUNA 1: CALENDÁRIO ECONÔMICO DINÂMICO -->
+        <div class="panel card calendar-panel">
+          <div class="panel-header">
+            <h3>📰 Calendário Econômico Semanal & Impacto em Ativos</h3>
+            <span class="badge" id="calendar-week-badge">Semana Atual</span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="styled-table" id="table-macro-events">
+              <thead>
+                <tr>
+                  <th>Data / Hora (BRT)</th>
+                  <th>País</th>
+                  <th>Impacto</th>
+                  <th>Evento / Indicador</th>
+                  <th>Projeção vs Anterior</th>
+                  <th>Ativos Afetados</th>
+                  <th>Status Operacional</th>
+                </tr>
+              </thead>
+              <tbody id="macro-events-tbody">
+                <!-- Gerado dinamicamente via JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- COLUNA 2: SESSÕES DE LIQUIDEZ E NOTAS TÉCNICAS -->
+        <div class="panel card sessions-sidebar">
+          <div class="panel-header">
+            <h3>🌐 Horários Nobres de Liquidez (UTC-3)</h3>
+          </div>
+
+          <div class="sessions-list">
+            <div class="session-card session-highlight">
+              <div class="session-icon">🇺🇸</div>
+              <div class="session-details">
+                <h4>Nova York & Superposição (Overlap)</h4>
+                <p><strong>09:30 às 17:00 BRT</strong> (Pico: 09:30 – 12:30)</p>
+                <small>🔥 <strong>Máxima Liquidez Mundial</strong>. Ideal para NAS100, XAUUSD e BTC. Maior fluxo institucional do dia.</small>
+              </div>
+            </div>
+
+            <div class="session-card">
+              <div class="session-icon">🇬🇧</div>
+              <div class="session-details">
+                <h4>Sessão de Londres</h4>
+                <p><strong>04:00 às 13:00 BRT</strong> (Pico: 04:30 – 07:00)</p>
+                <small>Excelente volume no Ouro (XAUUSD) e moedas européias.</small>
+              </div>
+            </div>
+
+            <div class="session-card">
+              <div class="session-icon">🇯🇵</div>
+              <div class="session-details">
+                <h4>Sessão Asiática / Tóquio</h4>
+                <p><strong>20:00 às 03:00 BRT</strong></p>
+                <small>Mercado em consolidação. Spreads mais largos na virada (18h BRT).</small>
+              </div>
+            </div>
+
+            <div class="warning-box mt-3">
+              ⚠️ <strong>Por que o Spread abre em notícias?</strong><br>
+              Provedores de liquidez institucional retiram suas ordens do book de ofertas segundos antes de dados Tier 1. Isso faz o spread abrir de 1.5 para 20+ pips e gera <em>slippage</em> pesado se houver robôs ou ordens abertas a mercado.
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ==================== ABA 4: CENTRAL DE APRENDIZADO ==================== -->
+    <section id="tab-learning" class="tab-content">
+      
+      <div class="learning-layout">
+        
+        <!-- SIDEBAR DE NAVEGAÇÃO DOS CANAIS (ESTILO DISCORD) -->
+        <aside class="learning-sidebar panel card">
+          <div class="sidebar-header-title">
+            <div class="sidebar-header-row">
+              <span class="icon">📂</span>
+              <div>
+                <h3>CANAIS & MÓDULOS DIDÁTICOS</h3>
+                <small>Estrutura Oficial do Treinamento</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Campo de Busca de Aulas -->
+          <div class="search-box-channel">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="channel-search-input" placeholder="Buscar aula ou tópico..." oninput="handleChannelSearch(this.value)">
+          </div>
+          
+          <div class="discord-tree-container" id="discord-tree-container">
+            <!-- Gerado via JS com todas as 9 categorias e seus respectivos canais -->
+          </div>
+        </aside>
+
+        <!-- ÁREA DE LEITURA DIDÁTICA -->
+        <div class="learning-reader panel card">
+          <div class="reader-header" id="reader-header">
+            <span class="reader-icon" id="reader-icon">📖</span>
+            <div class="reader-header-text">
+              <div class="reader-breadcrumbs" id="reader-category">Engenharia de Bots • Módulo Oficial</div>
+              <h2 id="reader-title">Selecione uma lição para iniciar</h2>
+            </div>
+            <div class="reader-header-action">
+              <button class="btn-micro" onclick="copyLessonContent()">📋 Copiar Aula</button>
+            </div>
+          </div>
+          <div class="reader-content markdown-body" id="reader-body">
+            <!-- Conteúdo carregado dinamicamente -->
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <footer class="app-footer">
+    <div class="footer-content">
+      <p><strong>Sunrise Quantitative Enterprise</strong> • Sistema Local de Gestão de Risco & Educação Financeira • Foco em Longevidade Estatística.</p>
+      <div class="footer-badges">
+        <span>✅ Servidor Local 127.0.0.1:8000</span>
+        <span>•</span>
+        <span>🔒 Modo Seguro Ativo</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

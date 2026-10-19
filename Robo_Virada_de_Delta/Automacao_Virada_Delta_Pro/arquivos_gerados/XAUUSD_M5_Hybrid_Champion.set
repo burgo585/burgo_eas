@@ -1,0 +1,31 @@
+;====================================================================
+; Preset: XAUUSD (Ouro) - M5 / M15 - Estratégia Híbrida Institucional
+; Lucro Líquido: +154.53 pts | Max DD: 89.20 pts | Sharpe: 1.60
+;====================================================================
+InpStrategyMode=0||0||0||2
+InpSessionFilter=0||0||0||2
+InpCustomStartHour=13||13||0||23
+InpCustomStartMin=30||30||0||59
+InpCustomEndHour=20||20||0||23
+InpCustomEndMin=0||0||0||59
+InpProfileBars=288||288||50||1000
+InpTargetLevels=70||70||30||120
+InpValueAreaPercent=70.0||70.0||50.0||85.0
+InpCritStrain=2.0||2.0||1.0||3.5
+InpMinHeadroom=1.5||1.5||1.0||3.0
+InpMaxOmega=2.0||2.0||1.0||4.0
+InpHurstThreshold=0.57||0.57||0.45||0.65
+InpVolumeLookback=10||10||5||30
+InpRisingMultiplier=1.5||1.5||1.1||2.5
+InpClimaxMultiplier=2.0||2.0||1.5||3.5
+InpUseAbnormalThreshold=true||true||0||1
+InpLotMode=2||2||0||2
+InpFixedLot=0.01||0.01||0.01||1.0
+InpRiskPercent=2.0||2.0||0.5||5.0
+InpUsePartialExit=true||true||0||1
+InpPartialRatio=0.70||0.70||0.30||0.90
+InpUseTrailingStop=true||true||0||1
+InpMaxDailyLossPct=3.5||3.5||1.0||10.0
+InpMagicNumber=145634||145634||0||999999
+InpShowHUD=true||true||0||1
+InpHUDColor=16760576||16760576||0||16777215

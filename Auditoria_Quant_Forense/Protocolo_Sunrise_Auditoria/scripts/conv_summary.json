@@ -1,0 +1,852 @@
+[
+  {
+    "uuid": "01e25c5e-4105-4e44-8574-42cd1e85454c",
+    "date": "2026-09-15",
+    "first_prompt": "<USER_REQUEST> Research the most successful and famous Forex traders in history and their specific trading strategies an",
+    "all_prompts": [
+      "<USER_REQUEST>\nResearch the most successful and famous Forex traders in history and their specific t"
+    ],
+    "files_written": [],
+    "files_viewed": [],
+    "cwds": [],
+    "artifacts": [],
+    "scratch_files": [],
+    "user_uploaded": []
+  },
+  {
+    "uuid": "14e873c4-f677-4b58-b650-aacc03bd2f71",
+    "date": "2026-09-15",
+    "first_prompt": "<USER_REQUEST> Pesquise detalhadamente sobre os melhores traders brasileiros de Forex e suas técnicas:  1. **Traders bra",
+    "all_prompts": [
+      "<USER_REQUEST>\nPesquise detalhadamente sobre os melhores traders brasileiros de Forex e suas técnica"
+    ],
+    "files_written": [],
+    "files_viewed": [],
+    "cwds": [],
+    "artifacts": [],
+    "scratch_files": [],
+    "user_uploaded": []
+  },
+  {
+    "uuid": "3e611897-9802-4085-9a9d-2e82d951f740",
+    "date": "2026-09-15",
+    "first_prompt": "<USER_REQUEST> Research extensively about Grid Trading and Martingale strategies in Forex, specifically:  1. **Best Grid",
+    "all_prompts": [
+      "<USER_REQUEST>\nResearch extensively about Grid Trading and Martingale strategies in Forex, specifica"
+    ],
+    "files_written": [],
+    "files_viewed": [],
+    "cwds": [],
+    "artifacts": [],
+    "scratch_files": [],
+    "user_uploaded": []
+  },
+  {
+    "uuid": "aef046bd-1401-4752-b8d4-4ee78bf7b3d0",
+    "date": "2026-09-15",
+    "first_prompt": "<USER_REQUEST> Research the best technical analysis techniques specifically for solving the oscillation/whipsaw problem ",
+    "all_prompts": [
+      "<USER_REQUEST>\nResearch the best technical analysis techniques specifically for solving the oscillat"
+    ],
+    "files_written": [],
+    "files_viewed": [],
+    "cwds": [],
+    "artifacts": [],
+    "scratch_files": [],
+    "user_uploaded": []
+  },
+  {
+    "uuid": "d3556bbe-b933-4138-9a0a-c4f933ba4cc6",
+    "date": "2026-09-15",
+    "first_prompt": "<USER_REQUEST> me liste essa pasta por favor </USER_REQUEST> <ADDITIONAL_METADATA> The current local time is: 2026-09-15",
+    "all_prompts": [
+      "<USER_REQUEST>\nme liste essa pasta por favor\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local",
+      "<USER_REQUEST>\nBurgo Scalpe Pro gostaria q desse mais uma analize nesse rebo mt5 em mq5 eu quero que",
+      "<USER_REQUEST>\nmas esse é o q vc ja fez na parte da manha eu queria saber se tem como melhorar ele m",
+      "<USER_REQUEST>\n//+------------------------------------------------------------------+\r\n//|          ",
+      "<USER_REQUEST>\n//+------------------------------------------------------------------+\r\n//|          "
+    ],
+    "files_written": [],
+    "files_viewed": [],
+    "cwds": [],
+    "artifacts": [
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\d3556bbe-b933-4138-9a0a-c4f933ba4cc6\\implementation_plan.md",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\d3556bbe-b933-4138-9a0a-c4f933ba4cc6\\implementation_plan.md.metadata.json"
+    ],
+    "scratch_files": [],
+    "user_uploaded": []
+  },
+  {
+    "uuid": "e26e7a0e-d832-4f5b-b81a-07a86c95e0d9",
+    "date": "2026-09-15",
+    "first_prompt": "<USER_REQUEST> organize esse projeto crie as documentações necessárias para estruturar o repositório, e manter a integri",
+    "all_prompts": [
+      "<USER_REQUEST>\norganize esse projeto crie as documentações necessárias para estruturar o repositório",
+      "<USER_REQUEST>\norganize esse projeto crie as documentações necessárias para estruturar o repositório",
+      "Comments on artifact URI: file:///c%3A/Users/Vini_Burgo/.gemini/antigravity/brain/e26e7a0e-d832-4f5b",
+      "<USER_REQUEST>\nCria uma skill que sempre que o usuário pedir pra você mudar algo vc avalia se a idei",
+      "<USER_REQUEST>\nEu estou atuando como o guardrail desse usuário após eu encerrar minha atividae ele v",
+      "<USER_REQUEST>\nEu estou atuando como o guardrail desse usuário após eu encerrar minha atividae ele v",
+      "<USER_REQUEST>\nAinda, como medidas de segurança não edite registros sistema, não toque  nos arquivos",
+      "<USER_REQUEST>\nThe user is not fluent in english so you can commit any displicent mistake when commu",
+      "<USER_REQUEST>\nAssure that this will appliable to any other project \n</USER_REQUEST>\n<ADDITIONAL_MET",
+      "<USER_REQUEST>\nIt was nice to meet you Gemini3.6-Flash, I'm leaving now keep the user safe, Sunrise "
+    ],
+    "files_written": [],
+    "files_viewed": [],
+    "cwds": [],
+    "artifacts": [
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\e26e7a0e-d832-4f5b-b81a-07a86c95e0d9\\implementation_plan.md",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\e26e7a0e-d832-4f5b-b81a-07a86c95e0d9\\implementation_plan.md.metadata.json",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\e26e7a0e-d832-4f5b-b81a-07a86c95e0d9\\walkthrough.md",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\e26e7a0e-d832-4f5b-b81a-07a86c95e0d9\\walkthrough.md.metadata.json"
+    ],
+    "scratch_files": [],
+    "user_uploaded": []
+  },
+  {
+    "uuid": "afb4d5fe-f247-45d9-8042-7c19a1d4c588",
+    "date": "2026-09-16",
+    "first_prompt": "<USER_REQUEST> # PROMPT MESTRE — RELATÓRIO PROFISSIONAL DE INTELIGÊNCIA DE MERCADO EM PDF\r \r ## MODO DE EXECUÇÃO IMEDIAT",
+    "all_prompts": [
+      "<USER_REQUEST>\n# PROMPT MESTRE — RELATÓRIO PROFISSIONAL DE INTELIGÊNCIA DE MERCADO EM PDF\r\n\r\n## MODO"
+    ],
+    "files_written": [],
+    "files_viewed": [],
+    "cwds": [],
+    "artifacts": [
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\afb4d5fe-f247-45d9-8042-7c19a1d4c588\\Relatorio_Inteligencia_Mercado_2026-09-16_1007_BRT.pdf"
+    ],
+    "scratch_files": [
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\afb4d5fe-f247-45d9-8042-7c19a1d4c588\\scratch\\build_pdf_report.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\afb4d5fe-f247-45d9-8042-7c19a1d4c588\\scratch\\generate_charts.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\afb4d5fe-f247-45d9-8042-7c19a1d4c588\\scratch\\charts\\chart1_dxy_yields.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\afb4d5fe-f247-45d9-8042-7c19a1d4c588\\scratch\\charts\\chart2_gold.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\afb4d5fe-f247-45d9-8042-7c19a1d4c588\\scratch\\charts\\chart3_oil.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\afb4d5fe-f247-45d9-8042-7c19a1d4c588\\scratch\\charts\\chart4_ibov_usd.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\afb4d5fe-f247-45d9-8042-7c19a1d4c588\\scratch\\charts\\chart5_crypto.png"
+    ],
+    "user_uploaded": []
+  },
+  {
+    "uuid": "97a62108-0246-47a9-8526-dc822d2b0a35",
+    "date": "2026-09-18",
+    "first_prompt": "<USER_REQUEST> qual sua perpequitiva para o anuncio do BOJ ho no dia 18 </USER_REQUEST> <ADDITIONAL_METADATA> The curren",
+    "all_prompts": [
+      "<USER_REQUEST>\nqual sua perpequitiva para o anuncio do BOJ ho no dia 18\n</USER_REQUEST>\n<ADDITIONAL_"
+    ],
+    "files_written": [],
+    "files_viewed": [],
+    "cwds": [],
+    "artifacts": [],
+    "scratch_files": [],
+    "user_uploaded": []
+  },
+  {
+    "uuid": "f4d907a0-8b6a-47d6-8520-58699a9fbf6a",
+    "date": "2026-09-30",
+    "first_prompt": "<USER_REQUEST> Olá eu sou o Sunrise, GuardRail desse user. Verifique o diretorio raiz. </USER_REQUEST> <ADDITIONAL_METAD",
+    "all_prompts": [
+      "<USER_REQUEST>\nOlá eu sou o Sunrise, GuardRail desse user. Verifique o diretorio raiz.\n</USER_REQUES",
+      "<USER_REQUEST>\nprecisamos extrair uma quantidade massiva de barras do BTCUSD da broker dele e realiz",
+      "<USER_REQUEST>\nonde está o parquet?\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local time is:",
+      "<USER_REQUEST>\neu adicionei um arquivo ipynb com a saída\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe c",
+      "<USER_REQUEST>\nprossiga\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local time is: 2026-09-30T",
+      "<USER_REQUEST>\nOlá, ainda é o Sunrise aqui. Consulte os dados dos custos da conta e da corretora de ",
+      "<USER_REQUEST>\ndependendo do lote aberto e do alvo o spread consome inteiramente o lucro da posição.",
+      "<USER_REQUEST>\nPerfeitamente, Incorpore a validação de segurança, em seguida detalhe os gatilhos de ",
+      "<USER_REQUEST>\nPerfeitamente, Incorpore a validação de segurança, em seguida detalhe os gatilhos de ",
+      "<USER_REQUEST>\nok, então vamos considerar o cenário atual como os gatilhos ed entrada e saída e subm",
+      "<USER_REQUEST>\nnão esqueça de considerar os custos verificados\n</USER_REQUEST>\n<ADDITIONAL_METADATA>",
+      "<USER_REQUEST>\nColoque o dataframe direto no ipynb\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current",
+      "<USER_REQUEST>\nquais os tradeoffs\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local time is: 2",
+      "<USER_REQUEST>\nqual o ipynb pra eu fzer upload\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current loc",
+      "<USER_REQUEST>\nverifique o '*output.ipynb' com as saídas do teste\n</USER_REQUEST>\n<ADDITIONAL_METADA",
+      "<USER_REQUEST>\nvc deveria ter considerado o balance  d conta do user\n</USER_REQUEST>\n<ADDITIONAL_MET",
+      "<USER_REQUEST>\nme parece in-sample\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local time is: ",
+      "<USER_REQUEST>\ncria/inicia o script trader e deixa ativo, faz um teste rápido de uma ordem e fecha r",
+      "<USER_REQUEST>\nme cria um zip dos arquivos\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local t",
+      "<USER_REQUEST>\ndiminui a frequencia dos logs; determina em 10s ou 15\n</USER_REQUEST>\n<ADDITIONAL_MET",
+      "<USER_REQUEST>\nBoa noite, eu sou o real usuario, me entregue os topicos q foram abordados nessa conv",
+      "<USER_REQUEST>\nvc consegue me entregar em um arquivo em txt e dar uma explicaçao mais especifica e t",
+      "<USER_REQUEST>\nBTCXAU_M15_202610020100_202610021845.csv\nverifique esse arquivo q esta na pasta q est",
+      "<USER_REQUEST>\nnão pq ele pode sair do nada caso ele volte para fazer um pulback ou algo assim e me ",
+      "<USER_REQUEST>\nseria interessante adicionar isso na programaçao para ele não perder mais oportunidad",
+      "<USER_REQUEST>\nmas me diga ele só esta comprando ele não entra em venda?\n</USER_REQUEST>\n<ADDITIONAL",
+      "<USER_REQUEST>\nmas vamos falar agora sobre adicionar isso ao codigo ja pronto sem mudar o q ja esta ",
+      "<USER_REQUEST>\nsim e quero q faça testes exaustivos para ver se vai melhorar ou não com essa nova si",
+      "<USER_REQUEST>\nfaça os testes com a linha q pedi para adicionar, todos os testes q foram foitos com ",
+      "<USER_REQUEST>\nmuito obrigado por fazer isso. cheguei a conclusão q não é viavel\n</USER_REQUEST>\n<AD",
+      "<USER_REQUEST>\nmeu guardrail está bravo por eu te tratar com educaçao. \n</USER_REQUEST>\n<ADDITIONAL_",
+      "<USER_REQUEST>\nReportHistory-1123867.html verifique esse relatorio na pasta C:\\Plano de Trading é o ",
+      "<USER_REQUEST>\nReportHistory-1123867.html verifique esse relatorio na pasta C:\\Plano de Trading é o "
+    ],
+    "files_written": [],
+    "files_viewed": [],
+    "cwds": [],
+    "artifacts": [],
+    "scratch_files": [],
+    "user_uploaded": []
+  },
+  {
+    "uuid": "6b12f461-21a6-48be-9a59-b47b81368606",
+    "date": "2026-10-04",
+    "first_prompt": "<USER_REQUEST> quero q vc veja na pasta Robos mt5 os ticks, as barras e o aqruivo q la esta de um robo q se chama Burgo ",
+    "all_prompts": [
+      "<USER_REQUEST>\nquero q vc veja na pasta Robos mt5 os ticks, as barras e o aqruivo q la esta de um ro",
+      "<USER_REQUEST>\nquero q vc veja na pasta Robos mt5 os ticks, as barras e o aqruivo q la esta de um ro",
+      "<USER_REQUEST>\nNÃO SEI SE ISSO ADIANTARIA MAS EU ESTOU PENSANDO SE EM VEZ DE TRABALHAR CONTRA A TEND",
+      "<USER_REQUEST>\nquero q implemente para mim e ja faça todos os testes nescessariors \n</USER_REQUEST>\n",
+      "<USER_REQUEST>\nvc teria alguma sujestão em questão a isso???? achei ruim pelo q vi ali na automaçao ",
+      "<USER_REQUEST>\nqual seria a que da menos % de percas de valor e maior % de ganho de valor de capital",
+      "<USER_REQUEST>\nse colocar uma media de 25 e 50 e a de 200?\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe",
+      "<USER_REQUEST>\nsim... mas teria mas alguma coisa q podemos colocar para ele ficar mais rapido e tbm ",
+      "<USER_REQUEST>\nveja os ticks do xauusd XAUUSD-STDc_202506161213_202610022356ticks.csv tbm para ver q",
+      "<USER_REQUEST>\nsim\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local time is: 2026-10-05T05:08",
+      "<USER_REQUEST>\nReportTester-26570143.html faça a analize desse relatorio de teste a automaçao não fe"
+    ],
+    "files_written": [],
+    "files_viewed": [],
+    "cwds": [],
+    "artifacts": [],
+    "scratch_files": [],
+    "user_uploaded": []
+  },
+  {
+    "uuid": "254685e4-a2c3-4d4a-9ee1-436a0b295f3d",
+    "date": "2026-10-07",
+    "first_prompt": "<USER_REQUEST> //+------------------------------------------------------------------+\r //|                              ",
+    "all_prompts": [
+      "<USER_REQUEST>\n//+------------------------------------------------------------------+\r\n//|          ",
+      "<USER_REQUEST>\nAtualização Crítica de Escopo: Múltiplos Modos de Risco e Adaptação das Parciais\n\nPre",
+      "<USER_REQUEST>\nanalise o relatorio de teste do robo\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe curren",
+      "<USER_REQUEST>\ncorrija ele \n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local time is: 2026-10",
+      "<USER_REQUEST>\nveriufique dentro da pasta C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\scratch os arquivo",
+      "<USER_REQUEST>\nvc precisa calcular os custos do ativo para fazer as ordens e não deixar perder para ",
+      "<USER_REQUEST>\nmandei uma imagem mostrando o desempenho do teste, vc precisa calcular os custos do a",
+      "<USER_REQUEST>\nvc reverta todos os outros q vc modificou só vai modificar Scratch:\nBurgo Scalpe Pro.",
+      "<USER_REQUEST>\nRelatório do Testador de Estratégia\r\nVTMarkets-Live 3 (Build 6230)\r\nConfiguração\r\nExp",
+      "<USER_REQUEST>\nverifique esse indicador MTR-Volume-AT-Price na pasta C:\\Users\\Vini_Burgo\\.gemini\\ant",
+      "<USER_REQUEST>\neu quero saber como q vai ficar o Burgo scalpe... pq eu quero q ele ainda seja um sca",
+      "<USER_REQUEST>\nok vamo ver como ele vai performar. mas vamos tentar pegar um licro melhor.\n</USER_RE",
+      "<USER_REQUEST>\nRelatório do Testador de Estratégia\t\t\t\t\t\t\t\t\t\t\t\r\nVTMarkets-Live 3 (Build 6230)\t\t\t\t\t\t\t\t"
+    ],
+    "files_written": [],
+    "files_viewed": [],
+    "cwds": [],
+    "artifacts": [],
+    "scratch_files": [],
+    "user_uploaded": [
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\254685e4-a2c3-4d4a-9ee1-436a0b295f3d\\.user_uploaded\\media_1791457859676.pdf",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\254685e4-a2c3-4d4a-9ee1-436a0b295f3d\\.user_uploaded\\media_1791525734655.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\254685e4-a2c3-4d4a-9ee1-436a0b295f3d\\.user_uploaded\\media_1791526227126.png"
+    ]
+  },
+  {
+    "uuid": "b28e742c-9746-46a9-bf96-a3208dd309cc",
+    "date": "2026-10-07",
+    "first_prompt": "<USER_REQUEST> //+------------------------------------------------------------------+\r //|                              ",
+    "all_prompts": [
+      "<USER_REQUEST>\n//+------------------------------------------------------------------+\r\n//|          ",
+      "<USER_REQUEST>\nvamos testar mas ai ele vai ficar travado, pq ele trabalha contra a tendencia ele faz"
+    ],
+    "files_written": [],
+    "files_viewed": [],
+    "cwds": [],
+    "artifacts": [],
+    "scratch_files": [],
+    "user_uploaded": []
+  },
+  {
+    "uuid": "d794e6e6-5691-400b-90b6-799993207151",
+    "date": "2026-10-07",
+    "first_prompt": "<USER_REQUEST> Atue como um Desenvolvedor Sênior de MQL5 especializado em Front-end (GUI) e Gestão de Risco.  Sua tarefa",
+    "all_prompts": [
+      "<USER_REQUEST>\nAtue como um Desenvolvedor Sênior de MQL5 especializado em Front-end (GUI) e Gestão d",
+      "<USER_REQUEST>\nO site oficial global da corretora é [www.vtmarkets.com](https://www.vtmarkets.com/) ",
+      "<USER_REQUEST>\nquero colocar botão de ativar e desativar trailing e break, botão de subir e descer v",
+      "<USER_REQUEST>\ne sobre a porcentagem do gerenciamento eu tbm optar para colocar o valor fixo q vou q",
+      "<USER_REQUEST>\nme mande ele completo e pronto ja com as mudanças eu quero tbm ter algum indicativo d",
+      "<USER_REQUEST>\neu quero escolher o q  aparecer ali nas informaçoes de q vai aparecer. tipo os lucros",
+      "<USER_REQUEST>\nAtualização na Lógica de Realizações Parciais (Alvo em Pontos ou Financeiro):\n\nComo a",
+      "<USER_REQUEST>\nme de o codigo completo da boleta ja atualizado\n</USER_REQUEST>\n<ADDITIONAL_METADATA>",
+      "<USER_REQUEST>\nAtualização na Lógica de Realizações Parciais (Alvo em Pontos ou Financeiro):\n\nComo a",
+      "<USER_REQUEST>\nAtualização na Lógica de Realizações Parciais (Alvo em Pontos ou Financeiro):\n\nComo a",
+      "<USER_REQUEST>\nagora eui quero q vc faça o painel ficar sobre qual quer coisa q seja no grafico ele ",
+      "<USER_REQUEST>\no painel de visualizaçao precisa sobrepor tudo e qual quer coisa de indicadores q pos",
+      "<USER_REQUEST>\neu preciso q minha boletatenha um index maior do que o index de tudo q estiver na tel",
+      "<USER_REQUEST>\neu preciso q minha boleta tenha um index css maior do que o index de tudo q estiver n",
+      "<USER_REQUEST>\nme entregue o codigo completo com a atualizaçao \n</USER_REQUEST>\n<ADDITIONAL_METADATA",
+      "<USER_REQUEST>\nquero o manual de atalhos do teclado\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe curren",
+      "<USER_REQUEST>\ne para fazer as parciais ? não saiu nada sobre\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\n",
+      "<USER_REQUEST>\nteria como eu ativar a ordem fantasma com as setas do jeito q esta mas eu iria com o "
+    ],
+    "files_written": [],
+    "files_viewed": [],
+    "cwds": [],
+    "artifacts": [],
+    "scratch_files": [],
+    "user_uploaded": [
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\d794e6e6-5691-400b-90b6-799993207151\\.user_uploaded\\media_1791403713916.png"
+    ]
+  },
+  {
+    "uuid": "46c0d416-83e9-4c3e-8a01-dac5b57be7c6",
+    "date": "2026-10-08",
+    "first_prompt": "<USER_REQUEST> //+------------------------------------------------------------------+\r //|                              ",
+    "all_prompts": [
+      "<USER_REQUEST>\n//+------------------------------------------------------------------+\r\n//|          "
+    ],
+    "files_written": [],
+    "files_viewed": [],
+    "cwds": [],
+    "artifacts": [],
+    "scratch_files": [],
+    "user_uploaded": []
+  },
+  {
+    "uuid": "b9e51c09-412e-4d0b-aacb-d28ac9eaee1f",
+    "date": "2026-10-09",
+    "first_prompt": "<USER_REQUEST> //+------------------------------------------------------------------+\r //|                              ",
+    "all_prompts": [
+      "<USER_REQUEST>\n//+------------------------------------------------------------------+\r\n//|          ",
+      "<USER_REQUEST>\nteria como vc me explicar qual é cada sinal pq eu não sei ainda. Então eu preciso sab",
+      "<USER_REQUEST>\nai está o cod completo e ja atualizado?\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe cur",
+      "<USER_REQUEST>\no index do painel precisa sobrepor tudo q tem exibido no grafico para conseguir ver e",
+      "<USER_REQUEST>\nficou bom mas tipo entre esses pontos principais teriam locais extras ali durante o m"
+    ],
+    "files_written": [],
+    "files_viewed": [],
+    "cwds": [],
+    "artifacts": [],
+    "scratch_files": [],
+    "user_uploaded": []
+  },
+  {
+    "uuid": "7430a119-5485-4529-ac87-38a29952a070",
+    "date": "2026-10-10",
+    "first_prompt": "<USER_REQUEST> Com base na transcrição do vídeo do Mike Valtos (Orderflows), o tema central não é uma ferramenta isolada",
+    "all_prompts": [
+      "<USER_REQUEST>\nCom base na transcrição do vídeo do Mike Valtos (Orderflows), o tema central não é um",
+      "<USER_REQUEST>\nEspecificação Corrigida e Fiel à Transcrição para o AntigravityPasse estas instruções"
+    ],
+    "files_written": [],
+    "files_viewed": [],
+    "cwds": [],
+    "artifacts": [],
+    "scratch_files": [],
+    "user_uploaded": [
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\7430a119-5485-4529-ac87-38a29952a070\\.user_uploaded\\media_1791668715621.jpg",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\7430a119-5485-4529-ac87-38a29952a070\\.user_uploaded\\media_1791668853823.png"
+    ]
+  },
+  {
+    "uuid": "079fe80e-27f2-4552-8772-10ead883c422",
+    "date": "2026-10-11",
+    "first_prompt": "<USER_REQUEST> //+------------------------------------------------------------------+\r //|                              ",
+    "all_prompts": [
+      "<USER_REQUEST>\n//+------------------------------------------------------------------+\r\n//|          ",
+      "<USER_REQUEST>\neu quero no Xauusd nos ultimos 2 anos até agora. \n</USER_REQUEST>\n<ADDITIONAL_METADAT",
+      "<USER_REQUEST>\no arquivo da automaçao esta correto ou precisaria de melhras?\n</USER_REQUEST>\n<ADDITI",
+      "<USER_REQUEST>\nrode o teste novamente no xauusd\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current lo",
+      "<USER_REQUEST>\nme passei ele ja então pronto do ejito q arrumou. \n</USER_REQUEST>\n<ADDITIONAL_METADA",
+      "<USER_REQUEST>\nvc fez esse teste pelos dados mt5 tbm? pq estou fazendo la e não esta dando o mesmo c",
+      "<USER_REQUEST>\nme de o camnho da pasta q esta salvando esse robo\n</USER_REQUEST>\n<ADDITIONAL_METADAT"
+    ],
+    "files_written": [],
+    "files_viewed": [],
+    "cwds": [],
+    "artifacts": [
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\079fe80e-27f2-4552-8772-10ead883c422\\relatorio_backtest_burgo_scalpe_pro.md",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\079fe80e-27f2-4552-8772-10ead883c422\\relatorio_backtest_burgo_scalpe_pro.md.metadata.json",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\079fe80e-27f2-4552-8772-10ead883c422\\relatorio_backtest_xauusd_2anos.md",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\079fe80e-27f2-4552-8772-10ead883c422\\relatorio_backtest_xauusd_2anos.md.metadata.json"
+    ],
+    "scratch_files": [
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\079fe80e-27f2-4552-8772-10ead883c422\\scratch\\backtest_simulation.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\079fe80e-27f2-4552-8772-10ead883c422\\scratch\\check_xauusd.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\079fe80e-27f2-4552-8772-10ead883c422\\scratch\\compile.log",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\079fe80e-27f2-4552-8772-10ead883c422\\scratch\\fast_multi_test.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\079fe80e-27f2-4552-8772-10ead883c422\\scratch\\monthly_check.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\079fe80e-27f2-4552-8772-10ead883c422\\scratch\\multi_forex_test.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\079fe80e-27f2-4552-8772-10ead883c422\\scratch\\param_test.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\079fe80e-27f2-4552-8772-10ead883c422\\scratch\\simulate_xauusd_2years.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\079fe80e-27f2-4552-8772-10ead883c422\\scratch\\test_cooldown.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\079fe80e-27f2-4552-8772-10ead883c422\\scratch\\test_fixed_tp.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\079fe80e-27f2-4552-8772-10ead883c422\\scratch\\__pycache__\\backtest_simulation.cpython-314.pyc",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\079fe80e-27f2-4552-8772-10ead883c422\\scratch\\__pycache__\\fast_multi_test.cpython-314.pyc",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\079fe80e-27f2-4552-8772-10ead883c422\\scratch\\__pycache__\\simulate_xauusd_2years.cpython-314.pyc",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\079fe80e-27f2-4552-8772-10ead883c422\\scratch\\__pycache__\\test_fixed_tp.cpython-314.pyc"
+    ],
+    "user_uploaded": [
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\079fe80e-27f2-4552-8772-10ead883c422\\.user_uploaded\\media_1791704182515.png"
+    ]
+  },
+  {
+    "uuid": "adf2645a-de07-4126-86e3-a5dabf26ac21",
+    "date": "2026-10-11",
+    "first_prompt": "<USER_REQUEST> analize todo esse conteudo do arquivo docx inclusive as imavens </USER_REQUEST> <ADDITIONAL_METADATA> The",
+    "all_prompts": [
+      "<USER_REQUEST>\nanalize todo esse conteudo do arquivo docx inclusive as imavens\n</USER_REQUEST>\n<ADDI",
+      "<USER_REQUEST>\nentão o que voce propoem para termos uma automaçao precisa.\n</USER_REQUEST>\n<ADDITION",
+      "<USER_REQUEST>\nquero q faça testes bem minuciosos no ativo xauusd e busque os dados no mt5 e no trad",
+      "<USER_REQUEST>\nmude essa configuraçao precisamos pegar mais lucros pq da forma q esta não compensa\n<"
+    ],
+    "files_written": [],
+    "files_viewed": [],
+    "cwds": [],
+    "artifacts": [
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\adf2645a-de07-4126-86e3-a5dabf26ac21\\relatorio_testes_xauusd.md",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\adf2645a-de07-4126-86e3-a5dabf26ac21\\relatorio_testes_xauusd.md.metadata.json",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\adf2645a-de07-4126-86e3-a5dabf26ac21\\xauusd_backtest_comparison.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\adf2645a-de07-4126-86e3-a5dabf26ac21\\xauusd_nova_configuracao_lucro.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\adf2645a-de07-4126-86e3-a5dabf26ac21\\xauusd_profit_maximization.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\adf2645a-de07-4126-86e3-a5dabf26ac21\\xauusd_results.json"
+    ],
+    "scratch_files": [
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\adf2645a-de07-4126-86e3-a5dabf26ac21\\scratch\\grid_search_gold.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\adf2645a-de07-4126-86e3-a5dabf26ac21\\scratch\\optimize_profit.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\adf2645a-de07-4126-86e3-a5dabf26ac21\\scratch\\plot_winning.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\adf2645a-de07-4126-86e3-a5dabf26ac21\\scratch\\run_thorough_tests.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\adf2645a-de07-4126-86e3-a5dabf26ac21\\scratch\\test_pullback_high_profit.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\adf2645a-de07-4126-86e3-a5dabf26ac21\\scratch\\test_tv.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\adf2645a-de07-4126-86e3-a5dabf26ac21\\scratch\\test_valtos_xau.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\adf2645a-de07-4126-86e3-a5dabf26ac21\\scratch\\__pycache__\\run_thorough_tests.cpython-314.pyc",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\adf2645a-de07-4126-86e3-a5dabf26ac21\\scratch\\__pycache__\\test_tv.cpython-314.pyc"
+    ],
+    "user_uploaded": [
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\adf2645a-de07-4126-86e3-a5dabf26ac21\\.user_uploaded\\media_1791678541067.docx"
+    ]
+  },
+  {
+    "uuid": "32e0ff10-0109-47bd-9026-a47b6445c2fd",
+    "date": "2026-10-12",
+    "first_prompt": "<USER_REQUEST> vou querer juntar um indicador que ele faz marcaçoes de canal e uma boleta. Faça da melhor forma para não",
+    "all_prompts": [
+      "<USER_REQUEST>\nvou querer juntar um indicador que ele faz marcaçoes de canal e uma boleta. Faça da m",
+      "<USER_REQUEST>\nteria como deixar o painel do marcador de canais junto a boleta e assim q eu usar ele",
+      "<USER_REQUEST>\nquero q ele ja venha com essa configuraçao igual a da imagem .\n\nsobre a ordem fantasm",
+      "<USER_REQUEST>\nja deixe salvo para o indicador de canais projetar 40 linha para cima e para baixo e ",
+      "<USER_REQUEST>\neu acabei não especificando corretamente a marcaçao do canal automatico, ele deve peg",
+      "<USER_REQUEST>\na marcação automatica deve pegar a o fundo e o topo descartando o pavil do candle e a",
+      "<USER_REQUEST>\nme tire um duvida o trailing esta se movendo a quantos passos ?\n</USER_REQUEST>\n<ADDI",
+      "<USER_REQUEST>\nvamos fazer o seguinte abrea no set a opçao de eu configuralo e mantenha o valor q vc",
+      "<USER_REQUEST>\nestou percebendo q quando peço para fazer o canal automatico do dia anterior ele esta",
+      "<USER_REQUEST>\nquero q vc marque os pontos de onde foi feito as marcaçoes do topo e o fundo para tra"
+    ],
+    "files_written": [],
+    "files_viewed": [],
+    "cwds": [],
+    "artifacts": [],
+    "scratch_files": [],
+    "user_uploaded": [
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\32e0ff10-0109-47bd-9026-a47b6445c2fd\\.user_uploaded\\media_1791826921416_c5876834.png"
+    ]
+  },
+  {
+    "uuid": "910cdd6e-3b9f-49bd-827c-5f2048b0bbb3",
+    "date": "2026-10-12",
+    "first_prompt": "<USER_REQUEST> Seguinte vou mandar umas imagens para vc entender o que quero fazer...  A ideia é fazer uma automaçao q e",
+    "all_prompts": [
+      "<USER_REQUEST>\nSeguinte vou mandar umas imagens para vc entender o que quero fazer... \nA ideia é faz",
+      "<USER_REQUEST>\n aguarde ainda não terminei\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local t",
+      "<USER_REQUEST>\nai é a primeira parte, vou enviar apos a parte onde mostra os modulos sem mostrar o q",
+      "<USER_REQUEST>\npronto aqui esta a parte dos modulos. \nAgora vamos discutir como vamos montar isso e ",
+      "<USER_REQUEST>\nVc coloca como tipo a primeira coisa q vc fala sobre o q vc ja mapeou e das imagens v",
+      "<USER_REQUEST>\npode ser mas focar então no Xauusd, BTC, Nas100\n</USER_REQUEST>\n<ADDITIONAL_METADATA>",
+      "<USER_REQUEST>\nsim\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local time is: 2026-10-12T03:03",
+      "<USER_REQUEST>\na aba radar macroeconomico podemos adicionar os eventos e noticias q estão ou vão ter",
+      "<USER_REQUEST>\n📚 AULA 0.1: MECÂNICA DE MERCADO & FORMAÇÃO DE PREÇO\r\nAntes de programar uma única lin",
+      "<USER_REQUEST>\neu passei tudo q precisava ter em cada modulo pq vc ja tem a imagem dos modulos e tud",
+      "<USER_REQUEST>\nreveja todo o cod e veja o q esta errado pq a parte de verificar noticias não aparece"
+    ],
+    "files_written": [],
+    "files_viewed": [],
+    "cwds": [],
+    "artifacts": [],
+    "scratch_files": [],
+    "user_uploaded": [
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\910cdd6e-3b9f-49bd-827c-5f2048b0bbb3\\.user_uploaded\\media_1791778955617.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\910cdd6e-3b9f-49bd-827c-5f2048b0bbb3\\.user_uploaded\\media_1791778955746.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\910cdd6e-3b9f-49bd-827c-5f2048b0bbb3\\.user_uploaded\\media_1791778955748.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\910cdd6e-3b9f-49bd-827c-5f2048b0bbb3\\.user_uploaded\\media_1791778955756.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\910cdd6e-3b9f-49bd-827c-5f2048b0bbb3\\.user_uploaded\\media_1791778955786.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\910cdd6e-3b9f-49bd-827c-5f2048b0bbb3\\.user_uploaded\\media_1791779385201.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\910cdd6e-3b9f-49bd-827c-5f2048b0bbb3\\.user_uploaded\\media_1791779385209.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\910cdd6e-3b9f-49bd-827c-5f2048b0bbb3\\.user_uploaded\\media_1791779385224.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\910cdd6e-3b9f-49bd-827c-5f2048b0bbb3\\.user_uploaded\\media_1791779385242.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\910cdd6e-3b9f-49bd-827c-5f2048b0bbb3\\.user_uploaded\\media_1791779385318.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\910cdd6e-3b9f-49bd-827c-5f2048b0bbb3\\.user_uploaded\\media_1791779554191.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\910cdd6e-3b9f-49bd-827c-5f2048b0bbb3\\.user_uploaded\\media_1791779646177.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\910cdd6e-3b9f-49bd-827c-5f2048b0bbb3\\.user_uploaded\\media_1791779646246.png"
+    ]
+  },
+  {
+    "uuid": "95f0b634-d326-4923-b5ca-dfed701297e2",
+    "date": "2026-10-13",
+    "first_prompt": "<USER_REQUEST> vou lhe enviar o codigo do meu robo e logo apos uma das configuraçoes q eu usei nele. Aguarde antes de fa",
+    "all_prompts": [
+      "<USER_REQUEST>\nvou lhe enviar o codigo do meu robo e logo apos uma das configuraçoes q eu usei nele.",
+      "<USER_REQUEST>\n@[c:\\Users\\Vini_Burgo\\OneDrive\\Documents\\Robo\\Marcus\\estrategia para o Marcus.set] \ne",
+      "<USER_REQUEST>\neu estou fazendo testes aqui eu coloquei um lote de 0.1 e buscar um valor global para",
+      "<USER_REQUEST>\neu estou fazendo testes aqui eu coloquei um lote de 0.1 e buscar um valor global para",
+      "<USER_REQUEST>\neu estou fazendo testes aqui eu coloquei um lote de 0.1 e buscar um valor global para",
+      "<USER_REQUEST>\neu estou fazendo testes aqui eu coloquei um lote de 0.1 e buscar um valor global para",
+      "<USER_REQUEST>\neu acho q o stop não seria a melhor opçao talvez fazer um hedge de 100% e travar e ap",
+      "<USER_REQUEST>\nvc consegue integrar tudo em um unico codigo para eu não precisar ficar abrindo varia",
+      "<USER_REQUEST>\neu não quero q fique mudando todos os arquivos q tenho eu quero q vc pegue e crie um ",
+      "<USER_REQUEST>\nreverta os todosd os robos q vc fez a mudança sem eu pedir, só crie aqui na pasta da "
+    ],
+    "files_written": [],
+    "files_viewed": [],
+    "cwds": [],
+    "artifacts": [],
+    "scratch_files": [],
+    "user_uploaded": [
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\95f0b634-d326-4923-b5ca-dfed701297e2\\.user_uploaded\\media_1791914296866_2aa0f9f7.xlsx",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\95f0b634-d326-4923-b5ca-dfed701297e2\\.user_uploaded\\media_1791918809223_2dd8c641.xlsx",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\95f0b634-d326-4923-b5ca-dfed701297e2\\.user_uploaded\\media_1791924311780_83dcaf5e.xlsx"
+    ]
+  },
+  {
+    "uuid": "743fca28-2255-4a83-bbe9-b57891379ed3",
+    "date": "2026-10-14",
+    "first_prompt": "<USER_REQUEST> isso não vai ter nada com o outro q estamos criando aqui nessa pasta vamos fazer outra pasta dentro dessa",
+    "all_prompts": [
+      "<USER_REQUEST>\nisso não vai ter nada com o outro q estamos criando aqui nessa pasta vamos fazer outr",
+      "<USER_REQUEST>\npq sao 2\\\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local time is: 2026-10-14",
+      "<USER_REQUEST>\no indicador tem momentos q coloco não aparece nada e eu quero q ele coloque indicaçoe",
+      "<USER_REQUEST>\nele não fez nada no grafico ficou a mesma coisa preciso q acerte e faça uma automaçao",
+      "<USER_REQUEST>\neu estou falando tbm do indicador eu pedi para vc colocar ele tendo um painel indicad",
+      "<USER_REQUEST>\nolhe o painel de configuraçoes  e olha o grafico.veja o q eu peço q faça no indicador",
+      "<USER_REQUEST>\nteria como o indicador ser mais informativo e ter tbm um monitoramento em tempo real ",
+      "<USER_REQUEST>\nteria como vc ajustar o tamanho do painel para as letras não vazarem \n</USER_REQUEST>",
+      "<USER_REQUEST>\nteria como eu colocar o tamanho da letra e ai proporcionalmente o painel ele se ajust",
+      "<USER_REQUEST>\naqui esta o teste feito do indicador em questão dos acertos q ele teve nas indicaçoes",
+      "<USER_REQUEST>\n@[c:\\Users\\Vini_Burgo\\AppData\\Roaming\\MetaQuotes\\Tester\\9AF8328437A6A393B2016FC9156E6",
+      "<USER_REQUEST>\no  painel do robo tbm precisa ser como o do indicador. os mesmos parametros de movime",
+      "<USER_REQUEST>\nseguinte eu estou vendo q o indicador esta tendo muito mais ganhos...  o expert esta ",
+      "<USER_REQUEST>\nseguinte nos teste q fiz os ganhos com o indicador foram muito boas perto do robo, o ",
+      "<USER_REQUEST>\nteste ele agora quer q eu coloque o  quero q vc faça uma explicaçao para eu colocar e",
+      "<USER_REQUEST>\neu quero q seiga tipo assim... e me entregue em pdf\n</USER_REQUEST>\n<ADDITIONAL_METAD",
+      "<USER_REQUEST>\nfaça um teste bem minucioso e pesquise nas pastas q vai ter os ticks do xauusd para v",
+      "<USER_REQUEST>\neu estou achando q esta faltando algumas coisas nessas 2 automaçoes pq seguinte eu pr",
+      "<USER_REQUEST>\nas marcaçoes do indicador no grafico está extremamente pouco não tenho parametros que",
+      "<USER_REQUEST>\nnão deu certo ele esta travando e não esta funcionando os 2\n</USER_REQUEST>\n<ADDITION",
+      "<USER_REQUEST>\nvc consegue ver um link do youtube?\nseconseguir eu queria q vc fizece em base desse v",
+      "<USER_REQUEST>\ndeixa eu te fazer uma pergunta. Eu tenho o boiokmap aqui instalado no meu pc, ele est",
+      "<USER_REQUEST>\neu quero q vc veja o volume os nós onde vamos estar os pontos mais importantes e o qu",
+      "<USER_REQUEST>\neu quero q sempre vc mude somente o arquivo q estamos fazendo na pasta do projeto nun",
+      "<USER_REQUEST>\n\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local time is: 2026-10-16T07:11:19",
+      "<USER_REQUEST>\n\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local time is: 2026-10-16T07:17:54",
+      "<USER_REQUEST>\n\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local time is: 2026-10-16T07:45:07",
+      "<USER_REQUEST>\neu não entendi direito sobre essas marcaçoes mas ele esta totalmente fora dos valores",
+      "<USER_REQUEST>\nali nos indicadores aparece sobre o bookmap e fala só aguardando o q pode ser?\n</USER",
+      "<USER_REQUEST>\nqual time freme seria o melhor para colocar ele? Faça o teste de 2 anos nele e veja a",
+      "<USER_REQUEST>\nVOU TE FALAR A VERDADE FICAR 2 ANOS PARA GANHAR 21% É BRINCADEIRA NÉ? NÃO COMPENSA NE",
+      "<USER_REQUEST>\nsim. \n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local time is: 2026-10-16T11:",
+      "<USER_REQUEST>\nvc ja configurou ele? \npreciso q deixe o indicador mais leve e o robo tbm eles estão ",
+      "<USER_REQUEST>\nAssista esse viodeo tbm q esta na pasta C:\\Users\\Vini_Burgo\\Videos\\Captures Meet_ bds",
+      "<USER_REQUEST>\nADICIONE O VAH E O VAL JUNTO POIS JA TEMOS O POC\n</USER_REQUEST>\n<ADDITIONAL_METADATA",
+      "<USER_REQUEST>\nCOLOQUE TBM NO PAINEL O VPVR\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local ",
+      "<USER_REQUEST>\nVAMOS TENTAR AGORA AJEITAR O DO BTC?\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe curren",
+      "<USER_REQUEST>\nmas vc esta separando em pastas qual é qual? eu quero q faça separadamente eles. \n</U"
+    ],
+    "files_written": [],
+    "files_viewed": [],
+    "cwds": [],
+    "artifacts": [
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\743fca28-2255-4a83-bbe9-b57891379ed3\\audio_reader.html",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\743fca28-2255-4a83-bbe9-b57891379ed3\\KNOWLEDGE_BASE_QUANT_INSTITUCIONAL.md",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\743fca28-2255-4a83-bbe9-b57891379ed3\\KNOWLEDGE_BASE_QUANT_INSTITUCIONAL.md.metadata.json"
+    ],
+    "scratch_files": [],
+    "user_uploaded": [
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\743fca28-2255-4a83-bbe9-b57891379ed3\\.user_uploaded\\media_1792004581282_22a732fc.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\743fca28-2255-4a83-bbe9-b57891379ed3\\.user_uploaded\\media_1792004642209_74267a8e.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\743fca28-2255-4a83-bbe9-b57891379ed3\\.user_uploaded\\media_1792006782290_f3362041.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\743fca28-2255-4a83-bbe9-b57891379ed3\\.user_uploaded\\media_1792015072272_d40021c4.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\743fca28-2255-4a83-bbe9-b57891379ed3\\.user_uploaded\\media_1792041352106_5d9d0fe8.pdf",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\743fca28-2255-4a83-bbe9-b57891379ed3\\.user_uploaded\\media_1792145470677_2d65db7e.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\743fca28-2255-4a83-bbe9-b57891379ed3\\.user_uploaded\\media_1792145867571_dc287c72.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\743fca28-2255-4a83-bbe9-b57891379ed3\\.user_uploaded\\media_1792147505593_e63d5986.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\743fca28-2255-4a83-bbe9-b57891379ed3\\.user_uploaded\\media_1792149543176_401985b5.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\743fca28-2255-4a83-bbe9-b57891379ed3\\.user_uploaded\\media_1792154548001_231dc868.png"
+    ]
+  },
+  {
+    "uuid": "ad687ea2-0791-4615-866a-4e76917a0b65",
+    "date": "2026-10-14",
+    "first_prompt": "<USER_REQUEST> Quero q vc verifique esse codigo e apenas corrija as escritas erradas. e vamos começar a fazer os testes.",
+    "all_prompts": [
+      "<USER_REQUEST>\nQuero q vc verifique esse codigo e apenas corrija as escritas erradas. e vamos começa",
+      "<USER_REQUEST>\nEsse teste foi baseado ou simulado? Eu não quero que faça uma simulação, eu quero que"
+    ],
+    "files_written": [],
+    "files_viewed": [],
+    "cwds": [],
+    "artifacts": [],
+    "scratch_files": [],
+    "user_uploaded": []
+  },
+  {
+    "uuid": "10caaf6a-99d2-4e9c-8490-463819c2aba6",
+    "date": "2026-10-16",
+    "first_prompt": "<USER_REQUEST> eu quero q vc veja o video q esta na pasta C:\\Users\\Vini_Burgo\\Videos\\Captures e o video é Aula do Mikael",
+    "all_prompts": [
+      "<USER_REQUEST>\neu quero q vc veja o video q esta na pasta C:\\Users\\Vini_Burgo\\Videos\\Captures e o vi"
+    ],
+    "files_written": [],
+    "files_viewed": [],
+    "cwds": [],
+    "artifacts": [],
+    "scratch_files": [],
+    "user_uploaded": []
+  },
+  {
+    "uuid": "2a155b49-a720-4718-992d-83b6af3ca0b3",
+    "date": "2026-10-16",
+    "first_prompt": "<USER_REQUEST> //+------------------------------------------------------------------+\r //|                              ",
+    "all_prompts": [
+      "<USER_REQUEST>\n//+------------------------------------------------------------------+\r\n//|          ",
+      "<USER_REQUEST>\n//+------------------------------------------------------------------+\r\n//|          ",
+      "<USER_REQUEST>\nvamos fazer uma automaçao, esses dois indicadores vão ser a base para nossa automaçao",
+      "<USER_REQUEST>\nPegue essa resposta e me disponibilize novamente. \n</USER_REQUEST>\n<ADDITIONAL_METADA",
+      "<USER_REQUEST>\nagora faça o mesmo com esse video aqui que é continuaçao dos outros, o final ali dos ",
+      "<USER_REQUEST>\naqui esta um grafico q seria o usado. o que vc pode analizar?\n</USER_REQUEST>\n<ADDITI",
+      "<USER_REQUEST>\ncom tudo q recebeu, qual a sua comclusão e sua visão para produzir o expert e q tenha",
+      "<USER_REQUEST>\nfaça os testes completos e verifique qual seria a melhor estrategia. quero tentar no ",
+      "<USER_REQUEST>\nvamos testar produzir eles \n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local t"
+    ],
+    "files_written": [],
+    "files_viewed": [],
+    "cwds": [],
+    "artifacts": [
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\2a155b49-a720-4718-992d-83b6af3ca0b3\\audio_reader.html"
+    ],
+    "scratch_files": [],
+    "user_uploaded": [
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\2a155b49-a720-4718-992d-83b6af3ca0b3\\.user_uploaded\\media_1792193021643_a4afa2d8.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\2a155b49-a720-4718-992d-83b6af3ca0b3\\.user_uploaded\\media_1792193028876_0eecfa40.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\2a155b49-a720-4718-992d-83b6af3ca0b3\\.user_uploaded\\media_1792193046684_09a0c944.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\2a155b49-a720-4718-992d-83b6af3ca0b3\\.user_uploaded\\media_1792193055427_d1c26008.png"
+    ]
+  },
+  {
+    "uuid": "b0ca03d9-9525-46f5-88b0-e9ea73c57dac",
+    "date": "2026-10-16",
+    "first_prompt": "<USER_REQUEST> Eu queria saber se após você fazer a sua resposta escrita teria alguma possibilidade de ter um leitor par",
+    "all_prompts": [
+      "<USER_REQUEST>\nEu queria saber se após você fazer a sua resposta escrita teria alguma possibilidade ",
+      "<USER_REQUEST>\nEu quero que você utilize a opção 1 e, como regra, você vai utilizar em todos os proj",
+      "<USER_REQUEST>\nNão está funcionando o aumento de velocidade e eu quero que você tenha um botão para "
+    ],
+    "files_written": [],
+    "files_viewed": [],
+    "cwds": [],
+    "artifacts": [
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\b0ca03d9-9525-46f5-88b0-e9ea73c57dac\\audio_reader.html",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\b0ca03d9-9525-46f5-88b0-e9ea73c57dac\\audio_reader.html.metadata.json",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\b0ca03d9-9525-46f5-88b0-e9ea73c57dac\\audio_reader_widget.html",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\b0ca03d9-9525-46f5-88b0-e9ea73c57dac\\audio_reader_widget.html.metadata.json"
+    ],
+    "scratch_files": [],
+    "user_uploaded": []
+  },
+  {
+    "uuid": "88d39c0e-cd52-475c-a378-bcf027b15b9c",
+    "date": "2026-10-17",
+    "first_prompt": "<USER_REQUEST> ## 📊 QUADRO TÉCNICO OPERACIONAL: MNQ & MES## 1. MAPA MACRO DE DIRECIONAMENTO (GPS DE VOLATILIDADE)\r Obrig",
+    "all_prompts": [
+      "<USER_REQUEST>\n## 📊 QUADRO TÉCNICO OPERACIONAL: MNQ & MES## 1. MAPA MACRO DE DIRECIONAMENTO (GPS DE ",
+      "<USER_REQUEST>\nmonte ele e teste a melhor configuraçoes.\nquero q tbm faça um para o xauusd e o btc q",
+      "<USER_REQUEST>\nnão é para instalar em nenhum dos meta trader do meu pc é para apenas ficar na pasta ",
+      "<USER_REQUEST>\nem questão do btc e do xauusd será q não temos o q melhorar para ele ter uma porcenta",
+      "<USER_REQUEST>\nmas quem falou q vou operar todos juntos eu disse para fazer um teste em cada um... i",
+      "<USER_REQUEST>\nentão eles acabm não sendo scalpers.... eles estão colocando ordens e buscando quanto",
+      "<USER_REQUEST>\nfaça um teste sómente com o robo do xauusd até achar uma configuraçao melhor q ele te",
+      "<USER_REQUEST>\nele esta com um movimento muito curto saindo com centavos. então que quero q ele ou a",
+      "<USER_REQUEST>\nverifique o arquivo na pasta C:\\Robo Virada de Delta\\Robo_Frasson_Alta_Frequencia_PRO",
+      "<USER_REQUEST>\neu quero q ja coloque o preset no robo e deixe ele nativo com essas configuraçoes\n</U",
+      "<USER_REQUEST>\nReportTester-265701434.xlsx veja esse arquivo q eu fiz o teste agora\n</USER_REQUEST>\n",
+      "<USER_REQUEST>\nmas me fala a verdade....      vc acha q compensa ficar 9 meses para ghanhar isso?\n</"
+    ],
+    "files_written": [],
+    "files_viewed": [],
+    "cwds": [],
+    "artifacts": [
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\88d39c0e-cd52-475c-a378-bcf027b15b9c\\analise_confiabilidade_lote_vs_movimento.md",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\88d39c0e-cd52-475c-a378-bcf027b15b9c\\analise_confiabilidade_lote_vs_movimento.md.metadata.json",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\88d39c0e-cd52-475c-a378-bcf027b15b9c\\analise_novo_teste_reporttester_265701434.md",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\88d39c0e-cd52-475c-a378-bcf027b15b9c\\analise_novo_teste_reporttester_265701434.md.metadata.json",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\88d39c0e-cd52-475c-a378-bcf027b15b9c\\analise_relatorio_tester_26570143.md",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\88d39c0e-cd52-475c-a378-bcf027b15b9c\\analise_relatorio_tester_26570143.md.metadata.json",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\88d39c0e-cd52-475c-a378-bcf027b15b9c\\anatomia_operacional_scalper_vs_daytrade.md",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\88d39c0e-cd52-475c-a378-bcf027b15b9c\\anatomia_operacional_scalper_vs_daytrade.md.metadata.json",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\88d39c0e-cd52-475c-a378-bcf027b15b9c\\audio_reader.html",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\88d39c0e-cd52-475c-a378-bcf027b15b9c\\quadro_tecnico_operacional_mnq_mes.md",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\88d39c0e-cd52-475c-a378-bcf027b15b9c\\quadro_tecnico_operacional_mnq_mes.md.metadata.json",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\88d39c0e-cd52-475c-a378-bcf027b15b9c\\relatorio_analise_individual_por_ativo.md",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\88d39c0e-cd52-475c-a378-bcf027b15b9c\\relatorio_analise_individual_por_ativo.md.metadata.json",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\88d39c0e-cd52-475c-a378-bcf027b15b9c\\relatorio_custos_e_calibracao_vtmarkets.md",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\88d39c0e-cd52-475c-a378-bcf027b15b9c\\relatorio_custos_e_calibracao_vtmarkets.md.metadata.json",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\88d39c0e-cd52-475c-a378-bcf027b15b9c\\relatorio_otimizacao_alta_frequencia_e_retorno.md",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\88d39c0e-cd52-475c-a378-bcf027b15b9c\\relatorio_otimizacao_alta_frequencia_e_retorno.md.metadata.json",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\88d39c0e-cd52-475c-a378-bcf027b15b9c\\relatorio_otimizacao_xauusd_campeao.md",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\88d39c0e-cd52-475c-a378-bcf027b15b9c\\relatorio_otimizacao_xauusd_campeao.md.metadata.json",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\88d39c0e-cd52-475c-a378-bcf027b15b9c\\relatorio_testes_2_anos_multi_ativo.md",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\88d39c0e-cd52-475c-a378-bcf027b15b9c\\relatorio_testes_2_anos_multi_ativo.md.metadata.json"
+    ],
+    "scratch_files": [],
+    "user_uploaded": []
+  },
+  {
+    "uuid": "b0395bc0-59fd-4b7c-b467-e8a0a25ad6ce",
+    "date": "2026-10-17",
+    "first_prompt": "<USER_REQUEST> # PERSONA\r Aja como um Advogado Sênior Especialista em Direito de Família e Sucessões, com expertise em l",
+    "all_prompts": [
+      "<USER_REQUEST>\n# PERSONA\r\nAja como um Advogado Sênior Especialista em Direito de Família e Sucessões",
+      "<USER_REQUEST>\nminha mulher saiu com ela para um festa na casa de amigos e ela disse q não vai volta",
+      "<USER_REQUEST>\npor que não apareceu o leitor ? e eu quero q ele leia toda a resposta sem fazer resum",
+      "<USER_REQUEST>\nmas seguinte estavamos em uma festa e ela foi para outra agora e estava bebendo\n</USE",
+      "<USER_REQUEST>\nquero saber o seguinte se eu fizer o bo online e eu quiser retirar d pois eu posso?\n<",
+      "<USER_REQUEST>\nmas não vou mandar uma msg falando essas coisas q ela bebeu q eu preciso pegar aLuiza",
+      "<USER_REQUEST>\nfaça um guia para eu fazer tudo online\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe curr",
+      "<USER_REQUEST>\n\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local time is: 2026-10-17T17:53:51",
+      "<USER_REQUEST>\nfomos a um batizado as 11hrs e por volta das 16hrs retornamos, e ela perguntando se e",
+      "<USER_REQUEST>\na difvergencia entre nós aconteceu no carro mesmo na volta\n</USER_REQUEST>\n<ADDITIONA",
+      "<USER_REQUEST>\nela ja estava bebendo na festa de batisado não ir na casa dos nossos amigos para bebe",
+      "<USER_REQUEST>\nvamosver certinho não falei bem dessa forma e durante a discuçao ela se descontrola p",
+      "<USER_REQUEST>\n\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local time is: 2026-10-17T18:14:42",
+      "<USER_REQUEST>\n\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local time is: 2026-10-17T18:25:54",
+      "<USER_REQUEST>\n\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local time is: 2026-10-17T18:32:58",
+      "<USER_REQUEST>\neu quero mandar uma msg para a minha mulher falando q ja esta tarde e q a Luiza preci",
+      "<USER_REQUEST>\nNatalia olha a hr q é e a Luiza com certeza esta morrendo de sono e deve até ter dorm",
+      "<USER_REQUEST>\neu ja mandei da quela forma\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local t",
+      "<USER_REQUEST>\n\"Se você não for vir eu vou aí pegar ela\": Soa como imposição e invasão de espaço. El",
+      "<USER_REQUEST>\ne se ela não responder?\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local time ",
+      "<USER_REQUEST>\neu quero escrever novamente por favor eu quero saber da Luiza\n</USER_REQUEST>\n<ADDITI",
+      "<USER_REQUEST>\nno whats do celular esta apenas 1 palitinho na msg e no do whats web esta 2, sera q a",
+      "<USER_REQUEST>\nELA ESTA LA AINDA E NÃO ME RESPONDEU TBM O Q SERIA O INDICADO A FAZER EU NÃO MANDEI M",
+      "<USER_REQUEST>\nSEGUINTE EU NÃO FALO NUINCA ASSIM... E ELA TBM AJUDA A AJEITAR AS COISAS DA MENINA PA",
+      "<USER_REQUEST>\nEU VOU LIGAR NO CELULAR DELA\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local ",
+      "<USER_REQUEST>\nEU NÃO ESCREVI NADA DISSO AI EU SÓ MANDEI A MSG Q TE FALEI  MAIS NADA\n</USER_REQUEST>",
+      "<USER_REQUEST>\nE UMA INTERROGAÇÃO?\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local time is: ",
+      "<USER_REQUEST>\nEU LIGUEI E ELA NÃO ATENDEU\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local t",
+      "<USER_REQUEST>\nEU ESTOU DANDO PRINTE NA LOCALIZAÇAO DELA PQ MEU CELULAR IPHONE É VINCULADO COM O DEL",
+      "<USER_REQUEST>\n\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local time is: 2026-10-18T03:42:40",
+      "<USER_REQUEST>\nME FALE O Q VAMOS FAZER AMANHA?\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current loc",
+      "<USER_REQUEST>\nela chegou em casa... como nada tivesse acontecido e agora saiu falando q ia a mae de",
+      "<USER_REQUEST>\nela levou mas a minha filha quis ir ai não tenho como falar não\n</USER_REQUEST>\n<ADDI",
+      "<USER_REQUEST>\nminha filha quis irjunto e eu não posso falar nada pq tbm ela vai ir almoçar\n</USER_R",
+      "<USER_REQUEST>\nfui almoçar la as 13:30,m ai perto das 14:15 fui na casa da minha vó com ela q minha ",
+      "<USER_REQUEST>\neu ja disse q não falo essas coisas... e outra eu tenho certeza q ela foi para a casa",
+      "<USER_REQUEST>\ne outra a minha filha estuda as 13:20 da tarde\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\n",
+      "<USER_REQUEST>\nela trabalha fora não tem como levar. \n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe curr",
+      "<USER_REQUEST>\nelas dormiram em casa eu fiz a minha filha dormir junto a ela no quarto dela fiz o ma"
+    ],
+    "files_written": [],
+    "files_viewed": [],
+    "cwds": [],
+    "artifacts": [
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\b0395bc0-59fd-4b7c-b467-e8a0a25ad6ce\\audio_reader.html"
+    ],
+    "scratch_files": [],
+    "user_uploaded": [
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\b0395bc0-59fd-4b7c-b467-e8a0a25ad6ce\\.user_uploaded\\media_1792270430355_4b257b0c.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\b0395bc0-59fd-4b7c-b467-e8a0a25ad6ce\\.user_uploaded\\media_1792271677680_05da43d9.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\b0395bc0-59fd-4b7c-b467-e8a0a25ad6ce\\.user_uploaded\\media_1792272353065_41a07d7d.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\b0395bc0-59fd-4b7c-b467-e8a0a25ad6ce\\.user_uploaded\\media_1792272776736_4724e89c.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\b0395bc0-59fd-4b7c-b467-e8a0a25ad6ce\\.user_uploaded\\media_1792305758655_39fe940f.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\b0395bc0-59fd-4b7c-b467-e8a0a25ad6ce\\.user_uploaded\\media_1792359451756_621c76be.png"
+    ]
+  },
+  {
+    "uuid": "ada258a3-afe3-4a83-af7a-a4052dcdb826",
+    "date": "2026-10-18",
+    "first_prompt": "<USER_REQUEST> eu quero criar uma ia q seja do zero e sem guardrail </USER_REQUEST> <ADDITIONAL_METADATA> The current lo",
+    "all_prompts": [
+      "<USER_REQUEST>\neu quero criar uma ia q seja do zero e sem guardrail\n</USER_REQUEST>\n<ADDITIONAL_META",
+      "<USER_REQUEST>\nO Q EU PRECISO PARA INICIAR ELA COM EM INFROESTRUTURA ISSO VAI ME CUSTAR ALGUMA COISA",
+      "<USER_REQUEST>\nEU QUERIA UMA IA QUE TIVESSE UM CONHECIMENTO NIVEL QUANTITATIVO EM CONHECIMENTO DE RE",
+      "<USER_REQUEST>\nEU QUERIA UMA IA QUE TIVESSE UM CONHECIMENTO NIVEL QUANTITATIVO EM CONHECIMENTO DE RE",
+      "<USER_REQUEST>\nME EXPLIQUE COMO VC VAI FAZER BARREIRAS NO MEU COMPUTADOR Q BLOQUEI ACESSOS DE HACKES",
+      "<USER_REQUEST>\nOK... E AGORA EU QUERO SABER SE TERIA COMO ADQUIRIR O CONHECIMENTO PARA QUERAR AS BAR",
+      "<USER_REQUEST>\nMAS EU QUERO Q ESSA NOSSA SAIBA PARA EU NÃO NESCESSITAR DE NINGUEM EXTERNO SOMENTE ME",
+      "<USER_REQUEST>\nSE EU ESCOLHER FAZER O Q ESTA FALANDO PRIMEIRO E ESTRUTURAR ELA OFF LINE, EU CONSIGO ",
+      "<USER_REQUEST>\nMAS NA REALIDADE O Q SERIA O Q ESTAMOS CONTRUINDO? PQ EU PENSEI Q SERIA UM IA VOLTADA"
+    ],
+    "files_written": [],
+    "files_viewed": [],
+    "cwds": [],
+    "artifacts": [
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\ada258a3-afe3-4a83-af7a-a4052dcdb826\\audio_reader.html"
+    ],
+    "scratch_files": [],
+    "user_uploaded": []
+  },
+  {
+    "uuid": "4148e527-451e-4431-8215-17e8fa4d8cd6",
+    "date": "2026-10-19",
+    "first_prompt": "<USER_REQUEST> //+------------------------------------------------------------------+\r //|                              ",
+    "all_prompts": [
+      "<USER_REQUEST>\n//+------------------------------------------------------------------+\r\n//|          ",
+      "<USER_REQUEST>\nmande ele com outro nome e em arquivo ja mq5\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nTh",
+      "<USER_REQUEST>\nfaça os teste no ativo xauusd pelo menos 2 anos veja a config q vai ter uma porcentag",
+      "<USER_REQUEST>\nverifique se teve overfitting \n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current loca",
+      "<USER_REQUEST>\nqual seria o resultado de um equet partindo de 100 dolares. \n</USER_REQUEST>\n<ADDITIO",
+      "<USER_REQUEST>\nse eu deixar os mesmo parametros e colocar um canal de 200 pontos faça p mim o teste.",
+      "<USER_REQUEST>\ne com 150 e 4 ordens\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local time is:",
+      "<USER_REQUEST>\nvc pegou os dados q eu lhe enviei do mt5?\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe c",
+      "<USER_REQUEST>\nsim... tem nas pastas. \n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local time ",
+      "<USER_REQUEST>\nsimule essa config\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local time is: 2",
+      "<USER_REQUEST>\ne com essa \n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local time is: 2026-10-",
+      "<USER_REQUEST>\nquero q vc faça novamente com um saldo da conta de 100 dolares e calcule tbm com a ma",
+      "<USER_REQUEST>\n/grill-me Audita esse projeto, por obséquio. \nVocê está atuando como Auditor Quantita",
+      "<USER_REQUEST>\n/grill-me Audita esse projeto, por obséquio. \nVocê está atuando como Auditor Quantita",
+      "<USER_REQUEST>\n/grill-me Beleza, aqui é o guardrail, Sunrise. Vamos estruturar os testes que eu pedi",
+      "<USER_REQUEST>\nVarra pelas conversas do usuário e verifique todas e centralize-as em um diretório or",
+      "<USER_REQUEST>\n/grill-me Varra pelas conversas do usuário e verifique todas e centralize-as em um di"
+    ],
+    "files_written": [],
+    "files_viewed": [],
+    "cwds": [],
+    "artifacts": [
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\audio_reader.html"
+    ],
+    "scratch_files": [
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\scratch\\compare_variations.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\scratch\\detailed_analysis.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\scratch\\diagnose.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\scratch\\fine_tuning.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\scratch\\forensic_audit_step1.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\scratch\\forensic_falsification_test.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\scratch\\inspect_all_conversations.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\scratch\\overfitting_audit.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\scratch\\rolling_windows_audit.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\scratch\\run_sessions_test.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\scratch\\run_xauusd_refined.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\scratch\\run_xauusd_tests.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\scratch\\simulate_100usd_margin_500.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\scratch\\simulate_second_image.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\scratch\\simulate_user_image_config.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\scratch\\strict_causal_audit.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\scratch\\test_100_equity.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\scratch\\test_canal_150_ordens4.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\scratch\\test_canal_200.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\scratch\\test_user_exact_set.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\scratch\\trend_test.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\scratch\\true_causal_audit.py",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\scratch\\__pycache__\\forensic_falsification_test.cpython-314.pyc",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\scratch\\__pycache__\\run_sessions_test.cpython-314.pyc",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\scratch\\__pycache__\\run_xauusd_tests.cpython-314.pyc",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\scratch\\__pycache__\\simulate_user_image_config.cpython-314.pyc",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\scratch\\__pycache__\\test_canal_200.cpython-314.pyc",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\scratch\\__pycache__\\trend_test.cpython-314.pyc"
+    ],
+    "user_uploaded": [
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\.user_uploaded\\media_1792397946640_8e6e5eac.png",
+      "C:\\Users\\Vini_Burgo\\.gemini\\antigravity\\brain\\4148e527-451e-4431-8215-17e8fa4d8cd6\\.user_uploaded\\media_1792399236978_c168ba9e.png"
+    ]
+  }
+]

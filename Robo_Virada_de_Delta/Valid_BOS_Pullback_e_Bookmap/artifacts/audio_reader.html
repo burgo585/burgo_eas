@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Leitor de Áudio - Organização por Pastas Separadas</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #0e121c; color: #e0e6ed; padding: 14px; display: flex; flex-direction: column; gap: 10px; border-radius: 8px; border: 1px solid #23314a; }
+    .header { display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 600; color: #64b5f6; }
+    .status-badge { background: #1a273b; padding: 3px 8px; border-radius: 4px; font-size: 11px; color: #4fc3f7; }
+    .text-box { background: #151d2c; border: 1px solid #1f2d42; border-radius: 6px; padding: 10px; font-size: 12.5px; line-height: 1.5; color: #b0bec5; min-height: 55px; max-height: 120px; overflow-y: auto; }
+    .highlight { background: rgba(79, 195, 247, 0.25); color: #fff; padding: 1px 4px; border-radius: 3px; font-weight: 500; }
+    .progress-bar-container { background: #1e293b; height: 6px; border-radius: 3px; overflow: hidden; position: relative; }
+    .progress-bar { background: linear-gradient(90deg, #0288d1, #00e676); width: 0%; height: 100%; transition: width 0.2s ease; }
+    .controls { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+    .btn-group { display: flex; align-items: center; gap: 6px; }
+    button { background: #1e2c44; color: #e2e8f0; border: 1px solid #33486a; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 500; display: inline-flex; align-items: center; gap: 5px; transition: all 0.15s ease; }
+    button:hover { background: #273856; border-color: #4a6794; color: #fff; }
+    button:active { transform: scale(0.97); }
+    .btn-primary { background: #0288d1; border-color: #039be5; color: #fff; }
+    .btn-primary:hover { background: #039be5; border-color: #29b6f6; }
+    .speed-select { background: #151d2c; color: #e2e8f0; border: 1px solid #33486a; padding: 5px 8px; border-radius: 5px; font-size: 11.5px; cursor: pointer; }
+    .speed-select:focus { outline: none; border-color: #4fc3f7; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <span>🔊 Resumo Falado: Separação em Pastas Dedicadas (Ouro e Bitcoin)</span>
+    <span class="status-badge" id="statusBadge">Pronto para reproduzir</span>
+  </div>
+
+  <div class="text-box" id="textBox">
+    <!-- Texto segmentado carregado dinamicamente -->
+  </div>
+
+  <div class="progress-bar-container">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
+  <div class="controls">
+    <div class="btn-group">
+      <button id="btnPrev" title="Voltar trecho">⏮️</button>
+      <button id="btnPlayPause" class="btn-primary">▶️ Ouvir Resposta</button>
+      <button id="btnNext" title="Avançar trecho">⏭️</button>
+      <button id="btnStop" title="Parar e resetar">⏹️</button>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #90a4ae;">
+      <label for="speedSelect">Velocidade:</label>
+      <select id="speedSelect" class="speed-select">
+        <option value="0.75">0.75x</option>
+        <option value="1.0" selected>1.0x</option>
+        <option value="1.25">1.25x</option>
+        <option value="1.5">1.5x</option>
+        <option value="1.75">1.75x</option>
+        <option value="2.0">2.0x</option>
+      </select>
+    </div>
+  </div>
+
+  <script>
+    const fullText = "A separação completa em pastas dedicadas foi concluída com sucesso. Agora você possui uma pasta exclusiva para o Ouro chamada Valid BOS Bookmap XAUUSD, contendo o robô, o indicador, o preset de ouro e o addon do Bookmap. E uma pasta exclusiva para o Bitcoin chamada Valid BOS Bookmap BTCUSD, contendo o robô e o indicador já pré-configurados de fábrica com os parâmetros exatos do Bitcoin, além do seu preset e addon. No MetaTrader 5, criamos as mesmas subpastas dentro de Experts e Indicators, permitindo que você localize cada ativo de forma clara e organizada no painel do navegador, sem nenhum risco de misturar as configurações. Todos os executáveis foram compilados com zero erros e os arquivos originais permaneceram 100% preservados.";
+
+    function splitSentences(text) {
+      return text.match(/[^.!?]+[.!?]+|[^.!?]+$/g).map(s => s.trim()).filter(s => s.length > 0);
+    }
+
+    const sentences = splitSentences(fullText);
+    let currentIndex = 0;
+    let isPlaying = false;
+    let isPaused = false;
+    let currentRate = 1.0;
+    let synth = window.speechSynthesis;
+    let ptVoice = null;
+
+    const textBox = document.getElementById('textBox');
+    const progressBar = document.getElementById('progressBar');
+    const statusBadge = document.getElementById('statusBadge');
+    const btnPlayPause = document.getElementById('btnPlayPause');
+    const btnPrev = document.getElementById('btnPrev');
+    const btnNext = document.getElementById('btnNext');
+    const btnStop = document.getElementById('btnStop');
+    const speedSelect = document.getElementById('speedSelect');
+
+    function renderSentences() {
+      textBox.innerHTML = sentences.map((s, idx) => `<span id="sent-${idx}" class="${idx === currentIndex && isPlaying ? 'highlight' : ''}">${s} </span>`).join('');
+    }
+
+    function initVoices() {
+      const voices = synth.getVoices();
+      ptVoice = voices.find(v => v.lang === 'pt-BR' || v.lang.startsWith('pt')) || null;
+    }
+
+    if (speechSynthesis.onvoiceschanged !== undefined) {
+      speechSynthesis.onvoiceschanged = initVoices;
+    }
+    initVoices();
+
+    function updateProgress() {
+      const pct = (sentences.length > 0) ? ((currentIndex) / sentences.length) * 100 : 0;
+      progressBar.style.width = pct + '%';
+    }
+
+    function speakCurrentSentence() {
+      if (currentIndex >= sentences.length) {
+        stopPlayback();
+        statusBadge.textContent = "Concluído";
+        progressBar.style.width = '100%';
+        return;
+      }
+
+      synth.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(sentences[currentIndex]);
+      utterance.lang = 'pt-BR';
+      if (ptVoice) utterance.voice = ptVoice;
+      utterance.rate = currentRate;
+
+      utterance.onstart = () => {
+        isPlaying = true;
+        isPaused = false;
+        btnPlayPause.textContent = "⏸️ Pausar";
+        statusBadge.textContent = `Reproduzindo trecho ${currentIndex + 1} de ${sentences.length}`;
+        renderSentences();
+        updateProgress();
+
+        const el = document.getElementById(`sent-${currentIndex}`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      };
+
+      utterance.onend = () => {
+        if (isPlaying && !isPaused) {
+          currentIndex++;
+          speakCurrentSentence();
+        }
+      };
+
+      utterance.onerror = (e) => {
+        console.error("Erro na síntese:", e);
+      };
+
+      synth.speak(utterance);
+    }
+
+    function play() {
+      isPlaying = true;
+      isPaused = false;
+      speakCurrentSentence();
+    }
+
+    function pause() {
+      isPaused = true;
+      isPlaying = false;
+      synth.cancel();
+      btnPlayPause.textContent = "▶️ Continuar";
+      statusBadge.textContent = "Pausado";
+      renderSentences();
+    }
+
+    function stopPlayback() {
+      isPlaying = false;
+      isPaused = false;
+      synth.cancel();
+      currentIndex = 0;
+      btnPlayPause.textContent = "▶️ Ouvir Resposta";
+      statusBadge.textContent = "Parado";
+      renderSentences();
+      updateProgress();
+    }
+
+    btnPlayPause.addEventListener('click', () => {
+      if (!isPlaying && !isPaused) {
+        play();
+      } else if (isPlaying && !isPaused) {
+        pause();
+      } else if (isPaused) {
+        play();
+      }
+    });
+
+    btnPrev.addEventListener('click', () => {
+      if (currentIndex > 0) {
+        currentIndex--;
+        if (isPlaying || isPaused) {
+          play();
+        } else {
+          renderSentences();
+          updateProgress();
+        }
+      }
+    });
+
+    btnNext.addEventListener('click', () => {
+      if (currentIndex < sentences.length - 1) {
+        currentIndex++;
+        if (isPlaying || isPaused) {
+          play();
+        } else {
+          renderSentences();
+          updateProgress();
+        }
+      } else {
+        stopPlayback();
+      }
+    });
+
+    btnStop.addEventListener('click', () => {
+      stopPlayback();
+    });
+
+    speedSelect.addEventListener('change', (e) => {
+      currentRate = parseFloat(e.target.value);
+      if (isPlaying) {
+        speakCurrentSentence();
+      }
+    });
+
+    renderSentences();
+    updateProgress();
+  </script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+# Antigravity Gitignore - Repositório Otimizado
+
+# Mídias e vídeos pesados
+*.mp4
+*.avi
+*.mov
+*.mkv
+
+# Pacotes e temporários
+*.zip
+*.tar.gz
+*.7z
+*.tmp
+tempmediaStorage/
+.system_generated/tasks/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# MT5 logs e caches pesados
+*.tlog
+*.log

@@ -1,0 +1,83 @@
+{
+  "MT5_M5_pure": {
+    "total_trades": 1034,
+    "win_rate": 35.78,
+    "profit_factor": 0.86,
+    "net_profit_pct": -68.8,
+    "max_drawdown": 70.57,
+    "expectancy_r": -0.105,
+    "final_balance": 3120.36
+  },
+  "MT5_M5_trend_filtered": {
+    "total_trades": 550,
+    "win_rate": 36.55,
+    "profit_factor": 0.81,
+    "net_profit_pct": -40.25,
+    "max_drawdown": 55.44,
+    "expectancy_r": -0.086,
+    "final_balance": 5975.27
+  },
+  "MT5_M5_high_precision": {
+    "total_trades": 99,
+    "win_rate": 32.32,
+    "profit_factor": 0.69,
+    "net_profit_pct": -17.88,
+    "max_drawdown": 20.52,
+    "expectancy_r": -0.192,
+    "final_balance": 8212.42
+  },
+  "MT5_M15_pure": {
+    "total_trades": 630,
+    "win_rate": 36.83,
+    "profit_factor": 0.94,
+    "net_profit_pct": -42.07,
+    "max_drawdown": 46.82,
+    "expectancy_r": -0.079,
+    "final_balance": 5793.34
+  },
+  "MT5_M15_trend_filtered": {
+    "total_trades": 322,
+    "win_rate": 39.75,
+    "profit_factor": 0.98,
+    "net_profit_pct": -4.31,
+    "max_drawdown": 26.53,
+    "expectancy_r": -0.006,
+    "final_balance": 9569.32
+  },
+  "MT5_M15_high_precision": {
+    "total_trades": 87,
+    "win_rate": 44.83,
+    "profit_factor": 1.19,
+    "net_profit_pct": 10.32,
+    "max_drawdown": 10.2,
+    "expectancy_r": 0.121,
+    "final_balance": 11032.27
+  },
+  "TV_M5_pure": {
+    "total_trades": 990,
+    "win_rate": 36.26,
+    "profit_factor": 0.88,
+    "net_profit_pct": -63.09,
+    "max_drawdown": 67.45,
+    "expectancy_r": -0.093,
+    "final_balance": 3690.77
+  },
+  "TV_M5_trend_filtered": {
+    "total_trades": 520,
+    "win_rate": 37.31,
+    "profit_factor": 0.87,
+    "net_profit_pct": -32.16,
+    "max_drawdown": 51.42,
+    "expectancy_r": -0.067,
+    "final_balance": 6784.0
+  },
+  "TV_M5_high_precision": {
+    "total_trades": 140,
+    "win_rate": 35.71,
+    "profit_factor": 0.82,
+    "net_profit_pct": -14.79,
+    "max_drawdown": 23.14,
+    "expectancy_r": -0.107,
+    "final_balance": 8520.59
+  }
+}

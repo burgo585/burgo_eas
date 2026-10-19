@@ -1,0 +1,453 @@
+//@version=5
+strategy("Valid BOS Pullback [Institutional Quant Strategy]", 
+         shorttitle="Valid BOS Pullback", 
+         overlay=true, 
+         initial_capital=10000, 
+         default_qty_type=strategy.percent_of_equity, 
+         default_qty_value=2, 
+         pyramiding=0, 
+         calc_on_order_fills=false, 
+         calc_on_every_tick=false)
+
+// ==============================================================================
+// SISTEMA INSTITUCIONAL: VALID BOS PULLBACK
+// Conceito: Rompimento estrutural com filtro de expansão e teste de polaridade.
+// Evita armadilhas de falso BOS (liquidity sweeps e ruído de mercado).
+// ==============================================================================
+
+// ------------------------------------------------------------------------------
+// INPUTS & CONFIGURAÇÕES
+// ------------------------------------------------------------------------------
+var string GRP_STRUC = "1. Detecção de Estrutura & Filtro de Ruído"
+i_pivotLegs          = input.int(3, "Tamanho do Pivô (Swing High/Low)", minval=2, maxval=25, group=GRP_STRUC, 
+                                 tooltip="Número de barras à esquerda e à direita para confirmar topos e fundos institucionais.")
+i_minExpansionBars   = input.int(2, "Barras Mínimas de Expansão (Filtro)", minval=1, maxval=30, group=GRP_STRUC, 
+                                 tooltip="Número mínimo de barras de deslocamento direcional após o rompimento antes do recuo. Elimina falsos rompimentos imediatos.")
+i_bosConfirmMethod   = input.string("Fechamento do Candle", "Confirmação do BOS", options=["Fechamento do Candle", "Toque do Preço (Wick)"], group=GRP_STRUC,
+                                    tooltip="Fechamento do Candle previne 100% de repainting e evita violadas falsas.")
+i_maxStructureBars   = input.int(40, "Expiração Máxima da Estrutura (Barras)", minval=10, maxval=150, group=GRP_STRUC,
+                                 tooltip="Número máximo de barras para a conclusão do setup antes de cancelar.")
+
+var string GRP_EXEC  = "2. Parâmetros Operacionais (Gatilhos e Risco)"
+i_entryTrigger       = input.string("Rompimento do Valid BOS", "Modo de Entrada", 
+                                    options=["Rompimento do Valid BOS", "Rejeição do Valid Pullback (Agressivo)"], group=GRP_EXEC,
+                                    tooltip="Valid BOS: Entrada conservadora de continuidade institucional.\nRejeição Pullback: Entrada agressiva no teste do suporte/resistência.")
+i_riskRewardRatio    = input.float(2.0, "Relação Risco / Retorno (RR)", minval=0.5, maxval=10.0, step=0.1, group=GRP_EXEC,
+                                   tooltip="Multiplicador do risco para calcular o Take Profit.")
+i_slBufferTicks      = input.int(5, "Folga do Stop Loss (Ticks)", minval=0, maxval=50, group=GRP_EXEC,
+                                 tooltip="Distância adicional além da mínima/máxima do pullback para evitar stopouts por violinada.")
+i_useAtrBuffer       = input.bool(false, "Usar Buffer dinâmico via ATR?", group=GRP_EXEC)
+i_atrLength          = input.int(14, "Período do ATR", group=GRP_EXEC)
+i_atrMultiplier      = input.float(0.5, "Multiplicador do ATR", step=0.1, group=GRP_EXEC)
+
+var string GRP_STYLE = "3. Estilo Visual & Design Institucional"
+i_showLines          = input.bool(true, "Desenhar Linhas de Estrutura", group=GRP_STYLE)
+i_showLabels         = input.bool(true, "Exibir Rótulos de Texto", group=GRP_STYLE)
+i_showTradeBoxes     = input.bool(true, "Exibir Caixas de Risco / Retorno", group=GRP_STYLE)
+i_colorBull          = input.color(color.new(#089981, 0), "Cor Alta (Bullish)", group=GRP_STYLE)
+i_colorBear          = input.color(color.new(#f23645, 0), "Cor Baixa (Bearish)", group=GRP_STYLE)
+i_colorPullback      = input.color(color.new(#2962ff, 0), "Cor do Pullback", group=GRP_STYLE)
+
+// ------------------------------------------------------------------------------
+// CÁLCULOS AUXILIARES
+// ------------------------------------------------------------------------------
+atrVal = ta.atr(i_atrLength)
+tickSize = syminfo.mintick
+slExtraDist = (i_useAtrBuffer ? (atrVal * i_atrMultiplier) : (i_slBufferTicks * tickSize))
+
+// Detecção de Topos e Fundos (Pivots)
+pHi = ta.pivothigh(high, i_pivotLegs, i_pivotLegs)
+pLo = ta.pivotlow(low, i_pivotLegs, i_pivotLegs)
+
+// Armazenamento histórico dos últimos pivôs confirmados
+var float lastConfirmedSwingHigh = na
+var int   lastConfirmedHighBar   = na
+var float lastConfirmedSwingLow  = na
+var int   lastConfirmedLowBar    = na
+
+if not na(pHi)
+    lastConfirmedSwingHigh := pHi
+    lastConfirmedHighBar   := bar_index - i_pivotLegs
+
+if not na(pLo)
+    lastConfirmedSwingLow  := pLo
+    lastConfirmedLowBar    := bar_index - i_pivotLegs
+
+// ------------------------------------------------------------------------------
+// ESTRUTURA DE ESTADO DA MÁQUINA QUANTITATIVA (Bullish & Bearish)
+// ------------------------------------------------------------------------------
+// Estados:
+// 0 = IDLE (Procurando rompimento inicial)
+// 1 = BREAKOUT_OCCURRED (Nível rompido, aguardando expansão de N barras)
+// 2 = EXPANSION_COMPLETE (Mínimo de barras atingido, aguardando recuo tocar o nível)
+// 3 = VALID_PULLBACK_CONFIRMED (Tocou o nível de referência, aguardando rompimento do novo extremo)
+
+var int   bull_state          = 0
+var float bull_refLevel       = na
+var int   bull_breakoutBar    = na
+var float bull_extremeHigh    = na
+var int   bull_extremeHighBar = na
+var float bull_pullbackLow    = na
+var int   bull_pullbackBar    = na
+var line  bull_refLine        = na
+
+var int   bear_state          = 0
+var float bear_refLevel       = na
+var int   bear_breakoutBar    = na
+var float bear_extremeLow     = na
+var int   bear_extremeLowBar  = na
+var float bear_pullbackHigh   = na
+var int   bear_pullbackBar    = na
+var line  bear_refLine        = na
+
+// ------------------------------------------------------------------------------
+// LÓGICA DE ALTA (BULLISH VALID BOS PULLBACK)
+// ------------------------------------------------------------------------------
+// Condição de fechamento de barra para execução não-repintante
+isConfirmedBar = barstate.isconfirmed
+
+if isConfirmedBar
+    // 1. Identificação do Nível Inicial e Rompimento
+    if bull_state == 0
+        if not na(lastConfirmedSwingHigh) and bar_index > lastConfirmedHighBar
+            // Verifica se o candle atual rompeu acima do Topo Anterior
+            bool breakout = (i_bosConfirmMethod == "Fechamento do Candle") ? (close > lastConfirmedSwingHigh and close[1] <= lastConfirmedSwingHigh) : (high > lastConfirmedSwingHigh and high[1] <= lastConfirmedSwingHigh)
+            
+            if breakout
+                bull_state          := 1
+                bull_refLevel       := lastConfirmedSwingHigh
+                bull_breakoutBar    := bar_index
+                bull_extremeHigh    := high
+                bull_extremeHighBar := bar_index
+                
+                if i_showLines
+                    bull_refLine := line.new(bull_breakoutBar, bull_refLevel, bar_index, bull_refLevel, 
+                                             color=color.new(i_colorBull, 30), width=2, style=line.style_solid)
+
+    // 2 & 3. Expansão e Filtro de Barras Mínimas
+    else if bull_state == 1
+        // Atualiza a linha de referência até a barra atual
+        if not na(bull_refLine)
+            line.set_x2(bull_refLine, bar_index)
+            
+        // Atualiza o novo topo alcançado durante a expansão
+        if high > bull_extremeHigh
+            bull_extremeHigh    := high
+            bull_extremeHighBar := bar_index
+
+        int barsSinceBreakout = bar_index - bull_breakoutBar
+
+        // Se o preço recuar e tocar o nível ANTES do mínimo de barras de expansão, a estrutura é RUÍDO (inválida)
+        if low <= bull_refLevel and barsSinceBreakout < i_minExpansionBars
+            bull_state := 0
+            if not na(bull_refLine)
+                line.delete(bull_refLine)
+                bull_refLine := na
+
+        // Se cumpriu as barras mínimas de expansão com o preço sustentado acima do nível
+        else if barsSinceBreakout >= i_minExpansionBars
+            bull_state := 2
+
+    // 4. O Recuo Válido (Valid Pullback)
+    else if bull_state == 2
+        if not na(bull_refLine)
+            line.set_x2(bull_refLine, bar_index)
+
+        // Continua atualizando novo topo se ainda estiver expandindo
+        if high > bull_extremeHigh
+            bull_extremeHigh    := high
+            bull_extremeHighBar := bar_index
+
+        // Checagem de expiração por excesso de barras
+        if (bar_index - bull_breakoutBar) > i_maxStructureBars
+            bull_state := 0
+            if not na(bull_refLine)
+                line.delete(bull_refLine)
+                bull_refLine := na
+        else
+            // Preço retorna e toca obrigatoriamente o nível de referência traçado
+            if low <= bull_refLevel
+                // O recuo não pode ter colapsado completamente (filtro de invalidação macro)
+                // Se fechou muito abaixo ou rompeu o fundo estrutural anterior, descarta
+                if close < (bull_refLevel - (bull_extremeHigh - bull_refLevel)) // Invalidação se perder 100% da expansão
+                    bull_state := 0
+                    if not na(bull_refLine)
+                        line.delete(bull_refLine)
+                        bull_refLine := na
+                else
+                    bull_state        := 3
+                    bull_pullbackLow  := low
+                    bull_pullbackBar  := bar_index
+                    
+                    // Design: Linha de referência se torna PONTILHADA
+                    if not na(bull_refLine)
+                        line.set_style(bull_refLine, line.style_dotted)
+                        line.set_color(bull_refLine, i_colorPullback)
+                    
+                    // Design: Rótulo "Valid Pullback"
+                    if i_showLabels
+                        label.new(bar_index, low, "Valid Pullback", 
+                                  color=color.new(i_colorPullback, 15), 
+                                  textcolor=color.white, 
+                                  style=label.style_label_up, 
+                                  size=size.small)
+
+    // 5. O Rompimento Válido (Valid BOS)
+    else if bull_state == 3
+        if not na(bull_refLine)
+            line.set_x2(bull_refLine, bar_index)
+
+        // Rastreia a menor mínima deixada durante o recuo para ser a base do Stop Loss
+        if low < bull_pullbackLow
+            bull_pullbackLow := low
+            bull_pullbackBar := bar_index
+
+        // Checagem de invalidação: se fechar substancialmente abaixo do nível do pullback
+        if close < (bull_refLevel - (bull_extremeHigh - bull_refLevel) * 0.5) or (bar_index - bull_breakoutBar) > i_maxStructureBars
+            bull_state := 0
+            if not na(bull_refLine)
+                line.delete(bull_refLine)
+                bull_refLine := na
+        else
+            // Confirmação de Rompimento do Novo Topo (Valid BOS)
+            bool bosTrigger = (i_bosConfirmMethod == "Fechamento do Candle") ? (close > bull_extremeHigh) : (high > bull_extremeHigh)
+
+            if bosTrigger
+                // Design: Linha se torna SÓLIDA VERDE
+                if not na(bull_refLine)
+                    line.set_style(bull_refLine, line.style_solid)
+                    line.set_color(bull_refLine, i_colorBull)
+                    line.set_width(bull_refLine, 2)
+
+                // Design: Rótulo "Valid BOS"
+                if i_showLabels
+                    label.new(bar_index, high, "Valid BOS (Bull)", 
+                              color=color.new(i_colorBull, 0), 
+                              textcolor=color.white, 
+                              style=label.style_label_down, 
+                              size=size.normal)
+
+                // Execução de Ordem (Automação)
+                if i_entryTrigger == "Rompimento do Valid BOS"
+                    float entryPrice = close
+                    float stopPrice  = bull_pullbackLow - slExtraDist
+                    float riskDist   = entryPrice - stopPrice
+                    
+                    if riskDist > 0
+                        float takePrice = entryPrice + (riskDist * i_riskRewardRatio)
+                        strategy.entry("Long_Valid_BOS", strategy.long)
+                        strategy.exit("TP_SL_Long", "Long_Valid_BOS", stop=stopPrice, limit=takePrice)
+
+                        if i_showTradeBoxes
+                            box.new(bar_index, entryPrice, bar_index + 15, stopPrice, 
+                                    border_color=color.red, bgcolor=color.new(color.red, 85))
+                            box.new(bar_index, takePrice, bar_index + 15, entryPrice, 
+                                    border_color=color.green, bgcolor=color.new(color.green, 85))
+
+                // Setup concluído com sucesso
+                bull_state := 0
+                bull_refLine := na
+
+// Entrada Agressiva de Alta no Pullback Rejection
+if isConfirmedBar and bull_state == 3 and i_entryTrigger == "Rejeição do Valid Pullback (Agressivo)" and bar_index == bull_pullbackBar
+    // Confirma se candle fechou verde ou rejeitou com pavio
+    if close > open
+        float entryPrice = close
+        float stopPrice  = bull_pullbackLow - slExtraDist
+        float riskDist   = entryPrice - stopPrice
+        if riskDist > 0
+            float takePrice = entryPrice + (riskDist * i_riskRewardRatio)
+            strategy.entry("Long_Aggressive_PB", strategy.long)
+            strategy.exit("TP_SL_Long_PB", "Long_Aggressive_PB", stop=stopPrice, limit=takePrice)
+
+
+// ------------------------------------------------------------------------------
+// LÓGICA DE BAIXA (BEARISH VALID BOS PULLBACK)
+// ------------------------------------------------------------------------------
+if isConfirmedBar
+    // 1. Identificação do Nível Inicial e Rompimento
+    if bear_state == 0
+        if not na(lastConfirmedSwingLow) and bar_index > lastConfirmedLowBar
+            bool breakout = (i_bosConfirmMethod == "Fechamento do Candle") ? (close < lastConfirmedSwingLow and close[1] >= lastConfirmedSwingLow) : (low < lastConfirmedSwingLow and low[1] >= lastConfirmedSwingLow)
+            
+            if breakout
+                bear_state          := 1
+                bear_refLevel       := lastConfirmedSwingLow
+                bear_breakoutBar    := bar_index
+                bear_extremeLow     := low
+                bear_extremeLowBar  := bar_index
+                
+                if i_showLines
+                    bear_refLine := line.new(bear_breakoutBar, bear_refLevel, bar_index, bear_refLevel, 
+                                             color=color.new(i_colorBear, 30), width=2, style=line.style_solid)
+
+    // 2 & 3. Expansão e Filtro de Barras Mínimas
+    else if bear_state == 1
+        if not na(bear_refLine)
+            line.set_x2(bear_refLine, bar_index)
+
+        if low < bear_extremeLow
+            bear_extremeLow    := low
+            bear_extremeLowBar := bar_index
+
+        int barsSinceBreakout = bar_index - bear_breakoutBar
+
+        // Se o preço retornar e tocar o nível antes das barras mínimas, é ruído
+        if high >= bear_refLevel and barsSinceBreakout < i_minExpansionBars
+            bear_state := 0
+            if not na(bear_refLine)
+                line.delete(bear_refLine)
+                bear_refLine := na
+        else if barsSinceBreakout >= i_minExpansionBars
+            bear_state := 2
+
+    // 4. O Recuo Válido (Valid Pullback)
+    else if bear_state == 2
+        if not na(bear_refLine)
+            line.set_x2(bear_refLine, bar_index)
+
+        if low < bear_extremeLow
+            bear_extremeLow    := low
+            bear_extremeLowBar := bar_index
+
+        if (bar_index - bear_breakoutBar) > i_maxStructureBars
+            bear_state := 0
+            if not na(bear_refLine)
+                line.delete(bear_refLine)
+                bear_refLine := na
+        else
+            // Preço retorna e toca obrigatoriamente o nível de referência traçado
+            if high >= bear_refLevel
+                if close > (bear_refLevel + (bear_refLevel - bear_extremeLow))
+                    bear_state := 0
+                    if not na(bear_refLine)
+                        line.delete(bear_refLine)
+                        bear_refLine := na
+                else
+                    bear_state         := 3
+                    bear_pullbackHigh  := high
+                    bear_pullbackBar   := bar_index
+                    
+                    // Design: Linha de referência se torna PONTILHADA
+                    if not na(bear_refLine)
+                        line.set_style(bear_refLine, line.style_dotted)
+                        line.set_color(bear_refLine, i_colorPullback)
+                    
+                    // Design: Rótulo "Valid Pullback"
+                    if i_showLabels
+                        label.new(bar_index, high, "Valid Pullback", 
+                                  color=color.new(i_colorPullback, 15), 
+                                  textcolor=color.white, 
+                                  style=label.style_label_down, 
+                                  size=size.small)
+
+    // 5. O Rompimento Válido (Valid BOS)
+    else if bear_state == 3
+        if not na(bear_refLine)
+            line.set_x2(bear_refLine, bar_index)
+
+        if high > bear_pullbackHigh
+            bear_pullbackHigh := high
+            bear_pullbackBar  := bar_index
+
+        if close > (bear_refLevel + (bear_refLevel - bear_extremeLow) * 0.5) or (bar_index - bear_breakoutBar) > i_maxStructureBars
+            bear_state := 0
+            if not na(bear_refLine)
+                line.delete(bear_refLine)
+                bear_refLine := na
+        else
+            bool bosTrigger = (i_bosConfirmMethod == "Fechamento do Candle") ? (close < bear_extremeLow) : (low < bear_extremeLow)
+
+            if bosTrigger
+                // Design: Linha se torna SÓLIDA VERMELHA
+                if not na(bear_refLine)
+                    line.set_style(bear_refLine, line.style_solid)
+                    line.set_color(bear_refLine, i_colorBear)
+                    line.set_width(bear_refLine, 2)
+
+                // Design: Rótulo "Valid BOS"
+                if i_showLabels
+                    label.new(bar_index, low, "Valid BOS (Bear)", 
+                              color=color.new(i_colorBear, 0), 
+                              textcolor=color.white, 
+                              style=label.style_label_up, 
+                              size=size.normal)
+
+                // Execução de Ordem (Automação)
+                if i_entryTrigger == "Rompimento do Valid BOS"
+                    float entryPrice = close
+                    float stopPrice  = bear_pullbackHigh + slExtraDist
+                    float riskDist   = stopPrice - entryPrice
+                    
+                    if riskDist > 0
+                        float takePrice = entryPrice - (riskDist * i_riskRewardRatio)
+                        strategy.entry("Short_Valid_BOS", strategy.short)
+                        strategy.exit("TP_SL_Short", "Short_Valid_BOS", stop=stopPrice, limit=takePrice)
+
+                        if i_showTradeBoxes
+                            box.new(bar_index, stopPrice, bar_index + 15, entryPrice, 
+                                    border_color=color.red, bgcolor=color.new(color.red, 85))
+                            box.new(bar_index, entryPrice, bar_index + 15, takePrice, 
+                                    border_color=color.green, bgcolor=color.new(color.green, 85))
+
+                bear_state := 0
+                bear_refLine := na
+
+// Entrada Agressiva de Baixa no Pullback Rejection
+if isConfirmedBar and bear_state == 3 and i_entryTrigger == "Rejeição do Valid Pullback (Agressivo)" and bar_index == bear_pullbackBar
+    if close < open
+        float entryPrice = close
+        float stopPrice  = bear_pullbackHigh + slExtraDist
+        float riskDist   = stopPrice - entryPrice
+        if riskDist > 0
+            float takePrice = entryPrice - (riskDist * i_riskRewardRatio)
+            strategy.entry("Short_Aggressive_PB", strategy.short)
+            strategy.exit("TP_SL_Short_PB", "Short_Aggressive_PB", stop=stopPrice, limit=takePrice)
+
+// ------------------------------------------------------------------------------
+// LINHAS ATIVAS DE NÍVEIS VIGENTES (RESISTÊNCIA & SUPORTE INSTITUCIONAL)
+// ------------------------------------------------------------------------------
+var line activeHighLine = na
+var line activeLowLine  = na
+
+if barstate.islast and i_showLines
+    line.delete(activeHighLine)
+    line.delete(activeLowLine)
+    if not na(lastConfirmedSwingHigh)
+        activeHighLine := line.new(bar_index - 25, lastConfirmedSwingHigh, bar_index + 10, lastConfirmedSwingHigh, 
+                                   color=color.orange, width=1, style=line.style_dashdot)
+    if not na(lastConfirmedSwingLow)
+        activeLowLine  := line.new(bar_index - 25, lastConfirmedSwingLow, bar_index + 10, lastConfirmedSwingLow, 
+                                   color=color.orange, width=1, style=line.style_dashdot)
+
+// ------------------------------------------------------------------------------
+// PAINEL DE MONITORAMENTO INSTITUCIONAL (DASHBOARD ON-CHART)
+// ------------------------------------------------------------------------------
+var table infoTable = table.new(position.top_right, 2, 6, bgcolor=color.new(#161a25, 10), border_color=color.new(#2d374b, 0), border_width=1)
+
+f_getStateName(int state) =>
+    switch state
+        0 => "Idle (Aguardando)"
+        1 => "Rompido (Expandindo...)"
+        2 => "Expansão OK (Aguard. Recuo)"
+        3 => "Valid Pullback Ativo!"
+        => "Desconhecido"
+
+if barstate.islast
+    table.cell(infoTable, 0, 0, "VALID BOS PULLBACK", text_color=color.white, text_size=size.small, bgcolor=color.new(#2962ff, 30))
+    table.cell(infoTable, 1, 0, "MONITOR INSTITUCIONAL", text_color=color.white, text_size=size.small, bgcolor=color.new(#2962ff, 30))
+    
+    table.cell(infoTable, 0, 1, "Topo Vigente (Resistência)", text_color=color.white, text_size=size.small)
+    table.cell(infoTable, 1, 1, not na(lastConfirmedSwingHigh) ? str.tostring(lastConfirmedSwingHigh, "#.##") : "Calculando...", text_color=color.orange, text_size=size.small)
+
+    table.cell(infoTable, 0, 2, "Fundo Vigente (Suporte)", text_color=color.white, text_size=size.small)
+    table.cell(infoTable, 1, 2, not na(lastConfirmedSwingLow) ? str.tostring(lastConfirmedSwingLow, "#.##") : "Calculando...", text_color=color.orange, text_size=size.small)
+
+    table.cell(infoTable, 0, 3, "Estrutura de Alta", text_color=color.white, text_size=size.small)
+    table.cell(infoTable, 1, 3, f_getStateName(bull_state), text_color=bull_state == 3 ? color.yellow : (bull_state > 0 ? color.green : color.gray), text_size=size.small)
+    
+    table.cell(infoTable, 0, 4, "Estrutura de Baixa", text_color=color.white, text_size=size.small)
+    table.cell(infoTable, 1, 4, f_getStateName(bear_state), text_color=bear_state == 3 ? color.yellow : (bear_state > 0 ? color.red : color.gray), text_size=size.small)
+
+    table.cell(infoTable, 0, 5, "Filtro Expansão Mínima", text_color=color.white, text_size=size.small)
+    table.cell(infoTable, 1, 5, str.tostring(i_minExpansionBars) + " barras", text_color=color.white, text_size=size.small)

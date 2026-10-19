@@ -1,0 +1,27 @@
+; Preset Burgo Scalpe Pro - XAUUSD M5 (Equilibrado com Proteção)
+InpInitialLot=0.02
+InpTargetSideUSD=3.00
+InpTargetGlobalUSD=30.00
+InpMagicNumber=888123
+InpUseMaxDD=true
+InpMaxDrawdownPct=12.00
+InpMaxLossUSD=800.00
+InpUseTrendFilter=true
+InpTrendTF=16385
+InpTrendPeriod=200
+InpBaseDistance=1000
+InpLotMultiplier=1.20
+InpMaxMartingale=5
+InpMaxTotalOrders=7
+InpMaxAllowedLot=0.40
+InpUseProgressiveGrid=true
+InpGridProgressionPct=25.00
+InpTimeframe=0
+InpUseATR=true
+InpATRPeriod=14
+InpATRMultiplier=1.50
+InpUseTrailingStop=true
+InpTrailingStartUSD=3.00
+InpTrailingDropPct=12.00
+InpStartTime=01:00
+InpEndTime=23:00

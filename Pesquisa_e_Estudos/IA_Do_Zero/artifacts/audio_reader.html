@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Leitor de Áudio Antigravity</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --card-bg: #28283d;
+      --accent: #89b4fa;
+      --accent-hover: #b4befe;
+      --text: #cdd6f4;
+      --text-muted: #a6adc8;
+      --progress-bg: #45475a;
+      --border: #313244;
+    }
+    body {
+      margin: 0;
+      padding: 12px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .player-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .status {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .current-text {
+      min-height: 54px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 13px;
+      line-height: 1.4;
+      margin-bottom: 14px;
+      border: 1px solid var(--border);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+    }
+    .progress-bar-container {
+      width: 100%;
+      height: 6px;
+      background: var(--progress-bg);
+      border-radius: 3px;
+      margin-bottom: 14px;
+      overflow: hidden;
+      cursor: pointer;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--accent);
+      transition: width 0.2s ease;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .btn-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    button {
+      background: #313244;
+      color: var(--text);
+      border: none;
+      border-radius: 6px;
+      padding: 7px 12px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+    button:hover {
+      background: #45475a;
+      color: #fff;
+    }
+    button.primary {
+      background: var(--accent);
+      color: #11111b;
+      font-weight: 600;
+    }
+    button.primary:hover {
+      background: var(--accent-hover);
+    }
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    select {
+      background: #313244;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 12px;
+      outline: none;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<div class="player-card">
+  <div class="header">
+    <div class="title">
+      <span>🔊</span> Resumo Falado da Resposta
+    </div>
+    <div id="statusLabel" class="status">Pronto para iniciar</div>
+  </div>
+
+  <div id="currentSentence" class="current-text">
+    Clique em "Ouvir Resposta" para escutar o que é, na realidade, a IA especializada que estamos estruturando.
+  </div>
+
+  <div class="progress-bar-container" id="progressBarContainer">
+    <div id="progressFill" class="progress-fill"></div>
+  </div>
+
+  <div class="controls">
+    <div class="btn-group">
+      <button id="btnPrev" title="Voltar trecho">⏮️</button>
+      <button id="btnPlayPause" class="primary">▶️ Ouvir Resposta</button>
+      <button id="btnNext" title="Avançar trecho">⏭️</button>
+      <button id="btnStop" title="Parar reprodução">⏹️</button>
+    </div>
+
+    <div class="speed-control">
+      <label for="speedSelect">Velocidade:</label>
+      <select id="speedSelect">
+        <option value="0.75">0.75x</option>
+        <option value="1.0" selected>1.0x</option>
+        <option value="1.25">1.25x</option>
+        <option value="1.5">1.5x</option>
+        <option value="1.75">1.75x</option>
+        <option value="2.0">2.0x</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<script>
+  const fullText = `O que estamos construindo é exatamente uma inteligência artificial dedicada exclusivamente a redes e segurança cibernética.
+Na prática moderna, criar uma inteligência artificial especialista não significa programar matemática do zero, assim como construir um carro não exige reinventar a roda ou fundir o próprio motor.
+Nós pegamos um motor de raciocínio de código aberto altamente potente e o transformamos em um analista dedicado através de três componentes:
+Primeiro, uma diretriz mestra que define sua identidade estrita como especialista em redes e defesa.
+Segundo, uma memória técnica dedicada com manuais, protocolos e matrizes de ataque guardados no seu computador.
+Terceiro, ferramentas que permitem a ele inspecionar conexões e executar diagnósticos diretamente no seu ambiente.
+O resultado final é o seu próprio copiloto particular de segurança, focado cem por cento no seu objetivo.`;
+
+  function splitSentences(text) {
+    const raw = text.split(/(?<=[.!?\n])\s+/);
+    return raw.map(s => s.trim()).filter(s => s.length > 0);
+  }
+
+  const sentences = splitSentences(fullText);
+  let currentIndex = 0;
+  let isPlaying = false;
+  let isPaused = false;
+  let currentRate = 1.0;
+  let voices = [];
+
+  const synth = window.speechSynthesis;
+  const currentSentenceEl = document.getElementById('currentSentence');
+  const progressFill = document.getElementById('progressFill');
+  const statusLabel = document.getElementById('statusLabel');
+  const btnPlayPause = document.getElementById('btnPlayPause');
+  const btnPrev = document.getElementById('btnPrev');
+  const btnNext = document.getElementById('btnNext');
+  const btnStop = document.getElementById('btnStop');
+  const speedSelect = document.getElementById('speedSelect');
+
+  function loadVoices() {
+    voices = synth.getVoices().filter(v => v.lang.startsWith('pt'));
+  }
+  if (speechSynthesis.onvoiceschanged !== undefined) {
+    speechSynthesis.onvoiceschanged = loadVoices;
+  }
+  loadVoices();
+
+  function updateUI() {
+    if (currentIndex >= sentences.length) {
+      progressFill.style.width = '100%';
+      statusLabel.textContent = 'Concluído';
+      btnPlayPause.textContent = '▶️ Ouvir Novamente';
+      btnPlayPause.classList.remove('primary');
+      currentSentenceEl.textContent = 'Reprodução concluída.';
+      return;
+    }
+    const pct = ((currentIndex) / sentences.length) * 100;
+    progressFill.style.width = `${pct}%`;
+    currentSentenceEl.textContent = sentences[currentIndex];
+    statusLabel.textContent = `Trecho ${currentIndex + 1} de ${sentences.length}`;
+  }
+
+  function speakCurrentSentence() {
+    synth.cancel();
+    if (currentIndex >= sentences.length) {
+      isPlaying = false;
+      isPaused = false;
+      updateUI();
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(sentences[currentIndex]);
+    utterance.rate = currentRate;
+    utterance.lang = 'pt-BR';
+    if (voices.length > 0) {
+      utterance.voice = voices[0];
+    }
+
+    utterance.onend = () => {
+      if (isPlaying && !isPaused) {
+        currentIndex++;
+        if (currentIndex < sentences.length) {
+          updateUI();
+          speakCurrentSentence();
+        } else {
+          isPlaying = false;
+          isPaused = false;
+          updateUI();
+        }
+      }
+    };
+
+    utterance.onerror = (e) => {
+      if (e.error !== 'interrupted' && e.error !== 'canceled') {
+        console.error('Speech error:', e);
+      }
+    };
+
+    updateUI();
+    synth.speak(utterance);
+  }
+
+  btnPlayPause.addEventListener('click', () => {
+    if (!isPlaying && !isPaused) {
+      if (currentIndex >= sentences.length) currentIndex = 0;
+      isPlaying = true;
+      isPaused = false;
+      btnPlayPause.textContent = '⏸️ Pausar';
+      btnPlayPause.classList.add('primary');
+      speakCurrentSentence();
+    } else if (isPlaying && !isPaused) {
+      isPaused = true;
+      isPlaying = false;
+      synth.cancel();
+      btnPlayPause.textContent = '▶️ Continuar';
+      statusLabel.textContent = 'Pausado';
+    } else if (isPaused) {
+      isPaused = false;
+      isPlaying = true;
+      btnPlayPause.textContent = '⏸️ Pausar';
+      speakCurrentSentence();
+    }
+  });
+
+  btnStop.addEventListener('click', () => {
+    synth.cancel();
+    isPlaying = false;
+    isPaused = false;
+    currentIndex = 0;
+    btnPlayPause.textContent = '▶️ Ouvir Resposta';
+    updateUI();
+    statusLabel.textContent = 'Parado';
+    currentSentenceEl.textContent = 'Reprodução cancelada. Pressione Ouvir Resposta para recomeçar.';
+    progressFill.style.width = '0%';
+  });
+
+  btnNext.addEventListener('click', () => {
+    if (currentIndex < sentences.length - 1) {
+      currentIndex++;
+      if (isPlaying) {
+        speakCurrentSentence();
+      } else {
+        updateUI();
+      }
+    }
+  });
+
+  btnPrev.addEventListener('click', () => {
+    if (currentIndex > 0) {
+      currentIndex--;
+      if (isPlaying) {
+        speakCurrentSentence();
+      } else {
+        updateUI();
+      }
+    }
+  });
+
+  speedSelect.addEventListener('change', (e) => {
+    currentRate = parseFloat(e.target.value);
+    if (isPlaying) {
+      speakCurrentSentence();
+    }
+  });
+</script>
+
+</body>
+</html>

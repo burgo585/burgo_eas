@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Leitor de Áudio - Análise do Novo Teste Lucrativo</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #10b981;
+      --primary-hover: #059669;
+      --accent: #38bdf8;
+      --border: #334155;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text-main);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .badge {
+      font-size: 11px;
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--primary);
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-weight: 500;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .progress-bar-container {
+      width: 100%;
+      height: 6px;
+      background: #334155;
+      border-radius: 999px;
+      overflow: hidden;
+      cursor: pointer;
+    }
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--primary));
+      transition: width 0.2s ease;
+    }
+    .current-text {
+      background: var(--card-bg);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      line-height: 1.45;
+      color: #e2e8f0;
+      min-height: 52px;
+      border-left: 3px solid var(--primary);
+      display: flex;
+      align-items: center;
+    }
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .btn-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    button {
+      background: var(--card-bg);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+    button:hover:not(:disabled) {
+      background: #334155;
+      border-color: #475569;
+    }
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .btn-main {
+      background: var(--primary);
+      color: #042f2e;
+      border-color: var(--primary);
+      font-weight: 600;
+    }
+    .btn-main:hover:not(:disabled) {
+      background: var(--primary-hover);
+      border-color: var(--primary-hover);
+    }
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    select {
+      background: var(--card-bg);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 8px;
+      font-size: 12px;
+      outline: none;
+      cursor: pointer;
+    }
+    select:focus {
+      border-color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="title">
+      <span>🎧 Resumo: Análise do Novo Teste (+18.3% de Lucro Líquido)</span>
+    </div>
+    <span class="badge" id="statusBadge">Pronto</span>
+  </div>
+
+  <div class="progress-bar-container" id="progressBarContainer" title="Progresso">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
+  <div class="current-text" id="displaySentence">
+    Clique em "Ouvir Resposta" para escutar o diagnóstico do seu novo teste positivo no MT5.
+  </div>
+
+  <div class="controls">
+    <div class="btn-group">
+      <button id="btnPrev" title="Voltar trecho (⏮️)">⏮️ Voltar</button>
+      <button id="btnPlayPause" class="btn-main">▶️ Ouvir Resposta</button>
+      <button id="btnNext" title="Avançar trecho (⏭️)">Avançar ⏭️</button>
+      <button id="btnStop" title="Parar (⏹️)">⏹️</button>
+    </div>
+
+    <div class="speed-control">
+      <span>Velocidade:</span>
+      <select id="speedSelect">
+        <option value="0.75">0.75x</option>
+        <option value="1.0" selected>1.0x</option>
+        <option value="1.25">1.25x</option>
+        <option value="1.5">1.5x</option>
+        <option value="1.75">1.75x</option>
+        <option value="2.0">2.0x</option>
+      </select>
+    </div>
+  </div>
+
+  <script>
+    const fullText = `Parabéns! O seu novo teste confirmou exatamente a virada de chave do robô.
+Diferente do teste anterior que havia fechado negativo em trinta e sete dólares, este novo teste fechou com duzentos e setenta e quatro dólares de lucro líquido positivo, representando mais de dezoito por cento de lucro na sua conta.
+O índice Sharpe disparou para impressionantes seis vírgula setenta e dois, comprovando consistência institucional.
+Dois fatores foram decisivos para essa virada:
+Primeiro, o filtro anti overtrading funcionou com precisão cirúrgica, reduzindo o número de operações em sessenta e cinco por cento e limitando as entradas a exatamente quatro operações seletivas por dia.
+Segundo, com o lote em um ponto zero no ativo centavo, o ganho médio por vitória aumentou em mais de setecentos por cento, alcançando um recorde de vinte vitórias consecutivas que somaram duzentos e quarenta e três dólares.
+E o melhor ainda está por vir: ao usar o alvo rápido de meio ATR e rodar no ativo padrão de ouro com lote de zero ponto vinte e cinco, esse lucro líquido de duzentos e setenta e quatro dólares se multiplica por dez vezes, ultrapassando os dois mil e quinhentos dólares no mesmo período.`;
+
+    function splitSentences(text) {
+      return text
+        .split('\n')
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+    }
+
+    const sentences = splitSentences(fullText);
+    let currentIndex = 0;
+    let isPlaying = false;
+    let isPaused = false;
+    let currentRate = 1.0;
+    let synth = window.speechSynthesis;
+    let utterance = null;
+    let ptBrVoice = null;
+
+    const displaySentence = document.getElementById('displaySentence');
+    const progressBar = document.getElementById('progressBar');
+    const statusBadge = document.getElementById('statusBadge');
+    const btnPlayPause = document.getElementById('btnPlayPause');
+    const btnStop = document.getElementById('btnStop');
+    const btnNext = document.getElementById('btnNext');
+    const btnPrev = document.getElementById('btnPrev');
+    const speedSelect = document.getElementById('speedSelect');
+
+    function loadVoices() {
+      if (!synth) return;
+      const voices = synth.getVoices();
+      ptBrVoice = voices.find(v => v.lang === 'pt-BR' || v.lang.startsWith('pt')) || null;
+    }
+
+    if (synth) {
+      loadVoices();
+      if (speechSynthesis.onvoiceschanged !== undefined) {
+        speechSynthesis.onvoiceschanged = loadVoices;
+      }
+    }
+
+    function updateUI() {
+      if (currentIndex < sentences.length) {
+        displaySentence.textContent = sentences[currentIndex];
+        const progress = ((currentIndex + 1) / sentences.length) * 100;
+        progressBar.style.width = progress + '%';
+      }
+      btnPrev.disabled = currentIndex === 0;
+      btnNext.disabled = currentIndex >= sentences.length - 1;
+
+      if (isPlaying && !isPaused) {
+        statusBadge.textContent = `Reproduzindo (${currentIndex + 1}/${sentences.length})`;
+        statusBadge.style.color = '#38bdf8';
+        statusBadge.style.background = 'rgba(56, 189, 248, 0.15)';
+        statusBadge.style.borderColor = 'rgba(56, 189, 248, 0.3)';
+        btnPlayPause.textContent = '⏸️ Pausar';
+      } else if (isPaused) {
+        statusBadge.textContent = 'Pausado';
+        statusBadge.style.color = '#fbbf24';
+        statusBadge.style.background = 'rgba(251, 191, 36, 0.15)';
+        statusBadge.style.borderColor = 'rgba(251, 191, 36, 0.3)';
+        btnPlayPause.textContent = '▶️ Continuar';
+      } else {
+        statusBadge.textContent = 'Pronto';
+        statusBadge.style.color = '#10b981';
+        statusBadge.style.background = 'rgba(16, 185, 129, 0.15)';
+        statusBadge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+        btnPlayPause.textContent = '▶️ Ouvir Resposta';
+      }
+    }
+
+    function speakSentence(index) {
+      if (!synth) return;
+      synth.cancel();
+
+      if (index < 0 || index >= sentences.length) {
+        stopPlayback();
+        return;
+      }
+
+      currentIndex = index;
+      isPlaying = true;
+      isPaused = false;
+      updateUI();
+
+      utterance = new SpeechSynthesisUtterance(sentences[currentIndex]);
+      utterance.rate = currentRate;
+      utterance.lang = 'pt-BR';
+      if (ptBrVoice) utterance.voice = ptBrVoice;
+
+      utterance.onend = () => {
+        if (isPlaying && !isPaused) {
+          if (currentIndex + 1 < sentences.length) {
+            speakSentence(currentIndex + 1);
+          } else {
+            stopPlayback();
+            statusBadge.textContent = 'Concluído';
+          }
+        }
+      };
+
+      utterance.onerror = (e) => {
+        console.warn('SpeechSynthesis error:', e);
+      };
+
+      synth.speak(utterance);
+    }
+
+    function togglePlayPause() {
+      if (!isPlaying) {
+        speakSentence(currentIndex);
+      } else if (isPaused) {
+        isPaused = false;
+        synth.resume();
+        updateUI();
+      } else {
+        isPaused = true;
+        synth.pause();
+        updateUI();
+      }
+    }
+
+    function stopPlayback() {
+      if (synth) synth.cancel();
+      isPlaying = false;
+      isPaused = false;
+      currentIndex = 0;
+      progressBar.style.width = '0%';
+      displaySentence.textContent = 'Clique em "Ouvir Resposta" para escutar o diagnóstico do seu novo teste positivo no MT5.';
+      updateUI();
+    }
+
+    function nextSentence() {
+      if (currentIndex < sentences.length - 1) {
+        speakSentence(currentIndex + 1);
+      }
+    }
+
+    function prevSentence() {
+      if (currentIndex > 0) {
+        speakSentence(currentIndex - 1);
+      }
+    }
+
+    function changeSpeed(newSpeed) {
+      currentRate = parseFloat(newSpeed);
+      if (isPlaying && !isPaused) {
+        speakSentence(currentIndex);
+      }
+    }
+
+    btnPlayPause.addEventListener('click', togglePlayPause);
+    btnStop.addEventListener('click', stopPlayback);
+    btnNext.addEventListener('click', nextSentence);
+    btnPrev.addEventListener('click', prevSentence);
+    speedSelect.addEventListener('change', (e) => changeSpeed(e.target.value));
+
+    updateUI();
+  </script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+; ==============================================================================
+; PRESET: XAUUSD M5 - MOVIMENTO LONGO SNIPER (ALVOS AMPLOS DE $4.50 A $11.25)
+; Calibrado para: Ouro Spot (XAUUSD) | Timeframe M5 | Corretora VT Markets Raw ECN
+; Dimensionamento: Lote 0.20 para Conta de $10.000 (Risco ~1.2% por trade)
+; Ganho Médio por Vitória: +$126,15 USD | Frequência: 0.32 Trade/Dia (~1 trade a cada 3 dias)
+; Taxa de Acerto: 57.89% | Profit Factor: 1.38x | Max DD: $432,58 (4.33%)
+; Retorno Projetado 2 Anos: +$3.241,27 USD
+; ==============================================================================
+
+; --- 1. Motor Operacional & Estrategia ---
+InpEngineMode=2
+InpBrokerType=0
+InpMagicNumber=889902
+
+; --- 2. Parametros do Frasson ATR & Tendencia ---
+InpFrassonPeriod=10
+InpFrassonShift=2
+InpFrassonMultiplier=2.00000000
+InpTrendFilterPeriod=50
+InpRequireTrendAlign=true
+
+; --- 3. GPS de Volatilidade & Filtro de Fluxo ---
+InpUseVolatilityGPS=true
+InpMinVolThreshold=0.70000000
+InpVolumeSpikeRatio=1.00000000
+InpMinRejectionWick=0.30000000
+
+; --- 4. Gestao de Capital & Dimensionamento ($10.000) ---
+InpLotMode=0
+InpBaseLotSize=0.20000000
+InpRiskPercentAccount=1.50000000
+InpPartialRatio=0.70000000
+InpATR_SL_Multiplier=1.20000000
+InpATR_TP1_Multiplier=1.00000000
+InpATR_TP2_Multiplier=2.50000000
+InpMoveBEOnTP1=true
+InpBEBufferPts=25.00000000
+InpLockProfitATR=0.20000000
+InpTrailingOnTarget2=true
+
+; --- 5. Filtro de Horario / Sessao Ativa ---
+InpUseSessionFilter=true
+InpStartHour=7
+InpStartMin=0
+InpEndHour=18
+InpEndMin=30
+
+; --- 6. Painel Visual HUD Dark Mode ---
+InpShowHUD=true

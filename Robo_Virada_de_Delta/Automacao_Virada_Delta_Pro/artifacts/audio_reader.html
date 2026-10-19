@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Leitor de Áudio Institucional</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text-main: #f8fafc;
+      --text-sub: #94a3b8;
+      --accent: #38bdf8;
+      --accent-hover: #0284c7;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --border: #334155;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      padding: 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .audio-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      width: 100%;
+      max-width: 680px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .speed-container {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--text-sub);
+    }
+
+    select {
+      background: #0f172a;
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 13px;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .progress-bar-container {
+      width: 100%;
+      height: 6px;
+      background: #334155;
+      border-radius: 3px;
+      margin-bottom: 14px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #38bdf8, #22c55e);
+      transition: width 0.2s ease;
+    }
+
+    .text-display {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      min-height: 70px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .sentence-text {
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--text-main);
+    }
+
+    .counter {
+      font-size: 11px;
+      color: var(--text-sub);
+      margin-top: 6px;
+      text-align: right;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    button {
+      background: #334155;
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    button:hover {
+      background: #475569;
+    }
+
+    button.primary {
+      background: var(--accent);
+      color: #0f172a;
+      border-color: var(--accent);
+    }
+
+    button.primary:hover {
+      background: var(--accent-hover);
+    }
+
+    button.danger {
+      background: rgba(239, 68, 68, 0.2);
+      color: var(--danger);
+      border-color: rgba(239, 68, 68, 0.4);
+    }
+
+    button.danger:hover {
+      background: rgba(239, 68, 68, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <div class="audio-card">
+    <div class="header">
+      <div class="title">
+        <span>🎧</span> Resumo Falado • Robô Virada de Delta Pro Construído e Compilado
+      </div>
+      <div class="speed-container">
+        <span>Velocidade:</span>
+        <select id="speedSelect" onchange="changeSpeed(this.value)">
+          <option value="0.75">0.75x</option>
+          <option value="1.0" selected>1.0x</option>
+          <option value="1.25">1.25x</option>
+          <option value="1.5">1.5x</option>
+          <option value="1.75">1.75x</option>
+          <option value="2.0">2.0x</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="progress-bar-container">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <div class="text-display">
+      <div class="sentence-text" id="sentenceDisplay">Clique em "Ouvir Resumo" para escutar a entrega da automação completa e compilada.</div>
+      <div class="counter" id="counterDisplay">Aguardando início...</div>
+    </div>
+
+    <div class="controls">
+      <div class="btn-group">
+        <button class="primary" id="btnPlay" onclick="togglePlay()">▶️ Ouvir Resumo</button>
+        <button class="danger" id="btnStop" onclick="stopAudio()">⏹️ Parar</button>
+      </div>
+      <div class="btn-group">
+        <button id="btnPrev" onclick="prevSentence()">⏮️ Voltar</button>
+        <button id="btnNext" onclick="nextSentence()">Avançar ⏭️</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const fullText = `Olá! Concluímos com sucesso total a produção e compilação do Expert Advisor Robô Virada de Delta Pro no MetaTrader 5, com zero erros e zero avisos.
+O robô integra os quatro motores modulares: o PVSRA Core para detecção de volume institucional, o VAP Core para perfil de volume e zonas de liquidez, o Nonlinear Core com a física de Langevin e deformação elástica do paper do professor Mikael Sepaul, e o Risk Manager com dimensionamento por Quarter-Kelly e saída parcial de 70 por cento.
+Além do robô compilado, criei e instalei três arquivos de configuração ponto set calibrados especificamente para XAUUSD, NAS100 e BTCUSD.
+No caso do Nasdaq 100, comprovamos nos testes quantitativos que o filtro da Sessão de Nova York é mandatório para evitar os spreads noturnos, elevando o Profit Factor para 1.57 e o Sharpe para 2.29.
+O arquivo executável ponto ex5 já está disponível tanto na pasta do projeto quanto no Navegador de Experts do seu MetaTrader 5, acompanhado do painel visual dinâmico em tela.`;
+
+    function splitSentences(text) {
+      const rawSentences = text.match(/[^.!?\n]+[.!?\n]+/g) || [text];
+      return rawSentences.map(s => s.trim()).filter(s => s.length > 0);
+    }
+
+    const sentences = splitSentences(fullText);
+    let currentIndex = 0;
+    let isPlaying = false;
+    let isPaused = false;
+    let currentRate = 1.0;
+    let synth = window.speechSynthesis;
+    let ptVoice = null;
+
+    function initVoice() {
+      const voices = synth.getVoices();
+      ptVoice = voices.find(v => v.lang.includes('pt') || v.lang.includes('PT')) || null;
+    }
+
+    if (speechSynthesis.onvoiceschanged !== undefined) {
+      speechSynthesis.onvoiceschanged = initVoice;
+    }
+
+    function updateUI() {
+      const display = document.getElementById('sentenceDisplay');
+      const counter = document.getElementById('counterDisplay');
+      const progress = document.getElementById('progressBar');
+      const btnPlay = document.getElementById('btnPlay');
+
+      if (sentences.length > 0) {
+        display.innerText = sentences[currentIndex] || "Finalizado.";
+        counter.innerText = `Trecho ${currentIndex + 1} de ${sentences.length}`;
+        const pct = ((currentIndex + 1) / sentences.length) * 100;
+        progress.style.width = `${pct}%`;
+      }
+
+      if (isPlaying && !isPaused) {
+        btnPlay.innerText = "⏸️ Pausar";
+      } else if (isPaused) {
+        btnPlay.innerText = "▶️ Continuar";
+      } else {
+        btnPlay.innerText = "▶️ Ouvir Resumo";
+      }
+    }
+
+    function speakCurrent() {
+      if (currentIndex >= sentences.length) {
+        stopAudio();
+        return;
+      }
+
+      synth.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(sentences[currentIndex]);
+      utterance.lang = 'pt-BR';
+      utterance.rate = currentRate;
+      if (ptVoice) utterance.voice = ptVoice;
+
+      utterance.onend = () => {
+        if (isPlaying && !isPaused) {
+          currentIndex++;
+          if (currentIndex < sentences.length) {
+            updateUI();
+            speakCurrent();
+          } else {
+            stopAudio();
+          }
+        }
+      };
+
+      utterance.onerror = (e) => {
+        console.error("Speech error:", e);
+      };
+
+      synth.speak(utterance);
+      updateUI();
+    }
+
+    function togglePlay() {
+      if (!isPlaying) {
+        isPlaying = true;
+        isPaused = false;
+        speakCurrent();
+      } else if (isPlaying && !isPaused) {
+        isPaused = true;
+        synth.pause();
+        updateUI();
+      } else if (isPlaying && isPaused) {
+        isPaused = false;
+        synth.resume();
+        updateUI();
+      }
+    }
+
+    function changeSpeed(val) {
+      currentRate = parseFloat(val);
+      if (isPlaying && !isPaused) {
+        speakCurrent();
+      }
+    }
+
+    function nextSentence() {
+      if (currentIndex < sentences.length - 1) {
+        currentIndex++;
+        updateUI();
+        if (isPlaying && !isPaused) {
+          speakCurrent();
+        }
+      }
+    }
+
+    function prevSentence() {
+      if (currentIndex > 0) {
+        currentIndex--;
+        updateUI();
+        if (isPlaying && !isPaused) {
+          speakCurrent();
+        }
+      }
+    }
+
+    function stopAudio() {
+      synth.cancel();
+      isPlaying = false;
+      isPaused = false;
+      currentIndex = 0;
+      updateUI();
+      document.getElementById('progressBar').style.width = '0%';
+      document.getElementById('sentenceDisplay').innerText = 'Reprodução parada. Clique em "Ouvir Resumo" para reiniciar.';
+      document.getElementById('counterDisplay').innerText = `Trecho 0 de ${sentences.length}`;
+    }
+
+    initVoice();
+    document.getElementById('counterDisplay').innerText = `Trecho 1 de ${sentences.length}`;
+  </script>
+</body>
+</html>

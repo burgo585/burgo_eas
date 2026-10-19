@@ -1,0 +1,27 @@
+; Preset Burgo Scalpe Pro - XAUUSD M1 (Scalper Rápido com Trava Anti-Explosão)
+InpInitialLot=0.01
+InpTargetSideUSD=2.00
+InpTargetGlobalUSD=20.00
+InpMagicNumber=888123
+InpUseMaxDD=true
+InpMaxDrawdownPct=10.00
+InpMaxLossUSD=500.00
+InpUseTrendFilter=true
+InpTrendTF=16385
+InpTrendPeriod=200
+InpBaseDistance=800
+InpLotMultiplier=1.20
+InpMaxMartingale=4
+InpMaxTotalOrders=6
+InpMaxAllowedLot=0.30
+InpUseProgressiveGrid=true
+InpGridProgressionPct=30.00
+InpTimeframe=0
+InpUseATR=true
+InpATRPeriod=14
+InpATRMultiplier=1.80
+InpUseTrailingStop=true
+InpTrailingStartUSD=2.00
+InpTrailingDropPct=10.00
+InpStartTime=01:00
+InpEndTime=23:00

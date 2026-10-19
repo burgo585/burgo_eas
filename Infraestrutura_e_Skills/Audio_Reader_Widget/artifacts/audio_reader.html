@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+</head>
+<body class="bg-transparent text-[var(--foreground)] antialiased p-2">
+  <div class="bg-[var(--card)] text-[var(--foreground)] border border-[var(--border)] rounded-xl p-4 shadow-sm max-w-lg mx-auto">
+    
+    <!-- Header with speed and status -->
+    <div class="flex items-center justify-between gap-2 mb-3">
+      <div class="flex items-center gap-2">
+        <span class="text-xl">🎙️</span>
+        <div>
+          <h3 class="font-semibold text-sm text-[var(--foreground)] leading-tight">Leitor de Resposta</h3>
+          <span id="stepIndicator" class="text-xs text-[var(--muted-foreground)]">Pronto para iniciar</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 bg-[var(--background)] px-2 py-1 rounded-lg border border-[var(--border)]">
+        <span class="text-xs text-[var(--muted-foreground)] font-medium">⚡</span>
+        <select id="speedSelect" class="text-xs bg-transparent text-[var(--foreground)] font-medium focus:outline-none cursor-pointer">
+          <option value="0.75">0.75x</option>
+          <option value="1" selected>1.0x (Normal)</option>
+          <option value="1.25">1.25x (Rápido)</option>
+          <option value="1.5">1.5x (Muito Rápido)</option>
+          <option value="1.75">1.75x</option>
+          <option value="2">2.0x (Dobro)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Live sentence preview / transcript box -->
+    <div class="bg-[var(--background)] border border-[var(--border)] rounded-lg p-2.5 mb-3 min-h-[48px] flex items-center">
+      <p id="sentenceDisplay" class="text-xs text-[var(--muted-foreground)] italic leading-relaxed">
+        "Clique em Ouvir para escutar a explicação."
+      </p>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="w-full bg-[var(--border)] h-1.5 rounded-full overflow-hidden mb-3">
+      <div id="progressBar" class="bg-blue-600 h-full w-0 transition-all duration-300"></div>
+    </div>
+
+    <!-- Playback Controls -->
+    <div class="flex items-center gap-2">
+      <!-- Back / Previous -->
+      <button id="prevBtn" title="Voltar trecho" class="flex items-center justify-center bg-[var(--background)] hover:bg-[var(--muted-foreground)]/10 text-[var(--foreground)] border border-[var(--border)] font-medium text-xs py-2 px-3 rounded-lg transition-colors">
+        ⏮️ Voltar
+      </button>
+
+      <!-- Main Play/Pause Button -->
+      <button id="playPauseBtn" class="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs py-2 px-3 rounded-lg transition-colors shadow-sm">
+        <span id="playIcon">▶️</span>
+        <span id="playText">Ouvir Resposta</span>
+      </button>
+
+      <!-- Forward / Next -->
+      <button id="nextBtn" title="Avançar trecho" class="flex items-center justify-center bg-[var(--background)] hover:bg-[var(--muted-foreground)]/10 text-[var(--foreground)] border border-[var(--border)] font-medium text-xs py-2 px-3 rounded-lg transition-colors">
+        Avançar ⏭️
+      </button>
+
+      <!-- Stop -->
+      <button id="stopBtn" title="Parar" class="flex items-center justify-center bg-[var(--background)] hover:bg-red-500/10 text-red-500 border border-[var(--border)] font-medium text-xs py-2 px-2.5 rounded-lg transition-colors">
+        ⏹️
+      </button>
+    </div>
+
+    <div id="statusFooter" class="mt-2 text-[11px] text-[var(--muted-foreground)] flex items-center justify-between">
+      <span id="statusMessage">Total: 4 trechos</span>
+      <span class="text-[10px] opacity-75">Voz: Português (pt-BR)</span>
+    </div>
+  </div>
+
+  <script>
+    const fullText = "Atualizei o leitor de áudio com um novo motor de reprodução por trechos. Agora o controle de velocidade funciona instantaneamente, mesmo durante a fala. Adicionei os botões de avançar e voltar trechos para você navegar livremente pelo áudio. Os botões de pausa e parada também foram corrigidos e agora funcionam com total precisão.";
+
+    // Split text into natural sentences
+    function splitSentences(text) {
+      const raw = text.match(/[^.!?]+[.!?]+(\s+|$)|[^.!?]+$/g);
+      if (!raw) return [text];
+      return raw.map(s => s.trim()).filter(s => s.length > 0);
+    }
+
+    const sentences = splitSentences(fullText);
+    let currentIndex = 0;
+    let isPlaying = false;
+    let isPaused = false;
+    let currentRate = 1.0;
+
+    // Elements
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const playIcon = document.getElementById('playIcon');
+    const playText = document.getElementById('playText');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const speedSelect = document.getElementById('speedSelect');
+    const sentenceDisplay = document.getElementById('sentenceDisplay');
+    const stepIndicator = document.getElementById('stepIndicator');
+    const progressBar = document.getElementById('progressBar');
+    const statusMessage = document.getElementById('statusMessage');
+
+    const synth = window.speechSynthesis;
+
+    function getVoice() {
+      if (!synth) return null;
+      const voices = synth.getVoices();
+      return voices.find(v => v.lang.includes('pt-BR') || v.lang.includes('pt_BR')) ||
+             voices.find(v => v.lang.startsWith('pt')) || null;
+    }
+
+    if (synth && synth.onvoiceschanged !== undefined) {
+      synth.onvoiceschanged = () => {};
+    }
+
+    function updateUI() {
+      const total = sentences.length;
+      const displayIndex = Math.min(currentIndex + 1, total);
+      const pct = isPlaying || isPaused ? Math.round(((currentIndex) / total) * 100) : 0;
+      
+      progressBar.style.width = pct + '%';
+      stepIndicator.textContent = `Trecho ${displayIndex} de ${total}`;
+      statusMessage.textContent = `Progresso: ${pct}% concluído`;
+
+      if (sentences[currentIndex]) {
+        sentenceDisplay.textContent = `"${sentences[currentIndex]}"`;
+        sentenceDisplay.classList.remove('italic', 'text-[var(--muted-foreground)]');
+        sentenceDisplay.classList.add('text-[var(--foreground)]', 'font-medium');
+      }
+
+      if (isPlaying && !isPaused) {
+        playIcon.textContent = "⏸️";
+        playText.textContent = "Pausar";
+        playPauseBtn.className = "flex-1 flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-700 text-white font-medium text-xs py-2 px-3 rounded-lg transition-colors shadow-sm";
+      } else if (isPaused) {
+        playIcon.textContent = "▶️";
+        playText.textContent = "Continuar";
+        playPauseBtn.className = "flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium text-xs py-2 px-3 rounded-lg transition-colors shadow-sm";
+      } else {
+        playIcon.textContent = "▶️";
+        playText.textContent = "Ouvir Resposta";
+        playPauseBtn.className = "flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs py-2 px-3 rounded-lg transition-colors shadow-sm";
+        progressBar.style.width = '0%';
+        stepIndicator.textContent = "Pronto para iniciar";
+        sentenceDisplay.textContent = '"Clique em Ouvir para escutar a explicação."';
+        sentenceDisplay.classList.add('italic', 'text-[var(--muted-foreground)]');
+        sentenceDisplay.classList.remove('text-[var(--foreground)]', 'font-medium');
+      }
+    }
+
+    function speakCurrentSentence() {
+      if (!synth) {
+        alert("Síntese de voz não suportada pelo navegador.");
+        return;
+      }
+
+      if (currentIndex >= sentences.length) {
+        stopPlayback();
+        progressBar.style.width = '100%';
+        statusMessage.textContent = "Leitura concluída!";
+        return;
+      }
+
+      // Cancel previous utterance cleanly
+      synth.cancel();
+
+      const text = sentences[currentIndex];
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'pt-BR';
+      utterance.rate = currentRate;
+
+      const voice = getVoice();
+      if (voice) {
+        utterance.voice = voice;
+      }
+
+      utterance.onend = () => {
+        if (!isPlaying || isPaused) return;
+        currentIndex++;
+        if (currentIndex < sentences.length) {
+          speakCurrentSentence();
+        } else {
+          stopPlayback();
+          progressBar.style.width = '100%';
+          statusMessage.textContent = "Leitura concluída!";
+        }
+      };
+
+      utterance.onerror = (e) => {
+        if (e.error === 'interrupted' || e.error === 'canceled') return;
+        console.error("SpeechSynthesis error:", e);
+      };
+
+      synth.speak(utterance);
+      updateUI();
+    }
+
+    function stopPlayback() {
+      if (synth) synth.cancel();
+      isPlaying = false;
+      isPaused = false;
+      currentIndex = 0;
+      updateUI();
+    }
+
+    // Play/Pause Click Handler
+    playPauseBtn.addEventListener('click', () => {
+      if (!isPlaying && !isPaused) {
+        // Start from beginning
+        currentIndex = 0;
+        isPlaying = true;
+        isPaused = false;
+        speakCurrentSentence();
+      } else if (isPlaying && !isPaused) {
+        // Pause
+        if (synth) synth.cancel();
+        isPlaying = false;
+        isPaused = true;
+        updateUI();
+      } else if (isPaused) {
+        // Resume from current sentence
+        isPlaying = true;
+        isPaused = false;
+        speakCurrentSentence();
+      }
+    });
+
+    // Skip Forward (Avançar)
+    nextBtn.addEventListener('click', () => {
+      if (currentIndex < sentences.length - 1) {
+        currentIndex++;
+        if (isPlaying && !isPaused) {
+          speakCurrentSentence();
+        } else {
+          updateUI();
+        }
+      }
+    });
+
+    // Skip Backward (Voltar)
+    prevBtn.addEventListener('click', () => {
+      if (currentIndex > 0) {
+        currentIndex--;
+        if (isPlaying && !isPaused) {
+          speakCurrentSentence();
+        } else {
+          updateUI();
+        }
+      }
+    });
+
+    // Stop Button
+    stopBtn.addEventListener('click', () => {
+      stopPlayback();
+    });
+
+    // Speed Selection (Dynamic on-the-fly change)
+    speedSelect.addEventListener('change', () => {
+      currentRate = parseFloat(speedSelect.value);
+      // If currently playing, restart current sentence immediately with the new rate!
+      if (isPlaying && !isPaused) {
+        speakCurrentSentence();
+      }
+    });
+
+    // Initial setup
+    updateUI();
+  </script>
+</body>
+</html>
