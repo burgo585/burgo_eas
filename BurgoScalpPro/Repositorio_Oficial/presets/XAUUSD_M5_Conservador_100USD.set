@@ -1,0 +1,48 @@
+; ==============================================================================
+; BURGO SCALP PRO - V45 PRO (CONFIGURACAO CONSERVADORA PARA BANCA DE US$ 100)
+; Remodelado com base na Auditoria Forense Quantitativa (Protocolo Sunrise)
+; Ativo: XAUUSD (Ouro) | Timeframe Recomendado: M5 / M15
+; ==============================================================================
+
+; --- 1. Filtro Direcional & Momentum ---
+InpTradeDirection=0
+InpEMAPeriod=200
+InpEMATimeframe=15
+InpUseRSIFilter=1
+InpRSIPeriod=14
+InpRSIOverbought=70.00000000
+InpRSIOversold=30.00000000
+
+; --- 2. Motor de Giro & Metas ECN ---
+InpInitialLot=0.01000000
+InpTargetSideNetUSD=4.00000000
+InpTargetGlobalUSD=25.00000000
+InpMagicNumber=888145
+
+; --- 3. Grade Adaptativa Anti-Tendencia ---
+InpBaseDistance=1500
+InpUseATRDistance=1
+InpATRPeriod=14
+InpATRTimeframe=15
+InpATRMultiplier=1.80000000
+InpLotMultiplier=1.00000000
+InpMaxTotalOrders=3
+
+; --- 4. Blindagem de Risco & Margem (Forense) ---
+InpStopMode=0
+InpBasketStopPct=7.00000000
+InpBasketStopFixed=10.00000000
+InpMinMarginLevel=350.00000000
+InpMaxMarginCommit=20.00000000
+InpMaxDailyLossPct=10.00000000
+InpCooldownMinutes=45
+
+; --- 5. Trailing Stop Inteligente ---
+InpUseTrailingStop=1
+InpTrailingStartUSD=6.00000000
+InpTrailingDropPct=12.00000000
+
+; --- 6. Horarios & Protecao de Swap Noturno ---
+InpStartTime=01:00
+InpEndTime=22:00
+InpAvoidSwapRollover=1

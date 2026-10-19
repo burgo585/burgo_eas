@@ -4,6 +4,32 @@ Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
 
 ---
 
+## [V45.00] - 2026-10-19 / Edição Institucional Pós-Auditoria Forense (Protocolo Sunrise)
+
+### 🔬 Causa Raiz & Motivação da Remodelagem
+Após auditoria forense quantitativa das ordens reais das últimas 24h na conta demo MT5 (1062632), constatou-se que o robô V40 atingiu stop financeiro fixo de -$80.00 às 08:59:38, despencando uma banca de US$ 134 para US$ 49 (-62.9% DD), e que as comissões da corretora ECN consumiram US$ 4.14 frente a US$ 2.93 de lucro bruto. A V45 Pro foi completamente reengenheirada para erradicar esses riscos.
+
+### 🛡️ Principais Inovações e Blindagens
+- **Stop Loss de Cesta Inteligente e Proporcional**:
+  - `InpBasketStopPct`: Perda máxima travada em `7.0%` do Saldo (em vez de -$80 fixos), garantindo que uma cesta adversa nunca comprometa a sobrevida da conta.
+  - `InpMaxDailyLossPct`: Trava diária de `10.0%` do saldo inicial do dia.
+  - `InpCooldownMinutes`: Pausa obrigatória de 45 minutos após qualquer stop de cesta.
+- **Trava de Margem Dinâmica Institucional**:
+  - `InpMinMarginLevel`: Bloqueio automático de qualquer nova ordem se o Nível de Margem for menor que `350%`.
+  - `InpMaxMarginCommit`: Proibição de abertura se a margem ocupada ultrapassar `20.0%` do patrimônio líquido.
+- **Grade Anti-Tendência com ATR Real do Ouro**:
+  - `InpBaseDistance`: Expandido de 600 para `1.500 pontos` (US$ 15,00 no Ouro).
+  - `InpUseATRDistance`: Espaçamento dinâmico baseado em `ATR(14, M15) * 1.8`.
+  - `InpLotMultiplier`: Fixado em `1.0` (Lote linear seguro) e limite de ordens reduzido para `3` por lado.
+- **Metas Líquidas ECN**:
+  - `InpTargetSideNetUSD`: Alvo líquido elevado para `US$ 4.00` por lado, cobrindo integralmente comissões ECN e spread.
+- **Filtro Anti-Exaustão RSI M15**:
+  - `InpUseRSIFilter`: Bloqueia compras se RSI > 70 e bloqueia vendas em sobrevenda extrema (< 30).
+- **Proteção Contra Rollover de Swap**:
+  - `InpAvoidSwapRollover`: Pausa operacional entre 23:45 e 00:15 do servidor para blindar a conta do swap triplo de -77.54 pontos.
+
+---
+
 ## [V43.00] - 2024 / XAUUSD M1 Scalper Edition
 
 ### 🎯 Foco principal
