@@ -1,106 +1,77 @@
-# 🏛️ Central de Projetos e Conversas — Antigravity
+# 🚀 Burgo EAs — Ecossistema Quantitativo de Trading & Sistemas Algorítmicos
 
-Este repositório centraliza, organiza e versiona todas as sessões, códigos, indicadores, robôs e pesquisas desenvolvidos no Antigravity.
-
-A estrutura adota o modelo **`Diretório > Subdiretórios`**, dividida entre Projetos Ativos e Categorias Temáticas Independentes.
+Repositório centralizado e governado de robôs de investimento (Expert Advisors MQL5/MQL4), indicadores técnicos proprietários, presets (.set), motores Python de backtest causal forense e inteligência quantitativa de mercado.
 
 ---
 
-## 🗺️ Mapa Completo de Projetos e Categorias
+## 📊 Inventário Geral de Ativos Quantitativos
 
-
-### 📁 PROJETO: `Auditoria_Quant_Forense`
-
-| Subdiretório | Título / Tema Principal | Data | Artefatos | Scripts | Códigos | Link |
-| :--- | :--- | :--- | :---: | :---: | :---: | :--- |
-| `Protocolo_Sunrise_Auditoria` | Auditoria Quantitativa Forense, Causalidade Intrabarra e Protocolo Sunrise | 2026-10-19 | 1 | 35 | 7 | [Ver Resumo](Auditoria_Quant_Forense/Protocolo_Sunrise_Auditoria/RESUMO.md) |
-
-### 📁 PROJETO: `Automacao_de_Aprendizado`
-
-| Subdiretório | Título / Tema Principal | Data | Artefatos | Scripts | Códigos | Link |
-| :--- | :--- | :--- | :---: | :---: | :---: | :--- |
-| `Web_Dashboard` | Dashboard Web e Automação de Aprendizado Visual | 2026-10-12 | 0 | 0 | 11 | [Ver Resumo](Automacao_de_Aprendizado/Web_Dashboard/RESUMO.md) |
-
-### 📁 PROJETO: `BoletaScalping`
-
-| Subdiretório | Título / Tema Principal | Data | Artefatos | Scripts | Códigos | Link |
-| :--- | :--- | :--- | :---: | :---: | :---: | :--- |
-| `Boleta_Com_Canais` | Integração da Boleta com Indicador de Marcações de Canal | 2026-10-12 | 0 | 0 | 2 | [Ver Resumo](BoletaScalping/Boleta_Com_Canais/RESUMO.md) |
-| `Interface_GUI_MQL5` | Construção da Interface Gráfica (GUI) e Gestão de Risco na Boleta Scalping | 2026-10-07 | 0 | 0 | 2 | [Ver Resumo](BoletaScalping/Interface_GUI_MQL5/RESUMO.md) |
-
-### 📁 PROJETO: `BurgoScalpPro`
-
-| Subdiretório | Título / Tema Principal | Data | Artefatos | Scripts | Códigos | Link |
-| :--- | :--- | :--- | :---: | :---: | :---: | :--- |
-| `Ajustes_MagicNumber_v50` | Ajustes de Magic Number e Versão 5.0 do Burgo Scalpe Pro | 2026-10-13 | 0 | 0 | 0 | [Ver Resumo](BurgoScalpPro/Ajustes_MagicNumber_v50/RESUMO.md) |
-| `Backtests_XAUUSD_2Anos` | Backtests de 2 Anos em XAUUSD e Análise de Desempenho | 2026-10-11 | 2 | 14 | 3 | [Ver Resumo](BurgoScalpPro/Backtests_XAUUSD_2Anos/RESUMO.md) |
-| `Correcoes_Codigo_e_Sets` | Correção de Variáveis e Calibração dos Sets M1, M5 e M15 | 2026-10-14 | 0 | 0 | 7 | [Ver Resumo](BurgoScalpPro/Correcoes_Codigo_e_Sets/RESUMO.md) |
-| `Desenvolvimento_MQL5` | Desenvolvimento e Compilação do EA Burgo Scalpe Pro no MetaTrader 5 | 2026-10-07 | 0 | 0 | 4 | [Ver Resumo](BurgoScalpPro/Desenvolvimento_MQL5/RESUMO.md) |
-| `Documentacao_Inicial` | Mapeamento e Documentação da Estrutura Inicial do BurgoScalpPro | 2026-09-15 | 1 | 0 | 0 | [Ver Resumo](BurgoScalpPro/Documentacao_Inicial/RESUMO.md) |
-| `Estruturacao_Repositorio` | Estruturação de Repositório e Documentação Técnica do BurgoScalpPro | 2026-09-15 | 2 | 0 | 12 | [Ver Resumo](BurgoScalpPro/Estruturacao_Repositorio/RESUMO.md) |
-| `Otimizacao_XAUUSD_Lucro` | Otimização de Lucro e Ajustes de Parâmetros em XAUUSD | 2026-10-11 | 5 | 9 | 0 | [Ver Resumo](BurgoScalpPro/Otimizacao_XAUUSD_Lucro/RESUMO.md) |
-
-### 📚 CATEGORIA TEMÁTICA: `Direito_e_Sucessoes`
-
-| Subdiretório | Título / Tema Principal | Data | Artefatos | Scripts | Códigos | Link |
-| :--- | :--- | :--- | :---: | :---: | :---: | :--- |
-| `Advocacia_Familia_e_Sucessoes` | Consultoria e Peças Jurídicas de Família, Sucessões e Proteção Patrimonial | 2026-10-17 | 1 | 0 | 0 | [Ver Resumo](Direito_e_Sucessoes/Advocacia_Familia_e_Sucessoes/RESUMO.md) |
-
-### 📁 PROJETO: `Indicadores_MT5`
-
-| Subdiretório | Título / Tema Principal | Data | Artefatos | Scripts | Códigos | Link |
-| :--- | :--- | :--- | :---: | :---: | :---: | :--- |
-| `CanalDrawer` | Desenvolvimento do Indicador CanalDrawer para MT5 | 2026-10-08 | 0 | 0 | 1 | [Ver Resumo](Indicadores_MT5/CanalDrawer/RESUMO.md) |
-| `MTR_Volume_AT_Price` | Desenvolvimento do Indicador MTR Volume At Price Pro | 2026-10-09 | 0 | 0 | 1 | [Ver Resumo](Indicadores_MT5/MTR_Volume_AT_Price/RESUMO.md) |
-
-### 📚 CATEGORIA TEMÁTICA: `Infraestrutura_e_Skills`
-
-| Subdiretório | Título / Tema Principal | Data | Artefatos | Scripts | Códigos | Link |
-| :--- | :--- | :--- | :---: | :---: | :---: | :--- |
-| `Audio_Reader_Widget` | Implementação do Widget de Leitor de Áudio Global Interativo | 2026-10-16 | 2 | 0 | 3 | [Ver Resumo](Infraestrutura_e_Skills/Audio_Reader_Widget/RESUMO.md) |
-
-### 📚 CATEGORIA TEMÁTICA: `Pesquisa_e_Estudos`
-
-| Subdiretório | Título / Tema Principal | Data | Artefatos | Scripts | Códigos | Link |
-| :--- | :--- | :--- | :---: | :---: | :---: | :--- |
-| `Analise_Tecnica_Oscilacoes` | Técnicas de Análise Técnica contra Ruído e Falsos Rompimentos (Whipsaws) | 2026-09-15 | 0 | 0 | 0 | [Ver Resumo](Pesquisa_e_Estudos/Analise_Tecnica_Oscilacoes/RESUMO.md) |
-| `Grid_e_Martingale` | Estudo Aprofundado sobre Grid Trading e Martingale no Forex | 2026-09-15 | 0 | 0 | 0 | [Ver Resumo](Pesquisa_e_Estudos/Grid_e_Martingale/RESUMO.md) |
-| `IA_Do_Zero` | Arquitetura e Treinamento de Inteligência Artificial do Zero | 2026-10-18 | 1 | 0 | 0 | [Ver Resumo](Pesquisa_e_Estudos/IA_Do_Zero/RESUMO.md) |
-| `Macroeconomia_BOJ` | Análise Macroeconômica sobre Anúncio de Taxa de Juros do Banco do Japão (BOJ) | 2026-09-18 | 0 | 0 | 0 | [Ver Resumo](Pesquisa_e_Estudos/Macroeconomia_BOJ/RESUMO.md) |
-| `Traders_Brasileiros_Forex` | Pesquisa Detalhada sobre Melhores Traders Brasileiros de Forex | 2026-09-15 | 0 | 0 | 0 | [Ver Resumo](Pesquisa_e_Estudos/Traders_Brasileiros_Forex/RESUMO.md) |
-| `Traders_Historicos_Forex` | Pesquisa sobre os Traders de Forex mais Famosos e Suas Estratégias | 2026-09-15 | 0 | 0 | 0 | [Ver Resumo](Pesquisa_e_Estudos/Traders_Historicos_Forex/RESUMO.md) |
-
-### 📁 PROJETO: `Plano_de_Trading`
-
-| Subdiretório | Título / Tema Principal | Data | Artefatos | Scripts | Códigos | Link |
-| :--- | :--- | :--- | :---: | :---: | :---: | :--- |
-| `Auditoria_Robos_MT5` | Auditoria de Ticks, Barras e Estratégias na Pasta Robos MT5 | 2026-10-04 | 0 | 0 | 3 | [Ver Resumo](Plano_de_Trading/Auditoria_Robos_MT5/RESUMO.md) |
-| `Briefing_e_Guardrail` | Briefing Técnico, Trader BTCUSD e Ativação do Guardrail Sunrise | 2026-09-30 | 0 | 0 | 19 | [Ver Resumo](Plano_de_Trading/Briefing_e_Guardrail/RESUMO.md) |
-| `Fabio_Valentim_TRAX` | Implementação do Sistema TRAX e Técnica do Leo para XAUUSD | 2026-10-07 | 0 | 0 | 2 | [Ver Resumo](Plano_de_Trading/Fabio_Valentim_TRAX/RESUMO.md) |
-
-### 📁 PROJETO: `Projeto_Mikael_Orderflows`
-
-| Subdiretório | Título / Tema Principal | Data | Artefatos | Scripts | Códigos | Link |
-| :--- | :--- | :--- | :---: | :---: | :---: | :--- |
-| `Transcribe_e_Frames` | Extração de Frames e Transcrição da Aula do Mikael em Vídeo | 2026-10-16 | 0 | 0 | 2 | [Ver Resumo](Projeto_Mikael_Orderflows/Transcribe_e_Frames/RESUMO.md) |
-
-### 📚 CATEGORIA TEMÁTICA: `Relatorios_e_Analises`
-
-| Subdiretório | Título / Tema Principal | Data | Artefatos | Scripts | Códigos | Link |
-| :--- | :--- | :--- | :---: | :---: | :---: | :--- |
-| `Inteligencia_Mercado_PDF` | Relatório Profissional de Inteligência de Mercado em PDF com ReportLab | 2026-09-16 | 1 | 7 | 0 | [Ver Resumo](Relatorios_e_Analises/Inteligencia_Mercado_PDF/RESUMO.md) |
-
-### 📁 PROJETO: `Robo_Virada_de_Delta`
-
-| Subdiretório | Título / Tema Principal | Data | Artefatos | Scripts | Códigos | Link |
-| :--- | :--- | :--- | :---: | :---: | :---: | :--- |
-| `Automacao_Virada_Delta_Pro` | Robo Virada Delta Pro: Inclusão de Núcleo Atrator Não-Linear e PVSRA | 2026-10-16 | 1 | 0 | 13 | [Ver Resumo](Robo_Virada_de_Delta/Automacao_Virada_Delta_Pro/RESUMO.md) |
-| `Robo_Frasson_Alta_Frequencia` | Quadro Técnico Operacional MNQ & MES e Otimização Alta Frequência Frasson | 2026-10-17 | 11 | 0 | 28 | [Ver Resumo](Robo_Virada_de_Delta/Robo_Frasson_Alta_Frequencia/RESUMO.md) |
-| `Robo_POC_Orderflows` | Desenvolvimento do Robô de POC e Fluxo de Ordens baseado em Mike Valtos | 2026-10-10 | 0 | 0 | 2 | [Ver Resumo](Robo_Virada_de_Delta/Robo_POC_Orderflows/RESUMO.md) |
-| `Valid_BOS_Pullback_e_Bookmap` | Estratégia Valid BOS Pullback, Base de Conhecimento Quant e Addon Bookmap | 2026-10-14 | 2 | 0 | 33 | [Ver Resumo](Robo_Virada_de_Delta/Valid_BOS_Pullback_e_Bookmap/RESUMO.md) |
+| Categoria | Quantidade | Principais Ativos / Tecnologias |
+| :--- | :---: | :--- |
+| **Robôs / EAs MT5** | **19 Sistemas** | `Burgo Scalpe Pro` (V40, V41, V42, V43, V50), `Robô Virada de Delta Pro`, `Robô Frasson Alta Frequência PRO`, `Valid BOS Bookmap EA`, `BoletaScalping MQL5`, `Robo POC Orderflows` |
+| **Indicadores MT5 & Pine** | **5 Indicadores** | `CanalDrawer.mq5`, `MTR_Volume_AT_Price_Pro.mq5`, `Valid_BOS_Pullback.pine`, `Valid_BOS_Bookmap_Ind.mq5` |
+| **Presets Calibrados (.set)** | **23 Presets** | XAUUSD (Ouro M1, M5, M15), BTCUSD (M5, VTMarkets), NAS100 / MNQ (M1, New York), MES (12R Renko, Frasson) |
+| **Scripts Python & Backtest** | **104 Scripts** | Motores de backtest causal, Monte Carlo, simulação de estresse, teste de ruína (Protocolo Sunrise) e ML leakage scanner |
+| **Documentação & Manuais** | **30+ Manuais** | Arquitetura MQL5, parâmetros de risco, manuais operacionais e relatórios forenses em Markdown |
 
 ---
 
-## ⚙️ Governança e Versionamento Git
-- **Repositório Otimizado**: Mantém resumos em Markdown, transcrições resumidas, scripts Python de auditoria, códigos MQL5 (`.mq5`, `.mqh`) e presets (`.set`).
-- **Arquivos Ignorados (`.gitignore`)**: Vídeos pesados de gravação (`.mp4`), pacotes binários temporários e logs transitórios do sistema.
+## 📁 Estrutura Temática de Pastas de Trading
+
+### 1. `BurgoScalpPro/`
+Robô insignia de scalping com canais dinâmicos, grade inteligente e controle de exposição no Ouro (XAUUSD) e Forex.
+- `Repositorio_Oficial/`: Código-fonte oficial incorporado de Documents (`Burgo Scalpe Pro V41, V42, V43 M1`), manuais de arquitetura (`docs/ARCHITECTURE.md`), parâmetros (`docs/PARAMETERS.md`) e regras de versionamento.
+- `Desenvolvimento_MQL5/`: Versão base compilável no terminal MT5.
+- `Backtests_XAUUSD_2Anos/`: Relatórios e dados históricos de simulação.
+- `Otimizacao_XAUUSD_Lucro/`: Scripts de otimização de lucro e curvas de retorno.
+- `Ajustes_MagicNumber_v50/`: Refatoração para versão 5.0 com múltiplos identificadores mágicos.
+- `Correcoes_Codigo_e_Sets/`: Presets otimizados para M1, M5 e M15.
+
+### 2. `Robo_Virada_de_Delta/`
+Sistemas focados em microestrutura, absorção, fluxo institucional (Orderflows) e atratores não lineares.
+- `Automacao_Virada_Delta_Pro/`: Implementação do núcleo de atrator não linear (`Nonlinear_Attractor_Core.mqh`), PVSRA (`PVSRA_Core.mqh`) e gerenciamento de risco (`Risk_Manager.mqh`).
+- `Robo_Frasson_Alta_Frequencia/`: Versão profissional otimizada para MNQ, MES e XAUUSD com 20 relatórios de calibração.
+- `Valid_BOS_Pullback_e_Bookmap/`: Integração híbrida PineScript + MQL5 + Java Bridge com a plataforma Bookmap.
+- `Robo_POC_Orderflows/`: Estratégia de POC desenvolvida com base na metodologia Mike Valtos.
+
+### 3. `Auditoria_Quant_Forense/`
+Blindagem quantitativa, auditoria causal e Protocolo Sunrise.
+- `Protocolo_Sunrise_Auditoria/`: Motores oficiais `mt5_causal_backtester.py`, scanner de vazamento temporal `ml_leakage_scanner.py` e auditoria de risco de ruína em janelas móveis.
+
+### 4. `BoletaScalping/`
+Interface gráfica (GUI) customizada para MetaTrader 5 com disparo de ordens a mercado, ordens pendentes, cálculo automático de lote e integração com canais.
+- `Interface_GUI_MQL5/`: Componente visual e boleta de scalping.
+- `Boleta_Com_Canais/`: Acoplamento direto entre as marcações de canal e os gatilhos da boleta.
+
+### 5. `Indicadores_MT5/`
+Ferramentas analíticas nativas em MQL5.
+- `CanalDrawer/`: Traçador automático de canais e zonas de suporte/resistência.
+- `MTR_Volume_AT_Price/`: Perfil de volume institucional acumulado por nível de preço.
+
+### 6. `Plano_de_Trading/`
+Plano operacional, robôs de teste e integrações.
+- `Briefing_e_Guardrail/`: Configuração de regras operacionais e bot BTCUSD.
+- `Auditoria_Robos_MT5/`: Verificação de dados de ticks e barras da pasta MT5.
+- `Fabio_Valentim_TRAX/`: Robô baseado no sistema TRAX e técnica do Leo para Ouro.
+
+### 7. `Automacao_de_Aprendizado/`
+Ambiente web interativo com dashboard para acompanhamento de operações e parâmetros.
+
+### 8. `Projeto_Mikael_Orderflows/`
+Ferramentas de transcrição e visão computacional para análise de frames de aulas e setups de fluxo institucional.
+
+### 9. `Relatorios_e_Analises/`
+Geração automatizada de relatórios em PDF profissional (`ReportLab`) de inteligência de mercado financeiro.
+
+### 10. `Pesquisa_e_Estudos/`
+Cadernos de pesquisa em finanças quantitativas:
+- `Traders_Historicos_Forex/` & `Traders_Brasileiros_Forex/`
+- `Grid_e_Martingale/`: Análise estocástica de rebaixamento e quebra em grades.
+- `Analise_Tecnica_Oscilacoes/`: Técnicas anti-whipsaw em consolidações.
+- `Macroeconomia_BOJ/`: Modelagem de impacto de política monetária global.
+
+---
+
+## 🛡️ Governança e Regras de Segurança
+- **Repositório Otimizado**: Mantém histórico de código, scripts, documentação e parâmetros, excluindo binários transitórios e arquivos gigantes de mídia.
+- **Microestrutura Realista**: Todos os scripts de backtest incorporam custos de Swap noturno triplo, comissões ECN reais e slippage.

@@ -1,0 +1,21 @@
+# MetaTrader 5 compiled executables
+*.ex5
+
+# MT5 Log files and report outputs
+*.log
+*.htm
+*.html
+*.txt
+*.csv
+
+# Strategy Tester Cache & Reports
+Tester/
+*.tst
+*.fxt
+
+# IDE and OS generated files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini

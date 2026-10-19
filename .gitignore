@@ -21,3 +21,6 @@ __pycache__/
 # MT5 logs e caches pesados
 *.tlog
 *.log
+
+# Não-Trading
+Direito_e_Sucessoes/
