@@ -23,6 +23,12 @@ RR_RATIO = 2.0                   # Payoff 2:1 (Take Profit = 2x Stop Loss)
 PVSRA_LOOKBACK = 10
 MAGIC_NUMBER = 20260930
 
+# Chaves Modulares de Operação (Feature Flags)
+ALLOW_BUY = True                     # Habilita sinais de COMPRA
+ALLOW_SELL = True                    # Habilita sinais de VENDA
+ENABLE_BREAKEVEN = False             # Padrão FALSE (evita que o ruído/pullback liquide trades vencedores)
+BREAKEVEN_TRIGGER_ATR = 1.5          # Distância em ATR para armar breakeven se ativado
+
 # Trava Sunrise GuardRail
 GUARDRAIL = {
     "enabled": True,
@@ -218,12 +224,33 @@ def run_trader():
                     last_log_time = now_ts
 
                 if not has_position and signal_dir != 0:
-                    order_type = mt5.ORDER_TYPE_BUY if signal_dir == 1 else mt5.ORDER_TYPE_SELL
-                    aprovado, motivo = guardrail_audit(order_type, lot, sl_dist_pts, tp_dist_pts)
-                    if aprovado:
-                        print(f"\n🚀 [+] SINAL VALIDADO! Gatilho: {pvsra_desc} | Direção: {'COMPRA' if signal_dir == 1 else 'VENDA'}")
-                        if execute_order(order_type, lot, sl_dist_usd, tp_dist_usd):
-                            time.sleep(5)
+                    if (signal_dir == 1 and not ALLOW_BUY) or (signal_dir == -1 and not ALLOW_SELL):
+                        pass
+                    else:
+                        order_type = mt5.ORDER_TYPE_BUY if signal_dir == 1 else mt5.ORDER_TYPE_SELL
+                        aprovado, motivo = guardrail_audit(order_type, lot, sl_dist_pts, tp_dist_pts)
+                        if aprovado:
+                            print(f"\n🚀 [+] SINAL VALIDADO! Gatilho: {pvsra_desc} | Direção: {'COMPRA' if signal_dir == 1 else 'VENDA'}")
+                            if execute_order(order_type, lot, sl_dist_usd, tp_dist_usd):
+                                time.sleep(5)
+
+                # Gestão Modular de Breakeven (Ativa apenas se a chave ENABLE_BREAKEVEN for True)
+                if has_position and ENABLE_BREAKEVEN:
+                    pos = open_positions[0]
+                    if pos.type == mt5.ORDER_TYPE_BUY:
+                        if (info.bid - pos.price_open) >= (BREAKEVEN_TRIGGER_ATR * atr) and pos.sl < pos.price_open:
+                            new_sl = round(pos.price_open + (info.spread * info.point), info.digits)
+                            req = {"action": mt5.TRADE_ACTION_SLTP, "position": pos.ticket, "symbol": SYMBOL, "sl": new_sl, "tp": pos.tp}
+                            res = mt5.order_send(req)
+                            if res and res.retcode == mt5.TRADE_RETCODE_DONE:
+                                print(f"🛡️ [BREAKEVEN] SL ajustado para a entrada: {new_sl}")
+                    elif pos.type == mt5.ORDER_TYPE_SELL:
+                        if (pos.price_open - info.ask) >= (BREAKEVEN_TRIGGER_ATR * atr) and (pos.sl > pos.price_open or pos.sl == 0):
+                            new_sl = round(pos.price_open - (info.spread * info.point), info.digits)
+                            req = {"action": mt5.TRADE_ACTION_SLTP, "position": pos.ticket, "symbol": SYMBOL, "sl": new_sl, "tp": pos.tp}
+                            res = mt5.order_send(req)
+                            if res and res.retcode == mt5.TRADE_RETCODE_DONE:
+                                print(f"🛡️ [BREAKEVEN] SL ajustado para a entrada: {new_sl}")
 
             time.sleep(5)  # Checagem a cada 5 segundos
 
