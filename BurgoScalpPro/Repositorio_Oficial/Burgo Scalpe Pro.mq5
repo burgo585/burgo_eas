@@ -1,161 +1,157 @@
 //+------------------------------------------------------------------+
 //|                                             Burgo Scalpe Pro.mq5 |
-//|                                    Copyright 2024, DevMaster Pro |
-//| V43 - XAUUSD M1 SCALPER EDITION (Fast Profits, Intraday Trend)   |
+//|                                    Copyright 2026, DevMaster Pro |
+//|  V43.1 - BLINDAGEM DE EXECUÇÃO + CORREÇÃO TRAILING + STOP CESTA  |
 //+------------------------------------------------------------------+
 #property copyright "DevMaster Pro"
-#property version   "43.00"
+#property version   "43.10"
 #property strict
 
 #include <Trade\Trade.mqh>
 #include <Trade\PositionInfo.mqh>
 
-// --- INPUTS CALIBRADOS PARA XAUUSD M1 SCALPER ---
-input group "==== MOTOR DE GIRO (SCALPING) ===="
-input double  InpInitialLot       = 0.01;      // Ouro é alavancado, comece com 0.01
-input double  InpTargetSideUSD    = 1.00;      // ◄ V43: Lucro muito rápido "Bateu, Levou"
-input double  InpTargetGlobalUSD  = 15.00;     // Alvo para reset total da conta
-input int     InpMagicNumber      = 888124;
+// --- INPUTS ---
+input group "==== MOTOR DE GIRO ===="
+input double  InpInitialLot       = 0.01;      // Lote Inicial de Giro
+input double  InpTargetSideUSD    = 5.00;      // Alvo de cada giro p/ limpeza ($)
+input double  InpTargetGlobalUSD  = 10.00;     // Alvo para reset total da conta ($)
+input int     InpMagicNumber      = 888123;    // Magic Number do Grid
+input int     InpHedgeMagicNumber = 888124;    // Magic Number do Hedge
 
-input group "==== LIMITE DE SEGURANÇA (OURO) ===="
-input int     InpBaseDistance     = 500;       // ◄ V43: 500 pontos de ouro (necessário pelo ruído)
-input double  InpLotMultiplier    = 1.30;      // Conservador
-input int     InpMaxMartingale    = 8;         
-input int     InpMaxTotalOrders   = 10;        // ◄ V43: Limite máximo menor
+input group "==== LIMITE DE SEGURANÇA E PROGRESSÃO ===="
+input int     InpBaseDistance     = 1500;       // Distância base em pontos (500 pts = $5.00 no Ouro)
+input double  InpLotMultiplier    = 1.0;       // Multiplicador real de lote do Grid
+input int     InpMaxMartingale    = 6;         // Limite máximo de níveis para aumento de lote
+input int     InpMaxTotalOrders   = 3;        // Máximo absoluto de ordens por lado
+input double  InpMaxAllowedLot    = 1.50;      // Lote máximo absoluto por ordem
+input int     InpMaxSpread        = 60;        // Spread Máximo em Pontos (0 = Desativado)
 
-input group "==== FILTROS DE VOLATILIDADE ===="
-input ENUM_TIMEFRAMES InpTimeframe    = PERIOD_CURRENT;
-input bool    InpUseATR           = true;      
-input int     InpATRPeriod        = 14;        
-input double  InpATRMultiplier    = 1.5;       
+input group "==== STOP LOSS FINANCEIRO DA CESTA (ANTI-QUEBRA) ===="
+input bool    InpUseMaxLossUSD    = true;      // Ativar Stop Loss Financeiro Máximo
+input double  InpMaxLossUSD       = 10.00;     // Prejuízo Máximo Flutuante ($) para Stop Geral
+input int     InpCooldownMinutes  = 60;        // Pausa (Cooldown) em minutos após Stop da Cesta
+input double  InpMaxDailyLossUSD  = 160.00;    // Prejuízo Máximo Diário ($) para Trava Anti-Quebra (0=Desativado)
+input bool    InpNewBarOnly       = true;      // Abrir novo giro inicial apenas na abertura de nova barra
 
-input group "==== FILTRO ANTI-OSCILAÇÃO ===="
-input bool    InpUseADX           = true;      
-input int     InpADXPeriod        = 14;        
-input double  InpADXThreshold     = 20.0;      // ◄ V43: Relaxado para operar mais no ouro
-input int     InpCooldownBars     = 1;         // ◄ V43: 1 minuto de descanso apenas
-input double  InpMaxDrawdownPct   = 15.0;      // Pausa o grid
+input group "==== FILTRO DE TENDÊNCIA INSTITUCIONAL (ANTI-CONTRA-TENDÊNCIA) ===="
+input bool            InpUseTrendFilter = true;     // Ativar Filtro de Tendência (False p/ Ouro, True p/ Forex)
+input ENUM_TIMEFRAMES InpTrendTF        = PERIOD_M15; // Timeframe da Média (H1 recomendado)
+input int             InpTrendEMAPeriod = 200;       // Período da Média Móvel (EMA 200)
 
-input group "==== FILTROS AVANÇADOS ===="
-input bool    InpUseCHOP          = true;      
-input int     InpCHOPPeriod       = 14;        
-input double  InpCHOPTrendLimit   = 38.2;      // Se cair, tendência muito forte (trava)
-input bool    InpUseEMA200Filter  = true;      
-input ENUM_TIMEFRAMES InpEMA200TF = PERIOD_M30;// ◄ V43: Tendência direcional de 30 minutos!
-input bool    InpUseRSITrigger    = false;     // Off por padrão para mais velocidade
-input int     InpRSIPeriod        = 14;        
-input double  InpRSIOversold      = 30.0;      
-input double  InpRSIOverbought    = 70.0;      
-input double  InpStepMultiplier   = 1.25;      // ◄ V43: Expansão rápida para segurar os spikes do Ouro
-input int     InpMaxSpread        = 40;        // ◄ V43: Ouro tem spread alto (40 pontos max)
-input double  InpHardEquityStopPct= 15.0;      // ◄ V43: Proteção nuclear (15% da conta)
+input group "==== HEDGE DINÂMICO DE RECUPERAÇÃO ===="
+input bool    InpUseTrendHedge    = true;      // Ativar Hedge de Defesa
+input int     InpHedgeTriggerLvl  = 5;         // Nível do grid que ativa o Hedge
+input double  InpHedgeLotRatio    = 0.8;       // Proporção do lote de hedge em relação ao grid preso
+input double  InpHedgeTargetUSD   = 8.00;      // Alvo de lucro em $ para encerrar o Hedge com ganho
 
-input group "==== TRAILING STOP ===="
-input bool    InpUseTrailingStop  = true;      
-input double  InpTrailingStartUSD = 0.50;      // ◄ V43: Começa a seguir o lucro rápido
-input double  InpTrailingDropPct  = 10.0;      
+input group "==== FILTROS DINÂMICOS (ATR) ===="
+input ENUM_TIMEFRAMES InpTimeframe= PERIOD_M15;// Timeframe do ATR
+input bool    InpUseATR           = true;      // Usar ATR para distância dinâmica
+input int     InpATRPeriod        = 14;        // Período do ATR
+input double  InpATRMultiplier    = 1.5;       // Multiplicador do ATR
 
-input group "==== HORÁRIOS DE OPERAÇÃO ===="
-input string  InpStartTime        = "00:00";   
-input string  InpEndTime          = "23:59";   
+input group "==== TRAILING STOP DE LUCRO ===="
+input bool    InpUseTrailingStop  = false;     // Ativar Trailing Stop (False = Alvo Fixo Recomendado no Ouro)
+input double  InpTrailingStartUSD = 5.00;      // Lucro mínimo para iniciar trailing ($)
+input double  InpTrailingDropPct  = 10.0;      // % de recuo tolerado antes de fechar
+
+input group "==== HORÁRIOS E PROTEÇÃO DE FIM DE SEMANA ===="
+input string  InpStartTime        = "04:00";   // Início das operações (04:00 server time)
+input string  InpEndTime          = "18:00";   // Fim das operações diárias (18:00 server time)
+input bool    InpFridayFilter     = true;      // Não abrir novos giros na sexta à tarde (após 17:00)
 
 // Globais
 CTrade        trade;
+CTrade        tradeHedge;
 CPositionInfo posInfo;
-int           PM = 1;
 string        PREFIX = "BSP_";
-int           atrHandle;
-int           adxHandle;
-int           ema200Handle;
-int           rsiHandle;
+int           atrHandle = INVALID_HANDLE;
+int           trendEmaHandle = INVALID_HANDLE;
 
 bool          EA_Active = true;
 bool          Panel_Minimized = false;
-bool          RuntimeUseATR;
-bool          RuntimeUseADX;
-bool          RuntimeUseCHOP;
-bool          RuntimeUseEMA200;
+bool          HedgeActive = false;
+ulong         lastStatsUpdateTime = 0;
+ulong         lastUIUpdate = 0;
+datetime      lastOrderTime = 0;
+int           lastHedgeTriggerLevel = 0;
+datetime      cooldownUntilTime = 0;
+datetime      lastBarTime = 0;
 
-// Anti-Oscilação
-datetime      lastBuyCloseTime  = 0;
-datetime      lastSellCloseTime = 0;
-double        currentADX        = 0;
-bool          gridBlocked       = false;
-string        gridBlockReason   = "";
+// Paleta de Cores do Painel
+color cor_bg_main     = C'15,23,42';    
+color cor_bg_panel    = C'30,41,59';    
+color cor_border      = C'51,65,85';    
+color cor_text_main   = C'241,245,249'; 
+color cor_text_muted  = C'148,163,184'; 
+color cor_accent      = C'56,189,248';  
+color cor_buy         = C'34,197,94';   
+color cor_sell        = C'239,68,68';   
+color cor_warning     = C'245,158,11';  
 
-// Novos indicadores
-double        currentCHOP       = 0;
-double        currentRSI        = 0;
-double        ema200Value       = 0;
-bool          ema200BuyAllowed  = true;
-bool          ema200SellAllowed = true;
-
-// Cores do Painel
-color cor_bg_main     = C'15,23,42';
-color cor_bg_panel    = C'30,41,59';
-color cor_border      = C'51,65,85';
-color cor_text_main   = C'241,245,249';
-color cor_text_muted  = C'148,163,184';
-color cor_accent      = C'56,189,248';
-color cor_buy         = C'34,197,94';
-color cor_sell        = C'239,68,68';
-color cor_warning     = C'245,158,11';
-color cor_purple      = C'168,85,247';
-
-// Estatísticas
 double total_profit = 0;
 double daily_profit = 0;
 int total_trades = 0;
 int win_trades = 0;
 int loss_trades = 0;
 
-// Trailing
 double max_buy_profit = 0;
 double max_sell_profit = 0;
 double max_global_profit = 0;
 
-// Declarações
 void CreateRect(string name, int x, int y, int w, int h, color bg, color border);
 void DrawLabel(string name, string text, int x, int y, color clr, int size, string font);
 void CreateButton(string name, string text, int x, int y, int w, int h, color bg, color fg);
 void AtualizarVisibilidadePainel();
 void AtualizarValoresPainel(double floating, double bal, double eq, int tBuy, int tSell, double pBuy, double pSell);
 void FecharLucrativas();
-void ExecutarHedge();
+bool TentarReciclar(double lucroDisponivel, ENUM_POSITION_TYPE ladoPerdedor);
+void FecharLado(ENUM_POSITION_TYPE type);
+void FecharTudo();
+void FecharHedges();
+void CriarPainelModerno();
+double NormalizarLote(double lot);
 
-//+------------------------------------------------------------------+
-int OnInit() {
-   trade.SetExpertMagicNumber(InpMagicNumber);
-   int digits = (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS);
-   PM = (digits >= 3) ? 10 : 1;
+double NormalizarLote(double lot) {
+   double step   = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP);
+   double minLot = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
+   double maxLot = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MAX);
    
-   atrHandle = iATR(_Symbol, InpTimeframe, InpATRPeriod);
-   adxHandle = iADX(_Symbol, InpTimeframe, InpADXPeriod);
-   ema200Handle = iMA(_Symbol, InpEMA200TF, 200, 0, MODE_EMA, PRICE_CLOSE);
-   rsiHandle = iRSI(_Symbol, InpTimeframe, InpRSIPeriod, PRICE_CLOSE);
+   if(step <= 0)   step = 0.01;
+   if(minLot <= 0) minLot = 0.01;
+   if(maxLot <= 0) maxLot = 100.0;
    
-   RuntimeUseATR    = InpUseATR;
-   RuntimeUseADX    = InpUseADX;
-   RuntimeUseCHOP   = InpUseCHOP;
-   RuntimeUseEMA200 = InpUseEMA200Filter;
+   lot = MathFloor(lot / step + 0.0000001) * step;
+   if(lot < minLot) lot = minLot;
+   if(lot > maxLot) lot = maxLot;
    
-   CriarPainelModerno();
-   return(INIT_SUCCEEDED);
+   return NormalizeDouble(lot, 2);
 }
 
-void OnDeinit(const int reason) { 
-   ObjectsDeleteAll(0, PREFIX); 
-   IndicatorRelease(atrHandle);
-   IndicatorRelease(adxHandle);
-   IndicatorRelease(ema200Handle);
-   IndicatorRelease(rsiHandle);
-   ChartRedraw();
+double CalcularProximoLote(double lastLot, int totalOrders);
+
+int ObterDirecaoTendencia() {
+   if(!InpUseTrendFilter || trendEmaHandle == INVALID_HANDLE) return 0;
+   
+   double ema[1];
+   if(CopyBuffer(trendEmaHandle, 0, 1, 1, ema) <= 0) return 0;
+   
+   double closePrice = iClose(_Symbol, InpTrendTF, 1);
+   if(closePrice > ema[0]) return 1;  // Tendência de Alta
+   if(closePrice < ema[0]) return -1; // Tendência de Baixa
+   return 0;
 }
 
 bool IsTradingTime() {
    datetime time = TimeCurrent();
    MqlDateTime dt;
    TimeToStruct(time, dt);
+   
+   // Proteção de Sexta-Feira: Não abre novos giros na sexta à tarde
+   if(InpFridayFilter && dt.day_of_week == 5 && dt.hour >= 17) {
+      return false;
+   }
+   
    int current_mins = dt.hour * 60 + dt.min;
    
    string start_arr[];
@@ -166,242 +162,300 @@ bool IsTradingTime() {
    StringSplit(InpEndTime, ':', end_arr);
    int end_mins = (int)StringToInteger(end_arr[0]) * 60 + (int)StringToInteger(end_arr[1]);
    
-   if (start_mins < end_mins)
+   if (start_mins < end_mins) {
       return (current_mins >= start_mins && current_mins <= end_mins);
-   else
+   } else {
       return (current_mins >= start_mins || current_mins <= end_mins);
+   }
 }
 
 double GetDynamicDistance() {
-   if(!RuntimeUseATR) return InpBaseDistance * PM * _Point;
+   double baseDist = InpBaseDistance * _Point;
+   if(!InpUseATR || atrHandle == INVALID_HANDLE) return baseDist;
    
-   double atr[];
-   if(CopyBuffer(atrHandle, 0, 0, 1, atr) <= 0) return InpBaseDistance * PM * _Point;
+   double atr[1];
+   if(CopyBuffer(atrHandle, 0, 1, 1, atr) <= 0) return baseDist;
+   
    double dist = atr[0] * InpATRMultiplier;
-   
-   double minDist = (InpBaseDistance * 0.75) * PM * _Point;
-   if(dist < minDist) dist = minDist;
+   if(dist < baseDist * 0.8) dist = baseDist * 0.8;
    return dist;
 }
 
-double CalculateChoppiness(int period) {
-   double high[], low[], close[];
-   ArraySetAsSeries(high, true);
-   ArraySetAsSeries(low, true);
-   ArraySetAsSeries(close, true);
-   
-   int needed = period + 1;
-   if(CopyHigh(_Symbol, InpTimeframe, 1, needed, high)   < needed) return 50.0;
-   if(CopyLow(_Symbol, InpTimeframe, 1, needed, low)     < needed) return 50.0;
-   if(CopyClose(_Symbol, InpTimeframe, 1, needed, close) < needed) return 50.0;
-   
-   double trSum = 0;
-   double highestHigh = -DBL_MAX;
-   double lowestLow   = DBL_MAX;
-   
-   for(int i = 0; i < period; i++) {
-      double prevClose = close[i + 1];
-      double tr = MathMax(high[i] - low[i], MathMax(MathAbs(high[i] - prevClose), MathAbs(low[i] - prevClose)));
-      trSum += tr;
-      if(high[i] > highestHigh) highestHigh = high[i];
-      if(low[i] < lowestLow)    lowestLow   = low[i];
-   }
-   
-   double range = highestHigh - lowestLow;
-   if(range <= 0 || trSum <= 0) return 50.0;
-   
-   return 100.0 * MathLog10(trSum / range) / MathLog10((double)period);
-}
+void CalculateStats(bool force = false) {
+   ulong now = GetTickCount64();
+   if(!force && (now - lastStatsUpdateTime < 3000)) return;
+   lastStatsUpdateTime = now;
 
-void UpdateMarketRegime() {
-   double adxBuf[];
-   if(CopyBuffer(adxHandle, 0, 0, 1, adxBuf) > 0) currentADX = adxBuf[0];
+   total_profit = 0;
+   daily_profit = 0;
+   total_trades = 0;
+   win_trades = 0;
+   loss_trades = 0;
    
-   if(RuntimeUseCHOP) currentCHOP = CalculateChoppiness(InpCHOPPeriod);
-   
-   if(RuntimeUseEMA200) {
-      double emaBuf[];
-      ArraySetAsSeries(emaBuf, true);
-      if(CopyBuffer(ema200Handle, 0, 1, 1, emaBuf) > 0) {
-         ema200Value = emaBuf[0];
-         double currentPrice = SymbolInfoDouble(_Symbol, SYMBOL_BID);
-         ema200BuyAllowed  = (currentPrice > ema200Value);
-         ema200SellAllowed = (currentPrice < ema200Value);
-      }
-   } else {
-      ema200BuyAllowed  = true;
-      ema200SellAllowed = true;
-   }
-   
-   double rsiBuf[];
-   if(CopyBuffer(rsiHandle, 0, 1, 1, rsiBuf) > 0) currentRSI = rsiBuf[0];
-}
-
-bool IsGridAllowed(double balance, double totalFloating) {
-   gridBlocked = false;
-   gridBlockReason = "";
-   
-   if(RuntimeUseCHOP && currentCHOP < InpCHOPTrendLimit) {
-      gridBlocked = true; gridBlockReason = StringFormat("CHOP %.1f < %.1f", currentCHOP, InpCHOPTrendLimit);
-      return false;
-   }
-   
-   if(RuntimeUseADX && currentADX < InpADXThreshold) {
-      gridBlocked = true; gridBlockReason = StringFormat("ADX %.1f < %.1f", currentADX, InpADXThreshold);
-      return false;
-   }
-   
-   if(InpMaxDrawdownPct > 0 && balance > 0 && totalFloating < 0) {
-      double ddPct = MathAbs(totalFloating) / balance * 100.0;
-      if(ddPct >= InpMaxDrawdownPct) {
-         gridBlocked = true; gridBlockReason = StringFormat("DD %.1f%% >= %.1f%%", ddPct, InpMaxDrawdownPct);
-         return false;
-      }
-   }
-   return true;
-}
-
-bool IsCooldownOk(ENUM_POSITION_TYPE side) {
-   if(InpCooldownBars <= 0) return true;
-   datetime closeTime = (side == POSITION_TYPE_BUY) ? lastBuyCloseTime : lastSellCloseTime;
-   if(closeTime == 0) return true;
-   int barsPassed = iBarShift(_Symbol, InpTimeframe, closeTime, false);
-   if(barsPassed < 0) return true;
-   return (barsPassed >= InpCooldownBars);
-}
-
-bool IsSpreadOk() {
-   if(InpMaxSpread <= 0) return true;
-   return ((int)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) <= InpMaxSpread);
-}
-
-void CalculateStats() {
-   total_profit = 0; daily_profit = 0;
-   total_trades = 0; win_trades = 0; loss_trades = 0;
-   HistorySelect(0, TimeCurrent());
-   int deals = HistoryDealsTotal();
    datetime today = TimeCurrent() - (TimeCurrent() % 86400);
+   HistorySelect(today - 30 * 86400, TimeCurrent());
+   int deals = HistoryDealsTotal();
    
    for(int i=0; i<deals; i++) {
       ulong ticket = HistoryDealGetTicket(i);
-      if(HistoryDealGetInteger(ticket, DEAL_MAGIC) == InpMagicNumber) {
-         double profit = HistoryDealGetDouble(ticket, DEAL_PROFIT) + HistoryDealGetDouble(ticket, DEAL_COMMISSION) + HistoryDealGetDouble(ticket, DEAL_SWAP);
+      long magic = HistoryDealGetInteger(ticket, DEAL_MAGIC);
+      if(magic == InpMagicNumber || magic == InpHedgeMagicNumber) {
          if(HistoryDealGetInteger(ticket, DEAL_ENTRY) == DEAL_ENTRY_OUT) {
-            total_profit += profit; total_trades++;
-            if(profit > 0) win_trades++; else if(profit < 0) loss_trades++;
+            double profit = HistoryDealGetDouble(ticket, DEAL_PROFIT) + 
+                            HistoryDealGetDouble(ticket, DEAL_COMMISSION) + 
+                            HistoryDealGetDouble(ticket, DEAL_SWAP);
+            total_profit += profit;
+            total_trades++;
+            if(profit > 0) win_trades++;
+            else if(profit < 0) loss_trades++;
+            
             datetime deal_time = (datetime)HistoryDealGetInteger(ticket, DEAL_TIME);
-            if(deal_time >= today) daily_profit += profit;
+            if(deal_time >= today) {
+               daily_profit += profit;
+            }
          }
       }
    }
 }
 
-void ProcessTrailingStop(double buyProfit, double sellProfit, double totalFloating) {
+void ProcessTrailingStop(double buyProfit, double sellProfit, double totalFloating, int totalBuy, int totalSell) {
    if(!InpUseTrailingStop) return;
    
-   if(totalFloating >= InpTargetGlobalUSD) {
+   // Trailing Global
+   if(totalFloating >= InpTargetGlobalUSD || max_global_profit > 0) {
       if(totalFloating > max_global_profit) max_global_profit = totalFloating;
       double dropAmount = max_global_profit * (InpTrailingDropPct / 100.0);
-      if(max_global_profit - totalFloating >= dropAmount) { FecharTudo(); max_global_profit = 0; return; }
-   } else if(totalFloating < InpTargetGlobalUSD * 0.5) max_global_profit = 0;
+      if((max_global_profit - totalFloating >= dropAmount) || (totalFloating <= InpTargetGlobalUSD * 0.85)) {
+         FecharTudo();
+         max_global_profit = 0;
+         Print("Trailing Stop Global Acionado!");
+         return;
+      }
+   }
+   if(totalBuy == 0 && totalSell == 0) max_global_profit = 0;
 
-   if(buyProfit >= InpTargetSideUSD) {
+   // Trailing Buy (Mantém-se armado uma vez atingido o alvo até fechar)
+   if(buyProfit >= InpTrailingStartUSD || max_buy_profit > 0) {
       if(buyProfit > max_buy_profit) max_buy_profit = buyProfit;
       double dropAmount = max_buy_profit * (InpTrailingDropPct / 100.0);
-      if(max_buy_profit - buyProfit >= dropAmount) { FecharLado(POSITION_TYPE_BUY); max_buy_profit = 0; }
-   } else if(buyProfit < InpTargetSideUSD * 0.5) max_buy_profit = 0;
+      if((max_buy_profit - buyProfit >= dropAmount) || (buyProfit <= InpTrailingStartUSD * 0.85)) {
+         FecharLado(POSITION_TYPE_BUY);
+         max_buy_profit = 0;
+         Print("Trailing Stop Acionado: COMPRA");
+      }
+   }
+   if(totalBuy == 0) max_buy_profit = 0;
    
-   if(sellProfit >= InpTargetSideUSD) {
+   // Trailing Sell (Mantém-se armado uma vez atingido o alvo até fechar)
+   if(sellProfit >= InpTrailingStartUSD || max_sell_profit > 0) {
       if(sellProfit > max_sell_profit) max_sell_profit = sellProfit;
       double dropAmount = max_sell_profit * (InpTrailingDropPct / 100.0);
-      if(max_sell_profit - sellProfit >= dropAmount) { FecharLado(POSITION_TYPE_SELL); max_sell_profit = 0; }
-   } else if(sellProfit < InpTargetSideUSD * 0.5) max_sell_profit = 0;
+      if((max_sell_profit - sellProfit >= dropAmount) || (sellProfit <= InpTrailingStartUSD * 0.85)) {
+         FecharLado(POSITION_TYPE_SELL);
+         max_sell_profit = 0;
+         Print("Trailing Stop Acionado: VENDA");
+      }
+   }
+   if(totalSell == 0) max_sell_profit = 0;
+}
+
+void GerenciarHedgeTendencia(int totalBuy, int totalSell, double totalBuyVol, double totalSellVol) {
+   if(!InpUseTrendHedge) return;
+
+   int hedgesAbertos = 0;
+   double hedgeProfit = 0;
+   ulong hedgeTicket = 0;
+   
+   for(int i = PositionsTotal()-1; i >= 0; i--) {
+      if(posInfo.SelectByIndex(i) && posInfo.Symbol() == _Symbol && posInfo.Magic() == InpHedgeMagicNumber) {
+         hedgesAbertos++;
+         hedgeTicket = posInfo.Ticket();
+         hedgeProfit += posInfo.Profit() + posInfo.Swap() + posInfo.Commission();
+      }
+   }
+   HedgeActive = (hedgesAbertos > 0);
+
+   // Realização de Lucro do Hedge independente: se o Hedge atingir o alvo, realiza o lucro!
+   if(HedgeActive && hedgeProfit >= InpHedgeTargetUSD) {
+      tradeHedge.PositionClose(hedgeTicket);
+      HedgeActive = false;
+      Print("HEDGE REALIZADO COM LUCRO: Ganho de $", hedgeProfit, " colocado no bolso.");
+      return;
+   }
+
+   // Grid de Vendas sobrecarregado -> abre Hedge de Compra (uma única vez por nível)
+   if(totalSell >= InpHedgeTriggerLvl && totalSell > lastHedgeTriggerLevel && !HedgeActive) {
+      double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+      double hedgeLot = NormalizarLote(totalSellVol * InpHedgeLotRatio);
+      if(hedgeLot > InpMaxAllowedLot) hedgeLot = InpMaxAllowedLot;
+      
+      if(tradeHedge.Buy(hedgeLot, _Symbol, ask, 0, 0, "Hedge Trend Buy")) {
+         HedgeActive = true;
+         lastHedgeTriggerLevel = totalSell;
+         Print("HEDGE ATIVADO: Defesa Buy aberta com lote ", hedgeLot);
+      }
+   }
+   
+   // Grid de Compras sobrecarregado -> abre Hedge de Venda (uma única vez por nível)
+   if(totalBuy >= InpHedgeTriggerLvl && totalBuy > lastHedgeTriggerLevel && !HedgeActive) {
+      double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+      double hedgeLot = NormalizarLote(totalBuyVol * InpHedgeLotRatio);
+      if(hedgeLot > InpMaxAllowedLot) hedgeLot = InpMaxAllowedLot;
+      
+      if(tradeHedge.Sell(hedgeLot, _Symbol, bid, 0, 0, "Hedge Trend Sell")) {
+         HedgeActive = true;
+         lastHedgeTriggerLevel = totalBuy;
+         Print("HEDGE ATIVADO: Defesa Sell aberta com lote ", hedgeLot);
+      }
+   }
+
+   // Se o grid principal foi zerado, encerra os hedges remanescentes e reseta a trava
+   if(totalBuy == 0 && totalSell == 0) {
+      if(HedgeActive) FecharHedges();
+      HedgeActive = false;
+      lastHedgeTriggerLevel = 0;
+   }
 }
 
 void OnTick() {
-   CalculateStats();
+   CalculateStats(false);
+   
+   // Proteção contra Spread Alargado (Roll-over noturno / notícias)
+   if(InpMaxSpread > 0 && SymbolInfoInteger(_Symbol, SYMBOL_SPREAD) > InpMaxSpread) {
+      return;
+   }
    
    double balance = AccountInfoDouble(ACCOUNT_BALANCE);
    double equity  = AccountInfoDouble(ACCOUNT_EQUITY);
    double totalFloating = equity - balance;
-   
-   // Hard Equity Stop
-   if(InpHardEquityStopPct > 0 && balance > 0 && totalFloating < 0) {
-      double ddPct = MathAbs(totalFloating) / balance * 100.0;
-      if(ddPct >= InpHardEquityStopPct) {
-         FecharTudo(); EA_Active = false;
-         ObjectSetString(0, PREFIX+"BTN_POWER", OBJPROP_TEXT, "OFF");
-         ObjectSetInteger(0, PREFIX+"BTN_POWER", OBJPROP_BGCOLOR, cor_sell);
-         ObjectSetString(0, PREFIX+"VAL_STATUS", OBJPROP_TEXT, "HARD STOP!");
-         ObjectSetInteger(0, PREFIX+"VAL_STATUS", OBJPROP_COLOR, cor_sell);
-         AtualizarValoresPainel(totalFloating, balance, equity, 0, 0, 0, 0);
-         return;
+
+   // =================================================================
+   // 1. TRAVA DE SEGURANÇA: STOP LOSS FINANCEIRO MÁXIMO DA CESTA
+   // =================================================================
+   if(InpUseMaxLossUSD && totalFloating <= -MathAbs(InpMaxLossUSD)) {
+      PrintFormat("STOP LOSS FINANCEIRO ACIONADO! Flutuante -$%.2f atingiu o limite de -$%.2f. Encerrando cesta.",
+                  MathAbs(totalFloating), MathAbs(InpMaxLossUSD));
+      FecharTudo();
+      if(InpCooldownMinutes > 0) {
+         cooldownUntilTime = TimeCurrent() + (InpCooldownMinutes * 60);
+         PrintFormat("COOLDOWN ATIVADO: Aguardando %d minutos até %s para novos giros.",
+                     InpCooldownMinutes, TimeToString(cooldownUntilTime, TIME_MINUTES|TIME_SECONDS));
       }
+      return;
    }
 
-   if(!InpUseTrailingStop && totalFloating >= InpTargetGlobalUSD) FecharTudo();
+   // Fechamento por Alvo Global Fixo
+   if(!InpUseTrailingStop && totalFloating >= InpTargetGlobalUSD) { 
+       FecharTudo(); 
+       return;
+   }
 
    int totalBuy=0, totalSell=0;
    double buyProfit=0, sellProfit=0;
-   double lastBuyPrice=0, lastSellPrice=0, lastBuyLot=0, lastSellLot=0;
+   double lowestBuyPrice=DBL_MAX, highestSellPrice=0;
+   double lastBuyLot=InpInitialLot, lastSellLot=InpInitialLot;
+   double totalBuyVol=0, totalSellVol=0;
 
+   // Contabiliza APENAS ordens do Magic Number Principal (Grid)
    for(int i = PositionsTotal()-1; i >= 0; i--) {
       if(posInfo.SelectByIndex(i) && posInfo.Symbol()==_Symbol && posInfo.Magic()==InpMagicNumber) {
          double p = posInfo.Profit() + posInfo.Commission() + posInfo.Swap();
          if(posInfo.PositionType()==POSITION_TYPE_BUY) {
-            totalBuy++; buyProfit += p;
-            if(lastBuyPrice==0 || posInfo.PriceOpen()<lastBuyPrice) { lastBuyPrice=posInfo.PriceOpen(); lastBuyLot=posInfo.Volume(); }
+            totalBuy++; 
+            buyProfit += p; 
+            totalBuyVol += posInfo.Volume();
+            if(posInfo.PriceOpen() < lowestBuyPrice) { 
+               lowestBuyPrice = posInfo.PriceOpen(); 
+               lastBuyLot = posInfo.Volume(); 
+            }
          } else {
-            totalSell++; sellProfit += p;
-            if(lastSellPrice==0 || posInfo.PriceOpen()>lastSellPrice) { lastSellPrice=posInfo.PriceOpen(); lastSellLot=posInfo.Volume(); }
+            totalSell++; 
+            sellProfit += p; 
+            totalSellVol += posInfo.Volume();
+            if(posInfo.PriceOpen() > highestSellPrice) { 
+               highestSellPrice = posInfo.PriceOpen(); 
+               lastSellLot = posInfo.Volume(); 
+            }
          }
       }
    }
 
-   UpdateMarketRegime();
-   bool canExpandGrid = IsGridAllowed(balance, totalFloating);
-   bool spreadOk = IsSpreadOk();
+   // Gerenciamento de Hedge Independente
+   GerenciarHedgeTendencia(totalBuy, totalSell, totalBuyVol, totalSellVol);
 
    if (EA_Active) {
-      if(buyProfit >= InpTargetSideUSD && totalSell > 0) if(TentarReciclar(buyProfit, POSITION_TYPE_SELL)) FecharLado(POSITION_TYPE_BUY); 
-      if(sellProfit >= InpTargetSideUSD && totalBuy > 0) if(TentarReciclar(sellProfit, POSITION_TYPE_BUY)) FecharLado(POSITION_TYPE_SELL); 
+      // Reciclagem ativa
+      if(buyProfit >= InpTargetSideUSD && totalSell > 0) {
+         if(TentarReciclar(buyProfit, POSITION_TYPE_SELL)) {
+            FecharLado(POSITION_TYPE_BUY); 
+         }
+      }
+      if(sellProfit >= InpTargetSideUSD && totalBuy > 0) {
+         if(TentarReciclar(sellProfit, POSITION_TYPE_BUY)) {
+            FecharLado(POSITION_TYPE_SELL); 
+         }
+      }
 
-      if (IsTradingTime() && spreadOk) {
+      // Fechamento de Lucro (Fixo por Lado ou Trailing Stop) - Opera a qualquer momento para proteger o capital
+      if(!InpUseTrailingStop) {
+          if(buyProfit >= InpTargetSideUSD)  FecharLado(POSITION_TYPE_BUY);
+          if(sellProfit >= InpTargetSideUSD) FecharLado(POSITION_TYPE_SELL);
+      } else {
+          ProcessTrailingStop(buyProfit, sellProfit, totalFloating, totalBuy, totalSell);
+      }
+
+      if (IsTradingTime()) {
          double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
          double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+         int trendDir = ObterDirecaoTendencia();
 
-         bool rsiAllowsBuy  = !InpUseRSITrigger || (currentRSI <= InpRSIOversold);
-         bool rsiAllowsSell = !InpUseRSITrigger || (currentRSI >= InpRSIOverbought);
-         
-         if(totalBuy == 0 && IsCooldownOk(POSITION_TYPE_BUY) && ema200BuyAllowed && rsiAllowsBuy) trade.Buy(InpInitialLot, _Symbol, ask, 0, 0, "Giro");
-         if(totalSell == 0 && IsCooldownOk(POSITION_TYPE_SELL) && ema200SellAllowed && rsiAllowsSell) trade.Sell(InpInitialLot, _Symbol, bid, 0, 0, "Giro");
+         // Proteções Anti-Quebra para abertura de NOVOS giros
+         bool inCooldown = (cooldownUntilTime > 0 && TimeCurrent() < cooldownUntilTime);
+         bool hitDailyLoss = (InpMaxDailyLossUSD > 0 && daily_profit <= -MathAbs(InpMaxDailyLossUSD));
+         datetime currentBar = iTime(_Symbol, _Period, 0);
+         bool isNewBar = (currentBar != lastBarTime);
+         bool canOpenGiro = (!inCooldown && !hitDailyLoss && (!InpNewBarOnly || isNewBar) && (TimeCurrent() - lastOrderTime >= 2));
 
-         if(!InpUseTrailingStop) {
-             if(buyProfit >= InpTargetSideUSD)  FecharLado(POSITION_TYPE_BUY);
-             if(sellProfit >= InpTargetSideUSD) FecharLado(POSITION_TYPE_SELL);
-         }
-         
-         ProcessTrailingStop(buyProfit, sellProfit, totalFloating);
-
-         double baseDistance = GetDynamicDistance();
-         
-         if(canExpandGrid) {
-            double buyLevelDist = baseDistance * MathPow(InpStepMultiplier, MathMax(0, totalBuy - 1));
-            if(totalBuy > 0 && totalBuy < InpMaxTotalOrders && ema200BuyAllowed && ask < (lastBuyPrice - buyLevelDist)) {
-               double nextLot = (totalBuy < InpMaxMartingale) ? NormalizeDouble(lastBuyLot*InpLotMultiplier, 2) : lastBuyLot;
-               trade.Buy(nextLot, _Symbol, ask, 0, 0, "Grid");
+         // ENTRADAS DE GIRO INICIAL
+         if(canOpenGiro && totalBuy == 0 && (trendDir >= 0)) {
+            if(trade.Buy(NormalizarLote(InpInitialLot), _Symbol, ask, 0, 0, "Giro Buy")) {
+               lastOrderTime = TimeCurrent();
+               lastBarTime = currentBar;
             }
+         }
+         if(canOpenGiro && totalSell == 0 && (trendDir <= 0)) {
+            if(trade.Sell(NormalizarLote(InpInitialLot), _Symbol, bid, 0, 0, "Giro Sell")) {
+               lastOrderTime = TimeCurrent();
+               lastBarTime = currentBar;
+            }
+         }
 
-            double sellLevelDist = baseDistance * MathPow(InpStepMultiplier, MathMax(0, totalSell - 1));
-            if(totalSell > 0 && totalSell < InpMaxTotalOrders && ema200SellAllowed && bid > (lastSellPrice + sellLevelDist)) {
-               double nextLot = (totalSell < InpMaxMartingale) ? NormalizeDouble(lastSellLot*InpLotMultiplier, 2) : lastSellLot;
-               trade.Sell(nextLot, _Symbol, bid, 0, 0, "Grid");
+         double currentDistance = GetDynamicDistance();
+         bool canOpenGrid = (TimeCurrent() - lastOrderTime >= 2);
+         
+         // GRADE DE COMPRA COM MULTIPLICADOR REAL
+         if(canOpenGrid && totalBuy > 0 && totalBuy < InpMaxTotalOrders && ask < (lowestBuyPrice - currentDistance)) {
+            double nextLot = CalcularProximoLote(lastBuyLot, totalBuy);
+            if(trade.Buy(nextLot, _Symbol, ask, 0, 0, "Grid Buy")) {
+               lastOrderTime = TimeCurrent();
+            }
+         }
+
+         // GRADE DE VENDA COM MULTIPLICADOR REAL
+         if(canOpenGrid && totalSell > 0 && totalSell < InpMaxTotalOrders && bid > (highestSellPrice + currentDistance)) {
+            double nextLot = CalcularProximoLote(lastSellLot, totalSell);
+            if(trade.Sell(nextLot, _Symbol, bid, 0, 0, "Grid Sell")) {
+               lastOrderTime = TimeCurrent();
             }
          }
       }
    }
 
-   AtualizarValoresPainel(totalFloating, balance, equity, totalBuy, totalSell, buyProfit, sellProfit);
+   // Throttling de atualização do Painel Gráfico (máximo a cada 500ms para evitar travamentos)
+   if(GetTickCount64() - lastUIUpdate >= 500) {
+      AtualizarValoresPainel(totalFloating, balance, equity, totalBuy, totalSell, buyProfit, sellProfit);
+      lastUIUpdate = GetTickCount64();
+   }
 }
 
 void OnChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam) {
@@ -413,37 +467,30 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
          ObjectSetString(0, PREFIX+"VAL_STATUS", OBJPROP_TEXT, EA_Active ? "Active" : "Paused");
          ObjectSetInteger(0, PREFIX+"VAL_STATUS", OBJPROP_COLOR, EA_Active ? cor_accent : cor_text_muted);
       }
-      else if(sparam == PREFIX+"BTN_ATR") {
-         RuntimeUseATR = !RuntimeUseATR;
-         ObjectSetString(0, PREFIX+"BTN_ATR", OBJPROP_TEXT, RuntimeUseATR ? "ATR" : "atr");
-         ObjectSetInteger(0, PREFIX+"BTN_ATR", OBJPROP_BGCOLOR, RuntimeUseATR ? cor_buy : cor_sell);
+      else if(sparam == PREFIX+"BTN_CLOSE_ALL") {
+         FecharTudo();
       }
-      else if(sparam == PREFIX+"BTN_ADX") {
-         RuntimeUseADX = !RuntimeUseADX;
-         ObjectSetString(0, PREFIX+"BTN_ADX", OBJPROP_TEXT, RuntimeUseADX ? "ADX" : "adx");
-         ObjectSetInteger(0, PREFIX+"BTN_ADX", OBJPROP_BGCOLOR, RuntimeUseADX ? cor_buy : cor_sell);
+      else if(sparam == PREFIX+"BTN_BUY") {
+         double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+         trade.Buy(NormalizarLote(InpInitialLot), _Symbol, ask, 0, 0, "Manual Buy");
       }
-      else if(sparam == PREFIX+"BTN_CHOP") {
-         RuntimeUseCHOP = !RuntimeUseCHOP;
-         ObjectSetString(0, PREFIX+"BTN_CHOP", OBJPROP_TEXT, RuntimeUseCHOP ? "CHOP" : "chop");
-         ObjectSetInteger(0, PREFIX+"BTN_CHOP", OBJPROP_BGCOLOR, RuntimeUseCHOP ? cor_buy : cor_sell);
+      else if(sparam == PREFIX+"BTN_SELL") {
+         double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+         trade.Sell(NormalizarLote(InpInitialLot), _Symbol, bid, 0, 0, "Manual Sell");
       }
-      else if(sparam == PREFIX+"BTN_EMA") {
-         RuntimeUseEMA200 = !RuntimeUseEMA200;
-         ObjectSetString(0, PREFIX+"BTN_EMA", OBJPROP_TEXT, RuntimeUseEMA200 ? "EMA" : "ema");
-         ObjectSetInteger(0, PREFIX+"BTN_EMA", OBJPROP_BGCOLOR, RuntimeUseEMA200 ? cor_buy : cor_sell);
+      else if(sparam == PREFIX+"BTN_CLEAN") {
+         FecharLucrativas();
       }
-      else if(sparam == PREFIX+"BTN_HEDGE") ExecutarHedge();
-      else if(sparam == PREFIX+"BTN_CLOSE_ALL") FecharTudo();
-      else if(sparam == PREFIX+"BTN_BUY") trade.Buy(InpInitialLot, _Symbol, SymbolInfoDouble(_Symbol, SYMBOL_ASK), 0, 0, "Manual Buy");
-      else if(sparam == PREFIX+"BTN_SELL") trade.Sell(InpInitialLot, _Symbol, SymbolInfoDouble(_Symbol, SYMBOL_BID), 0, 0, "Manual Sell");
-      else if(sparam == PREFIX+"BTN_CLEAN") FecharLucrativas();
       else if(sparam == PREFIX+"BTN_PANIC") {
-         FecharTudo(); EA_Active = false;
-         ObjectSetString(0, PREFIX+"BTN_POWER", OBJPROP_TEXT, "OFF"); ObjectSetInteger(0, PREFIX+"BTN_POWER", OBJPROP_BGCOLOR, cor_sell);
-         ObjectSetString(0, PREFIX+"VAL_STATUS", OBJPROP_TEXT, "PANIC!"); ObjectSetInteger(0, PREFIX+"VAL_STATUS", OBJPROP_COLOR, cor_sell);
+         FecharTudo();
+         EA_Active = false;
+         ObjectSetString(0, PREFIX+"BTN_POWER", OBJPROP_TEXT, "OFF");
+         ObjectSetInteger(0, PREFIX+"BTN_POWER", OBJPROP_BGCOLOR, cor_sell);
+         ObjectSetString(0, PREFIX+"VAL_STATUS", OBJPROP_TEXT, "Paused");
       }
-      else if(sparam == PREFIX+"BTN_REMOVE") ExpertRemove();
+      else if(sparam == PREFIX+"BTN_REMOVE") {
+         ExpertRemove();
+      }
       else if(sparam == PREFIX+"BTN_MIN") {
          Panel_Minimized = !Panel_Minimized;
          ObjectSetString(0, PREFIX+"BTN_MIN", OBJPROP_TEXT, Panel_Minimized ? "+" : "-");
@@ -453,117 +500,91 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
    }
 }
 
-void ExecutarHedge() {
-   double totalLotsBuy = 0.0, totalLotsSell = 0.0;
-   for(int i=0; i<PositionsTotal(); i++) {
-      if(posInfo.SelectByIndex(i) && posInfo.Symbol()==_Symbol && posInfo.Magic()==InpMagicNumber) {
-         if(posInfo.PositionType() == POSITION_TYPE_BUY) totalLotsBuy += posInfo.Volume();
-         else totalLotsSell += posInfo.Volume();
-      }
-   }
-   double deltaLote = NormalizeDouble(MathAbs(totalLotsBuy - totalLotsSell), 2);
-   if(deltaLote > 0.0) {
-      if(totalLotsBuy > totalLotsSell) trade.Sell(deltaLote, _Symbol, SymbolInfoDouble(_Symbol, SYMBOL_BID), 0, 0, "Hedge Lock");
-      else trade.Buy(deltaLote, _Symbol, SymbolInfoDouble(_Symbol, SYMBOL_ASK), 0, 0, "Hedge Lock");
-   }
-   if(EA_Active) {
-      EA_Active = false; ObjectSetString(0, PREFIX+"BTN_POWER", OBJPROP_TEXT, "OFF");
-      ObjectSetInteger(0, PREFIX+"BTN_POWER", OBJPROP_BGCOLOR, cor_sell);
-      ObjectSetString(0, PREFIX+"VAL_STATUS", OBJPROP_TEXT, "Hedge Lock"); ObjectSetInteger(0, PREFIX+"VAL_STATUS", OBJPROP_COLOR, cor_warning);
-   }
-}
-
 bool TentarReciclar(double lucroDisponivel, ENUM_POSITION_TYPE ladoPerdedor) {
-   ulong ticketMelhor = 0; double perdaMelhor = 0;
+   ulong ticketPiorOrdem = 0;
+   double maiorPrejuizo = 0;
+
    for(int i=0; i<PositionsTotal(); i++) {
-      if(posInfo.SelectByIndex(i) && posInfo.Symbol()==_Symbol && posInfo.Magic()==InpMagicNumber && posInfo.PositionType()==ladoPerdedor) {
+      if(posInfo.SelectByIndex(i) && posInfo.Magic()==InpMagicNumber && posInfo.PositionType()==ladoPerdedor) {
          double perda = posInfo.Profit() + posInfo.Commission() + posInfo.Swap();
-         if(perda < 0 && (ticketMelhor == 0 || MathAbs(perda) < MathAbs(perdaMelhor))) {
-            ticketMelhor = posInfo.Ticket(); perdaMelhor = perda;
+         if(perda < maiorPrejuizo) {
+            maiorPrejuizo = perda;
+            ticketPiorOrdem = posInfo.Ticket();
          }
       }
    }
-   if(ticketMelhor > 0 && lucroDisponivel > MathAbs(perdaMelhor)) {
-      trade.PositionClose(ticketMelhor); return true;
+
+   if(ticketPiorOrdem > 0 && lucroDisponivel > MathAbs(maiorPrejuizo)) {
+      if(trade.PositionClose(ticketPiorOrdem)) {
+         Print("RECICLAGEM SUCESSO: Ordem ticket #", ticketPiorOrdem, " eliminada com lucro oposto.");
+         return true;
+      }
    }
    return false;
 }
 
 void FecharLado(ENUM_POSITION_TYPE type) {
-   trade.SetAsyncMode(true);
    for(int i=PositionsTotal()-1; i>=0; i--) {
-      if(posInfo.SelectByIndex(i) && posInfo.Symbol()==_Symbol && posInfo.Magic()==InpMagicNumber)
+      if(posInfo.SelectByIndex(i) && posInfo.Symbol()==_Symbol && posInfo.Magic()==InpMagicNumber) {
          if(posInfo.PositionType()==type) trade.PositionClose(posInfo.Ticket());
+      }
    }
-   trade.SetAsyncMode(false);
-   if(type == POSITION_TYPE_BUY) lastBuyCloseTime = TimeCurrent(); else lastSellCloseTime = TimeCurrent();
+}
+
+void FecharHedges() {
+   for(int i=PositionsTotal()-1; i>=0; i--) {
+      if(posInfo.SelectByIndex(i) && posInfo.Symbol()==_Symbol && posInfo.Magic()==InpHedgeMagicNumber) {
+         tradeHedge.PositionClose(posInfo.Ticket());
+      }
+   }
 }
 
 void FecharTudo() {
-   trade.SetAsyncMode(true);
    for(int i=PositionsTotal()-1; i>=0; i--) {
-      if(posInfo.SelectByIndex(i) && posInfo.Symbol()==_Symbol && posInfo.Magic()==InpMagicNumber)
-         trade.PositionClose(posInfo.Ticket());
+      if(posInfo.SelectByIndex(i) && posInfo.Symbol()==_Symbol) {
+         if(posInfo.Magic()==InpMagicNumber || posInfo.Magic()==InpHedgeMagicNumber) {
+            trade.PositionClose(posInfo.Ticket());
+         }
+      }
    }
-   trade.SetAsyncMode(false);
-   lastBuyCloseTime = TimeCurrent(); lastSellCloseTime = TimeCurrent();
+   HedgeActive = false;
+   max_global_profit = 0;
+   max_buy_profit = 0;
+   max_sell_profit = 0;
 }
 
 void FecharLucrativas() {
-   trade.SetAsyncMode(true);
    for(int i=PositionsTotal()-1; i>=0; i--) {
       if(posInfo.SelectByIndex(i) && posInfo.Symbol()==_Symbol && posInfo.Magic()==InpMagicNumber) {
          double p = posInfo.Profit() + posInfo.Commission() + posInfo.Swap();
          if(p > 0) trade.PositionClose(posInfo.Ticket());
       }
    }
-   trade.SetAsyncMode(false);
 }
 
 void CriarPainelModerno() {
-   int x = 20, y = 20, w = 320, h = 650; 
+   int x = 20, y = 20, w = 320, h = 520;
    CreateRect(PREFIX+"BG_MAIN", x, y, w, h, cor_bg_main, cor_border);
    CreateRect(PREFIX+"BG_HEADER", x, y, w, 40, cor_bg_panel, cor_border);
-   DrawLabel(PREFIX+"TITLE", "XAUUSD M1 SCALPER V43", x+15, y+12, cor_accent, 11, "Arial Bold");
+   DrawLabel(PREFIX+"TITLE", "BURGO SCALPE V43 PRO", x+15, y+12, cor_text_main, 12, "Arial Bold");
    CreateButton(PREFIX+"BTN_MIN", "-", x+w-35, y+10, 20, 20, cor_bg_main, cor_text_main);
    
    DrawLabel(PREFIX+"LBL_TIME", "Server Time:", x+15, y+55, cor_text_muted, 9, "Arial");
    DrawLabel(PREFIX+"VAL_TIME", "00:00:00", x+15, y+70, cor_accent, 14, "Arial Bold");
+   
    DrawLabel(PREFIX+"LBL_CANDLE", "Next Candle:", x+120, y+55, cor_text_muted, 9, "Arial");
    DrawLabel(PREFIX+"VAL_CANDLE", "00:00", x+120, y+70, cor_text_main, 10, "Arial Bold");
+
    DrawLabel(PREFIX+"LBL_SPREAD", "Spread:", x+220, y+55, cor_text_muted, 9, "Arial");
    DrawLabel(PREFIX+"VAL_SPREAD", "0", x+220, y+70, cor_warning, 10, "Arial Bold");
 
    int btn_y = y + 100;
-   CreateButton(PREFIX+"BTN_BUY", "BUY", x+15, btn_y, 65, 30, cor_buy, clrWhite);
-   CreateButton(PREFIX+"BTN_SELL", "SELL", x+85, btn_y, 65, 30, cor_sell, clrWhite);
-   CreateButton(PREFIX+"BTN_CLEAN", "CLEAN", x+155, btn_y, 65, 30, cor_accent, clrWhite);
-   CreateButton(PREFIX+"BTN_PANIC", "PANIC", x+225, btn_y, 80, 30, cor_warning, clrWhite);
+   CreateButton(PREFIX+"BTN_BUY", "BUY", x+15, btn_y, 65, 35, cor_buy, clrWhite);
+   CreateButton(PREFIX+"BTN_SELL", "SELL", x+85, btn_y, 65, 35, cor_sell, clrWhite);
+   CreateButton(PREFIX+"BTN_CLEAN", "CLEAN", x+155, btn_y, 65, 35, cor_accent, clrWhite);
+   CreateButton(PREFIX+"BTN_PANIC", "PANIC", x+225, btn_y, 80, 35, cor_warning, clrWhite);
 
-   int btn2_y = btn_y + 35;
-   CreateButton(PREFIX+"BTN_ATR",  RuntimeUseATR  ? "ATR"  : "atr",  x+15,  btn2_y, 52, 30, RuntimeUseATR  ? cor_buy : cor_sell, clrWhite);
-   CreateButton(PREFIX+"BTN_ADX",  RuntimeUseADX  ? "ADX"  : "adx",  x+72,  btn2_y, 52, 30, RuntimeUseADX  ? cor_buy : cor_sell, clrWhite);
-   CreateButton(PREFIX+"BTN_CHOP", RuntimeUseCHOP ? "CHOP" : "chop", x+129, btn2_y, 52, 30, RuntimeUseCHOP ? cor_buy : cor_sell, clrWhite);
-   CreateButton(PREFIX+"BTN_EMA",  RuntimeUseEMA200?"EMA"  : "ema",  x+186, btn2_y, 52, 30, RuntimeUseEMA200?cor_buy : cor_sell, clrWhite);
-   CreateButton(PREFIX+"BTN_HEDGE","HEDGE",                          x+243, btn2_y, 62, 30, cor_purple, clrWhite);
-
-   int st1_y = btn2_y + 37;
-   DrawLabel(PREFIX+"LBL_GRID_STATUS", "GRID:", x+15, st1_y, cor_text_muted, 8, "Arial Bold");
-   DrawLabel(PREFIX+"VAL_GRID_STATUS", "ACTIVE", x+48, st1_y, cor_buy, 8, "Arial Bold");
-   DrawLabel(PREFIX+"LBL_ADX_VAL", "ADX:", x+115, st1_y, cor_text_muted, 8, "Arial");
-   DrawLabel(PREFIX+"VAL_ADX_VAL", "0.0", x+140, st1_y, cor_text_main, 8, "Arial Bold");
-   DrawLabel(PREFIX+"LBL_DD_VAL", "DD:", x+195, st1_y, cor_text_muted, 8, "Arial");
-   DrawLabel(PREFIX+"VAL_DD_VAL", "0.0%", x+215, st1_y, cor_text_main, 8, "Arial Bold");
-
-   int st2_y = st1_y + 18;
-   DrawLabel(PREFIX+"LBL_CHOP_VAL", "CHOP:", x+15, st2_y, cor_text_muted, 8, "Arial");
-   DrawLabel(PREFIX+"VAL_CHOP_VAL", "50.0", x+48, st2_y, cor_text_main, 8, "Arial Bold");
-   DrawLabel(PREFIX+"LBL_EMA_DIR", "EMA:", x+115, st2_y, cor_text_muted, 8, "Arial");
-   DrawLabel(PREFIX+"VAL_EMA_DIR", "BOTH", x+140, st2_y, cor_text_main, 8, "Arial Bold");
-   DrawLabel(PREFIX+"LBL_RSI_VAL", "RSI:", x+195, st2_y, cor_text_muted, 8, "Arial");
-   DrawLabel(PREFIX+"VAL_RSI_VAL", "50.0", x+215, st2_y, cor_text_main, 8, "Arial Bold");
-
-   int card_y = st2_y + 25;
+   int card_y = btn_y + 50;
    CreateRect(PREFIX+"CARD1", x+15, card_y, 140, 70, cor_bg_panel, cor_border);
    DrawLabel(PREFIX+"LBL_FLOAT", "Floating P/L", x+25, card_y+10, cor_text_muted, 9, "Arial");
    DrawLabel(PREFIX+"VAL_FLOAT", "$0.00", x+25, card_y+25, cor_text_main, 12, "Arial Bold");
@@ -601,17 +622,24 @@ void CriarPainelModerno() {
 void AtualizarValoresPainel(double floating, double bal, double eq, int tBuy, int tSell, double pBuy, double pSell) {
    if (Panel_Minimized) return;
 
-   ObjectSetString(0, PREFIX+"VAL_TIME", OBJPROP_TEXT, TimeToString(TimeCurrent(), TIME_MINUTES|TIME_SECONDS));
-   long seconds_left = SeriesInfoInteger(_Symbol, InpTimeframe, SERIES_LASTBAR_DATE) + PeriodSeconds(InpTimeframe) - TimeCurrent();
+   datetime time = TimeCurrent();
+   ObjectSetString(0, PREFIX+"VAL_TIME", OBJPROP_TEXT, TimeToString(time, TIME_MINUTES|TIME_SECONDS));
+
+   long seconds_left = SeriesInfoInteger(_Symbol, _Period, SERIES_LASTBAR_DATE) + PeriodSeconds(_Period) - TimeCurrent();
    if(seconds_left < 0) seconds_left = 0;
    ObjectSetString(0, PREFIX+"VAL_CANDLE", OBJPROP_TEXT, StringFormat("%02d:%02d", seconds_left / 60, seconds_left % 60));
-   ObjectSetString(0, PREFIX+"VAL_SPREAD", OBJPROP_TEXT, IntegerToString(SymbolInfoInteger(_Symbol, SYMBOL_SPREAD)));
+
+   long spread = SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
+   ObjectSetString(0, PREFIX+"VAL_SPREAD", OBJPROP_TEXT, IntegerToString(spread));
 
    color floatColor = (floating > 0) ? cor_buy : (floating < 0) ? cor_sell : cor_text_main;
-   ObjectSetString(0, PREFIX+"VAL_FLOAT", OBJPROP_TEXT, StringFormat("$%.2f", floating)); ObjectSetInteger(0, PREFIX+"VAL_FLOAT", OBJPROP_COLOR, floatColor);
+   ObjectSetString(0, PREFIX+"VAL_FLOAT", OBJPROP_TEXT, StringFormat("$%.2f", floating));
+   ObjectSetInteger(0, PREFIX+"VAL_FLOAT", OBJPROP_COLOR, floatColor);
    ObjectSetString(0, PREFIX+"VAL_BAL", OBJPROP_TEXT, StringFormat("Bal: $%.2f", bal));
+
    color profitColor = (daily_profit > 0) ? cor_buy : (daily_profit < 0) ? cor_sell : cor_text_main;
-   ObjectSetString(0, PREFIX+"VAL_PROFIT", OBJPROP_TEXT, StringFormat("$%.2f", daily_profit)); ObjectSetInteger(0, PREFIX+"VAL_PROFIT", OBJPROP_COLOR, profitColor);
+   ObjectSetString(0, PREFIX+"VAL_PROFIT", OBJPROP_TEXT, StringFormat("$%.2f", daily_profit));
+   ObjectSetInteger(0, PREFIX+"VAL_PROFIT", OBJPROP_COLOR, profitColor);
    ObjectSetString(0, PREFIX+"VAL_TOTAL", OBJPROP_TEXT, StringFormat("Total: $%.2f", total_profit));
 
    ObjectSetString(0, PREFIX+"VAL_BUY_ORD", OBJPROP_TEXT, StringFormat("%d ($%.2f)", tBuy, pBuy));
@@ -620,81 +648,77 @@ void AtualizarValoresPainel(double floating, double bal, double eq, int tBuy, in
    double win_rate = (total_trades > 0) ? ((double)win_trades / total_trades) * 100.0 : 0;
    double loss_rate = (total_trades > 0) ? ((double)loss_trades / total_trades) * 100.0 : 0;
    double profit_pct = (bal > 0) ? (total_profit / bal) * 100.0 : 0;
+
    ObjectSetString(0, PREFIX+"VAL_TRADES", OBJPROP_TEXT, StringFormat("Total Trades: %d", total_trades));
    ObjectSetString(0, PREFIX+"VAL_WINS", OBJPROP_TEXT, StringFormat("Wins: %d (%.1f%%)", win_trades, win_rate));
    ObjectSetString(0, PREFIX+"VAL_LOSSES", OBJPROP_TEXT, StringFormat("Losses: %d (%.1f%%)", loss_trades, loss_rate));
    ObjectSetString(0, PREFIX+"VAL_PROFIT_PCT", OBJPROP_TEXT, StringFormat("Profit %%: %.2f%%", profit_pct));
-   
-   if(gridBlocked) { ObjectSetString(0, PREFIX+"VAL_GRID_STATUS", OBJPROP_TEXT, "PAUSED"); ObjectSetInteger(0, PREFIX+"VAL_GRID_STATUS", OBJPROP_COLOR, cor_warning); } 
-   else { ObjectSetString(0, PREFIX+"VAL_GRID_STATUS", OBJPROP_TEXT, "ACTIVE"); ObjectSetInteger(0, PREFIX+"VAL_GRID_STATUS", OBJPROP_COLOR, cor_buy); }
-   
-   ObjectSetString(0, PREFIX+"VAL_ADX_VAL", OBJPROP_TEXT, StringFormat("%.1f", currentADX)); ObjectSetInteger(0, PREFIX+"VAL_ADX_VAL", OBJPROP_COLOR, (currentADX >= InpADXThreshold) ? cor_buy : cor_sell);
-   
-   double ddPct = (bal > 0 && floating < 0) ? MathAbs(floating) / bal * 100.0 : 0;
-   ObjectSetString(0, PREFIX+"VAL_DD_VAL", OBJPROP_TEXT, StringFormat("%.1f%%", ddPct));
-   color ddColor = (InpHardEquityStopPct > 0 && ddPct >= InpHardEquityStopPct) ? cor_sell : (ddPct > InpMaxDrawdownPct * 0.7) ? cor_warning : cor_buy;
-   ObjectSetInteger(0, PREFIX+"VAL_DD_VAL", OBJPROP_COLOR, ddColor);
-   
-   ObjectSetString(0, PREFIX+"VAL_CHOP_VAL", OBJPROP_TEXT, StringFormat("%.1f", currentCHOP));
-   color chopColor = (currentCHOP >= 61.8) ? cor_buy : (currentCHOP <= InpCHOPTrendLimit) ? cor_sell : cor_warning;
-   ObjectSetInteger(0, PREFIX+"VAL_CHOP_VAL", OBJPROP_COLOR, chopColor);
-   
-   if(!RuntimeUseEMA200) { ObjectSetString(0, PREFIX+"VAL_EMA_DIR", OBJPROP_TEXT, "OFF"); ObjectSetInteger(0, PREFIX+"VAL_EMA_DIR", OBJPROP_COLOR, cor_text_muted); } 
-   else if(ema200BuyAllowed && !ema200SellAllowed) { ObjectSetString(0, PREFIX+"VAL_EMA_DIR", OBJPROP_TEXT, "BUY UP"); ObjectSetInteger(0, PREFIX+"VAL_EMA_DIR", OBJPROP_COLOR, cor_buy); } 
-   else if(ema200SellAllowed && !ema200BuyAllowed) { ObjectSetString(0, PREFIX+"VAL_EMA_DIR", OBJPROP_TEXT, "SELL DN"); ObjectSetInteger(0, PREFIX+"VAL_EMA_DIR", OBJPROP_COLOR, cor_sell); } 
-   else { ObjectSetString(0, PREFIX+"VAL_EMA_DIR", OBJPROP_TEXT, "---"); ObjectSetInteger(0, PREFIX+"VAL_EMA_DIR", OBJPROP_COLOR, cor_text_muted); }
-   
-   ObjectSetString(0, PREFIX+"VAL_RSI_VAL", OBJPROP_TEXT, StringFormat("%.1f", currentRSI));
-   color rsiColor = (currentRSI <= InpRSIOversold) ? cor_buy : (currentRSI >= InpRSIOverbought) ? cor_sell : cor_text_main;
-   ObjectSetInteger(0, PREFIX+"VAL_RSI_VAL", OBJPROP_COLOR, rsiColor);
    
    ChartRedraw();
 }
 
 void AtualizarVisibilidadePainel() {
    bool show = !Panel_Minimized;
-   ObjectSetInteger(0, PREFIX+"BG_MAIN", OBJPROP_YSIZE, show ? 650 : 40);
+   ObjectSetInteger(0, PREFIX+"BG_MAIN", OBJPROP_YSIZE, show ? 520 : 40);
    string objs[] = {"LBL_TIME", "VAL_TIME", "LBL_CANDLE", "VAL_CANDLE", "LBL_SPREAD", "VAL_SPREAD",
-                    "BTN_BUY", "BTN_SELL", "BTN_CLEAN", "BTN_PANIC", 
-                    "BTN_ATR", "BTN_ADX", "BTN_CHOP", "BTN_EMA", "BTN_HEDGE", "BTN_CLOSE_ALL",
-                    "LBL_GRID_STATUS", "VAL_GRID_STATUS", "LBL_ADX_VAL", "VAL_ADX_VAL", "LBL_DD_VAL", "VAL_DD_VAL",
-                    "LBL_CHOP_VAL", "VAL_CHOP_VAL", "LBL_EMA_DIR", "VAL_EMA_DIR", "LBL_RSI_VAL", "VAL_RSI_VAL",
+                    "LBL_STATUS", "VAL_STATUS", "BTN_BUY", "BTN_SELL", "BTN_CLEAN", "BTN_PANIC", 
                     "CARD1", "LBL_FLOAT", "VAL_FLOAT", "VAL_BAL", 
                     "CARD2", "LBL_PROFIT", "VAL_PROFIT", "VAL_TOTAL",
                     "CARD3", "LBL_ORDERS", "LBL_BUY_ORD", "VAL_BUY_ORD", "LBL_SELL_ORD", "VAL_SELL_ORD",
                     "CARD4", "LBL_STATS", "VAL_TRADES", "VAL_WINS", "VAL_LOSSES", "VAL_PROFIT_PCT",
-                    "BG_FOOTER", "LBL_POWER", "VAL_STATUS", "BTN_POWER", "BTN_REMOVE"};
+                    "BG_FOOTER", "LBL_POWER", "BTN_REMOVE"};
+                    
    for(int i=0; i<ArraySize(objs); i++) {
-      if(ObjectFind(0, PREFIX+objs[i]) >= 0)
+      if(ObjectFind(0, PREFIX+objs[i]) >= 0) {
          ObjectSetInteger(0, PREFIX+objs[i], OBJPROP_TIMEFRAMES, show ? OBJ_ALL_PERIODS : OBJ_NO_PERIODS);
+      }
    }
 }
 
 void CreateRect(string name, int x, int y, int w, int h, color bg, color border) {
    if(ObjectFind(0, name) < 0) ObjectCreate(0, name, OBJ_RECTANGLE_LABEL, 0, 0, 0);
-   ObjectSetInteger(0, name, OBJPROP_XDISTANCE, x); ObjectSetInteger(0, name, OBJPROP_YDISTANCE, y);
-   ObjectSetInteger(0, name, OBJPROP_XSIZE, w); ObjectSetInteger(0, name, OBJPROP_YSIZE, h);
-   ObjectSetInteger(0, name, OBJPROP_BGCOLOR, bg); ObjectSetInteger(0, name, OBJPROP_BORDER_COLOR, border);
-   ObjectSetInteger(0, name, OBJPROP_CORNER, CORNER_LEFT_UPPER); ObjectSetInteger(0, name, OBJPROP_BACK, false);
-   ObjectSetInteger(0, name, OBJPROP_ZORDER, 100); ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false); ObjectSetInteger(0, name, OBJPROP_HIDDEN, true);
+   ObjectSetInteger(0, name, OBJPROP_XDISTANCE, x);
+   ObjectSetInteger(0, name, OBJPROP_YDISTANCE, y);
+   ObjectSetInteger(0, name, OBJPROP_XSIZE, w);
+   ObjectSetInteger(0, name, OBJPROP_YSIZE, h);
+   ObjectSetInteger(0, name, OBJPROP_BGCOLOR, bg);
+   ObjectSetInteger(0, name, OBJPROP_BORDER_COLOR, border);
+   ObjectSetInteger(0, name, OBJPROP_CORNER, CORNER_LEFT_UPPER);
+   ObjectSetInteger(0, name, OBJPROP_BACK, false);
+   ObjectSetInteger(0, name, OBJPROP_ZORDER, 100);
+   ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+   ObjectSetInteger(0, name, OBJPROP_HIDDEN, true);
 }
 
 void DrawLabel(string name, string text, int x, int y, color clr, int size, string font) {
    if(ObjectFind(0, name) < 0) ObjectCreate(0, name, OBJ_LABEL, 0, 0, 0);
-   ObjectSetInteger(0, name, OBJPROP_XDISTANCE, x); ObjectSetInteger(0, name, OBJPROP_YDISTANCE, y);
-   ObjectSetString(0, name, OBJPROP_TEXT, text); ObjectSetInteger(0, name, OBJPROP_COLOR, clr);
-   ObjectSetInteger(0, name, OBJPROP_FONTSIZE, size); ObjectSetString(0, name, OBJPROP_FONT, font);
-   ObjectSetInteger(0, name, OBJPROP_CORNER, CORNER_LEFT_UPPER); ObjectSetInteger(0, name, OBJPROP_BACK, false);
-   ObjectSetInteger(0, name, OBJPROP_ZORDER, 101); ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false); ObjectSetInteger(0, name, OBJPROP_HIDDEN, true);
+   ObjectSetInteger(0, name, OBJPROP_XDISTANCE, x);
+   ObjectSetInteger(0, name, OBJPROP_YDISTANCE, y);
+   ObjectSetString(0, name, OBJPROP_TEXT, text);
+   ObjectSetInteger(0, name, OBJPROP_COLOR, clr);
+   ObjectSetInteger(0, name, OBJPROP_FONTSIZE, size);
+   ObjectSetString(0, name, OBJPROP_FONT, font);
+   ObjectSetInteger(0, name, OBJPROP_CORNER, CORNER_LEFT_UPPER);
+   ObjectSetInteger(0, name, OBJPROP_BACK, false);
+   ObjectSetInteger(0, name, OBJPROP_ZORDER, 101);
+   ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+   ObjectSetInteger(0, name, OBJPROP_HIDDEN, true);
 }
 
 void CreateButton(string name, string text, int x, int y, int w, int h, color bg, color fg) {
    if(ObjectFind(0, name) < 0) ObjectCreate(0, name, OBJ_BUTTON, 0, 0, 0);
-   ObjectSetInteger(0, name, OBJPROP_XDISTANCE, x); ObjectSetInteger(0, name, OBJPROP_YDISTANCE, y);
-   ObjectSetInteger(0, name, OBJPROP_XSIZE, w); ObjectSetInteger(0, name, OBJPROP_YSIZE, h);
-   ObjectSetString(0, name, OBJPROP_TEXT, text); ObjectSetInteger(0, name, OBJPROP_BGCOLOR, bg);
-   ObjectSetInteger(0, name, OBJPROP_COLOR, fg); ObjectSetInteger(0, name, OBJPROP_CORNER, CORNER_LEFT_UPPER);
-   ObjectSetInteger(0, name, OBJPROP_BACK, false); ObjectSetInteger(0, name, OBJPROP_ZORDER, 102);
-   ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false); ObjectSetInteger(0, name, OBJPROP_HIDDEN, true);
-   ObjectSetString(0, name, OBJPROP_FONT, "Arial Bold"); ObjectSetInteger(0, name, OBJPROP_FONTSIZE, 9);
+   ObjectSetInteger(0, name, OBJPROP_XDISTANCE, x);
+   ObjectSetInteger(0, name, OBJPROP_YDISTANCE, y);
+   ObjectSetInteger(0, name, OBJPROP_XSIZE, w);
+   ObjectSetInteger(0, name, OBJPROP_YSIZE, h);
+   ObjectSetString(0, name, OBJPROP_TEXT, text);
+   ObjectSetInteger(0, name, OBJPROP_BGCOLOR, bg);
+   ObjectSetInteger(0, name, OBJPROP_COLOR, fg);
+   ObjectSetInteger(0, name, OBJPROP_CORNER, CORNER_LEFT_UPPER);
+   ObjectSetInteger(0, name, OBJPROP_BACK, false);
+   ObjectSetInteger(0, name, OBJPROP_ZORDER, 102);
+   ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+   ObjectSetInteger(0, name, OBJPROP_HIDDEN, true);
+   ObjectSetString(0, name, OBJPROP_FONT, "Arial Bold");
+   ObjectSetInteger(0, name, OBJPROP_FONTSIZE, 9);
 }
