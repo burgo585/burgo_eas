@@ -1,0 +1,17 @@
+# Dados massivos de mercado (Ticks e Parquet)
+*.csv
+*.parquet
+*.zip
+*.log
+
+# Python cache e artefatos
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Relatórios temporários gerados
+ReportHistory*
+ReportTester*
+*.html
+*.png
+*.ini

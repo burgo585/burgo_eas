@@ -1,0 +1,136 @@
+{
+  "system": {
+    "version": "1.0.0",
+    "name": "TRAX Institutional Quant Engine",
+    "timezone_ny": "America/New_York",
+    "timezone_local": "America/Sao_Paulo",
+    "log_level": "INFO",
+    "ai_confidence_threshold": 0.7
+  },
+  "mt5": {
+    "account": 1123867,
+    "password": "Louco123123@",
+    "server": "VTMarkets-Demo",
+    "path": "C:\\Program Files\\MetaTrader 5\\terminal64.exe",
+    "portable": false,
+    "timeout_ms": 60000
+  },
+  "macro": {
+    "yfinance_enabled": true,
+    "update_interval_seconds": 60,
+    "tickers": {
+      "vix": "^VIX",
+      "dxy": "DX-Y.NYB",
+      "dxy_fallback": "UUP",
+      "us10y": "^TNX"
+    },
+    "fred": {
+      "enabled": true,
+      "api_key": "DEMO_OR_REPLACE_WITH_FRED_API_KEY",
+      "series": {
+        "fed_funds": "FEDFUNDS",
+        "yield_spread_10y2y": "T10Y2Y",
+        "high_yield_spread": "BAMLH0A0HYM2"
+      }
+    }
+  },
+  "binance": {
+    "enabled": true,
+    "ws_base_url": "wss://fstream.binance.com/ws",
+    "rest_base_url": "https://fapi.binance.com",
+    "depth_symbol": "btcusdt",
+    "depth_levels": 20,
+    "depth_speed_ms": 100
+  },
+  "assets": {
+    "MNQ": {
+      "symbol": "MNQ",
+      "mt5_symbol": "NAS100ft.",
+      "description": "Micro E-mini Nasdaq-100 Index Futures",
+      "asset_class": "EQUITY_INDEX_FUTURES",
+      "moc_loc_active": true,
+      "moc_loc_window_start": "15:50:00",
+      "moc_loc_window_end": "15:59:50",
+      "kill_switch_time": "15:59:50",
+      "atr_period": 14,
+      "atr_sl_multiplier": 1.5,
+      "risk_reward_ratio": 2.0,
+      "delta_threshold_multiplier": 3.0,
+      "min_volume_threshold": 500,
+      "fvg_min_ticks": 4,
+      "lot_size": 0.2,
+      "max_slippage_points": 2.0,
+      "magic_number": 100101,
+      "cross_macro_correlation": {
+        "vix_inverse_filter": true,
+        "us10y_pressure_filter": true
+      },
+      "ib_session_start_hour": 9,
+      "ib_session_start_min": 30,
+      "ib_duration_minutes": 30,
+      "ivb_model1_active": true,
+      "ivb_model2_active": true,
+      "auto_guardrail_active": true
+    },
+    "XAUUSD": {
+      "symbol": "XAUUSD",
+      "mt5_symbol": "XAUUSD-VIP",
+      "description": "Gold Spot vs US Dollar",
+      "asset_class": "COMMODITY_METALS",
+      "tick_file_path": "XAUUSD-STDc_202506161213_202610022356ticks.csv",
+      "quote_tick_mode": true,
+      "moc_loc_active": false,
+      "trading_hours": "24/5",
+      "atr_period": 14,
+      "atr_sl_multiplier": 2.0,
+      "risk_reward_ratio": 2.0,
+      "delta_threshold_multiplier": 3.0,
+      "min_volume_threshold": 300,
+      "fvg_min_ticks": 10,
+      "lot_size": 0.1,
+      "max_slippage_points": 0.5,
+      "magic_number": 100102,
+      "cross_macro_correlation": {
+        "dxy_inverse_filter": true,
+        "us10y_inverse_filter": true
+      },
+      "session_filter_active": false,
+      "trend_ema_filter_active": true,
+      "breakeven_active": false,
+      "ib_session_start_hour": 8,
+      "ib_session_start_min": 0,
+      "ib_duration_minutes": 30,
+      "ivb_model1_active": true,
+      "ivb_model2_active": true,
+      "auto_guardrail_active": true
+    },
+    "BTCUSD": {
+      "symbol": "BTCUSD",
+      "mt5_symbol": "BTCUSD",
+      "description": "Bitcoin vs US Dollar",
+      "asset_class": "CRYPTO",
+      "moc_loc_active": false,
+      "trading_hours": "24/7",
+      "binance_reference_symbol": "BTCUSDT",
+      "atr_period": 14,
+      "atr_sl_multiplier": 2.5,
+      "risk_reward_ratio": 3.0,
+      "delta_threshold_multiplier": 3.0,
+      "min_volume_threshold": 20,
+      "fvg_min_ticks": 50,
+      "lot_size": 0.05,
+      "max_slippage_points": 10.0,
+      "magic_number": 100103,
+      "binance_imbalance_threshold": 0.35,
+      "cross_macro_correlation": {
+        "vix_fear_filter": true
+      },
+      "ib_session_start_hour": 0,
+      "ib_session_start_min": 0,
+      "ib_duration_minutes": 60,
+      "ivb_model1_active": true,
+      "ivb_model2_active": true,
+      "auto_guardrail_active": true
+    }
+  }
+}
