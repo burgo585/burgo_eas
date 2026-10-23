@@ -1,19 +1,20 @@
 //+------------------------------------------------------------------+
 //|                                  EA_Stormer_H4_Stoch_EMA70.mq5   |
 //|               Estrategia Oficial Stormer: H4 Swing Trade         |
-//|        Estocastico Lento (8,3,3) + EMA 70 + Setup 1-2-3          |
-//|         Versao 2.0: Joe Ross Swing Points + Gestao Avancada      |
+//|      "O MELHOR sinal de swing trade": Trap no Fundo do 1-2-3     |
+//|        Estocastico Lento (8,3,3) + EMA 70 + Trap no 1-2-3        |
+//|         Versao 3.0: Alinhamento Total com os 2 Videos Oficiais   |
 //|                    https://github.com/burgo585/burgo_eas         |
 //+------------------------------------------------------------------+
 #property copyright   "Stormer Strategy - Antigravity Quant Team"
 #property link        "https://github.com/burgo585/burgo_eas"
-#property version     "2.00"
-#property description "Expert Advisor de Swing Trade baseado no setup de Stormer / Joe Ross:"
-#property description "1. 1-2-3 Classico por Pontos de Swing (Joe Ross) ou Pivo de 3 Barras."
-#property description "2. Alvo Dinamico: Projecao 100% Fibo, Topo Anterior filtrado ou Multiplo R:R."
-#property description "3. Execucao nativa por Ordens Pendentes (Buy Stop/Sell Stop) com cancelamento por invalidacao."
-#property description "4. Calculo de risco real baseado no preco efetivo (Trigger + Spread + Slippage)."
-#property description "5. Arrays dinamicos sem limite fixo para o Estocastico."
+#property version     "3.00"
+#property description "Expert Advisor Oficial baseado nos 2 videos do Stormer:"
+#property description "1. Video Completo: Trap no Fundo do 1-2-3 (Violinada de fundo com rejeicao e alvo 2R)."
+#property description "2. Video Resumo H4: Estocastico Lento (8,3,3) < 20 e Media Movel Exponencial 70 subindo."
+#property description "3. Suporte a Inside Bar pos-trap (nao cancela o setup)."
+#property description "4. Gestao por Ordens Pendentes Stop com cancelamento por invalidacao."
+#property description "5. Calculo de risco real efetivo considerando spread e slippage."
 
 #include <Trade\Trade.mqh>
 #include <Trade\PositionInfo.mqh>
@@ -24,15 +25,16 @@
 //--- Enums
 enum ENUM_PATTERN_TYPE
 {
-   PATTERN_JOE_ROSS_SWING = 0, // 1-2-3 Classico (Pontos de Swing Joe Ross)
-   PATTERN_STORMER_3BAR   = 1  // 1-2-3 de 3 Barras (Pivo Rapido de Candles)
+   PATTERN_STORMER_TRAP   = 0, // Trap no 1-2-3 (O MELHOR SINAL - Video Completo Stormer)
+   PATTERN_JOE_ROSS_SWING = 1, // 1-2-3 Classico por Pontos de Swing (Joe Ross)
+   PATTERN_STORMER_3BAR   = 2  // 1-2-3 Simples de 3 Barras (Pivo Rapido de Candles)
 };
 
 enum ENUM_TARGET_MODE
 {
-   TARGET_FIBO_100        = 0, // Projecao 100% da Perna 1-2 a partir de 3 (Recomendado)
-   TARGET_SWING_PREVIOUS  = 1, // Topo/Fundo Anterior (com filtro de distancia ATR)
-   TARGET_FIXED_RR        = 2  // Multiplo Fixo de Risco:Retorno (ex: 2.0x)
+   TARGET_2X_RISK         = 0, // Alvo Oficial do Video: 2x o Risco (2R) para cima
+   TARGET_FIBO_100        = 1, // Projecao 100% da Perna 1-2
+   TARGET_SWING_PREVIOUS  = 2  // Topo/Fundo Anterior (com filtro de ATR)
 };
 
 enum ENUM_LOT_TYPE
@@ -42,43 +44,40 @@ enum ENUM_LOT_TYPE
 };
 
 //--- Inputs do Sistema
-input group "=== TIPO DE PADRAO 1-2-3 ==="
-input ENUM_PATTERN_TYPE InpPatternType        = PATTERN_JOE_ROSS_SWING; // Tipo de Padrao 1-2-3
-input int               InpSwingStrength      = 2;                      // Forca do Pivo de Swing (barras de cada lado)
-input int               InpMaxBarsSearch      = 40;                     // Maximo de Barras para busca dos Pontos 1-2-3
+input group "=== MODO DO SETUP STORMER ==="
+input ENUM_PATTERN_TYPE InpPatternType        = PATTERN_STORMER_TRAP;   // Tipo de Padrao Operacional
+input ENUM_TARGET_MODE  InpTargetMode         = TARGET_2X_RISK;         // Modo de Calculo do Alvo (Padrao 2R do Video)
+input double            InpTargetRRMultiplier = 2.0;                    // Multiplo de Risco para o Alvo (ex: 2.0 = 2R)
+input int               InpSwingStrength      = 2;                      // Forca do Pivo de Swing (se Joe Ross)
+input int               InpMaxBarsSearch      = 40;                     // Maximo de Barras para busca retrospectiva
 
 input group "=== PARAMETROS DOS INDICADORES ==="
 input ENUM_TIMEFRAMES   InpTimeframe          = PERIOD_H4;              // Tempo Grafico Operacional (Padrao H4)
 input int               InpEMAPeriod          = 70;                     // Periodo da Media Exponencial (EMA 70)
 input ENUM_APPLIED_PRICE InpEMAPrice          = PRICE_CLOSE;            // Preco Aplicado da EMA
-input int               InpStochK             = 8;                      // Estocastico %K
-input int               InpStochD             = 3;                      // Estocastico %D
-input int               InpStochSlowing       = 3;                      // Estocastico Slowing (Desaceleracao)
+input int               InpStochK             = 8;                      // Estocastico %K (Padrao Stormer: 8)
+input int               InpStochD             = 3;                      // Estocastico %D (Padrao: 3)
+input int               InpStochSlowing       = 3;                      // Estocastico Slowing (Padrao: 3)
 input ENUM_MA_METHOD    InpStochMethod        = MODE_SMA;               // Metodo do Estocastico
 input ENUM_STO_PRICE    InpStochPrice         = STO_LOWHIGH;            // Preco do Estocastico
 input double            InpStochOversold      = 20.0;                   // Nivel de Sobrevenda (Compra)
 input double            InpStochOverbought    = 80.0;                   // Nivel de Sobrecompra (Venda)
-input int               InpStochLookback      = 10;                     // Barras de Recuo para checagem do Estocastico (Sem limite fixo)
+input int               InpStochLookback      = 10;                     // Barras de Recuo para checagem do Estocastico
 
-input group "=== REGRAS DE TENDENCIA E FILTROS ==="
+input group "=== FILTROS DE TENDENCIA ==="
 input bool              InpAllowBuy           = true;                   // Permitir Compras
 input bool              InpAllowSell          = true;                   // Permitir Vendas (Mercados Bidirecionais)
 input bool              InpFilterEMA_Slope    = true;                   // Exigir inclinacao da EMA (subindo/descendo)
 input bool              InpFilterPriceAboveEMA = true;                 // Preco deve estar acima da EMA (Compra) / abaixo (Venda)
 
-input group "=== GESTAO DE ALVO (TAKE PROFIT) ==="
-input ENUM_TARGET_MODE  InpTargetMode         = TARGET_FIBO_100;        // Modo de Calculo do Alvo
-input double            InpTargetRRMultiplier = 2.0;                    // Multiplo de R:R (se modo Fixo RR)
-input int               InpSwingLookback      = 20;                     // Barras para buscar Topo/Fundo Anterior
-input double            InpMinRiskReward      = 1.0;                    // Risco:Retorno Minimo Real para aceitar entrada
-input int               InpBufferPoints       = 50;                     // Buffer de Folga no Stop Loss (pontos)
+input group "=== GESTAO DE STOP E EXECUCAO ==="
+input int               InpBufferPoints       = 50;                     // Buffer de Folga no Stop Loss (pontos alem da minima)
 input int               InpSlippageEstimate   = 20;                     // Estimativa de Slippage para calculo do risco real (pontos)
-
-input group "=== GESTAO DE POSICAO ==="
+input double            InpMinRiskReward      = 1.0;                    // Risco:Retorno Minimo Real para aceitar entrada
+input int               InpPendingExpireBars  = 6;                      // Validade da Ordem Pendente (barras H4)
 input bool              InpBreakEvenActive    = true;                   // Mover Stop para 0x0 ao atingir 1:1 de Risco
 input bool              InpUseTrailing        = false;                  // Ativar Trailing Stop
 input double            InpTrailingPoints     = 300.0;                  // Distancia do Trailing Stop (pontos)
-input int               InpPendingExpireBars  = 6;                      // Validade da Ordem Pendente em Barras H4
 
 input group "=== GESTAO DE CAPITAL E LOTE ==="
 input ENUM_LOT_TYPE     InpLotType            = LOT_PERCENT_RISK;       // Tipo de Calculo de Lote
@@ -88,7 +87,7 @@ input double            InpMaxSpreadPoints    = 50.0;                   // Sprea
 
 input group "=== IDENTIFICACAO ==="
 input ulong             InpMagicNumber        = 708123;                 // Magic Number do Robo
-input string            InpComment            = "Stormer_H4_v2";        // Comentario da Ordem
+input string            InpComment            = "Stormer_Trap_H4";      // Comentario da Ordem
 input bool              InpDrawVisuals        = true;                   // Desenhar niveis no grafico
 
 //--- Objetos Globais
@@ -103,17 +102,14 @@ int            h_stoch = INVALID_HANDLE;
 int            h_atr = INVALID_HANDLE;
 datetime       lastBarTime = 0;
 
-// Estrutura para armazenar os pontos 1-2-3
-struct SPoint123
+struct SSetupSignal
 {
    bool     valid;
-   datetime time1;
-   double   price1; // Fundo ou Topo 1
-   datetime time2;
-   double   price2; // Topo ou Fundo 2 (Gatilho)
-   datetime time3;
-   double   price3; // Fundo mais alto ou Topo mais baixo (Stop base)
-   double   target; // Alvo calculado
+   datetime timeRef;
+   double   triggerPrice; // Maxima do Trap ou Ponto 2
+   double   stopLossPrice;// Minima do Trap ou Ponto 3
+   double   targetPrice;  // Alvo calculado (2R, Fibo ou Topo)
+   string   desc;
 };
 
 //+------------------------------------------------------------------+
@@ -135,14 +131,14 @@ int OnInit()
    h_ema = iMA(_Symbol, InpTimeframe, InpEMAPeriod, 0, MODE_EMA, InpEMAPrice);
    if(h_ema == INVALID_HANDLE)
    {
-      Print("[ERRO] Falha ao criar handle da EMA: ", GetLastError());
+      Print("[ERRO] Falha ao criar handle da EMA 70: ", GetLastError());
       return INIT_FAILED;
    }
 
    h_stoch = iStochastic(_Symbol, InpTimeframe, InpStochK, InpStochD, InpStochSlowing, InpStochMethod, InpStochPrice);
    if(h_stoch == INVALID_HANDLE)
    {
-      Print("[ERRO] Falha ao criar handle do Estocastico: ", GetLastError());
+      Print("[ERRO] Falha ao criar handle do Estocastico Lento (8,3,3): ", GetLastError());
       return INIT_FAILED;
    }
 
@@ -153,9 +149,9 @@ int OnInit()
       return INIT_FAILED;
    }
 
-   PrintFormat("[SUCESSO] EA Stormer v2.0 inicializado em %s (%s). Modo: %s", 
+   PrintFormat("[SUCESSO] EA Stormer H4 v3.0 inicializado em %s (%s). Modo: %s | Alvo: %s", 
                _Symbol, EnumToString(InpTimeframe), 
-               (InpPatternType == PATTERN_JOE_ROSS_SWING) ? "Joe Ross Swing" : "Pivo 3 Barras");
+               EnumToString(InpPatternType), EnumToString(InpTargetMode));
 
    return INIT_SUCCEEDED;
 }
@@ -169,10 +165,7 @@ void OnDeinit(const int reason)
    if(h_stoch != INVALID_HANDLE) IndicatorRelease(h_stoch);
    if(h_atr != INVALID_HANDLE) IndicatorRelease(h_atr);
 
-   if(InpDrawVisuals)
-   {
-      ObjectsDeleteAll(0, "Stormer_");
-   }
+   if(InpDrawVisuals) ObjectsDeleteAll(0, "Stormer_");
    Comment("");
 }
 
@@ -191,7 +184,7 @@ bool IsNewBar()
 }
 
 //+------------------------------------------------------------------+
-//| PONTO 4: Calculo do lote com base no RISCO REAL EFETIVO          |
+//| Calculo de Lote baseado no RISCO REAL EFETIVO                    |
 //+------------------------------------------------------------------+
 double CalculateRealRiskLot(double real_risk_points)
 {
@@ -214,7 +207,6 @@ double CalculateRealRiskLot(double real_risk_points)
    double pointsPerTick = tickSize / point;
    double moneyPerPointPerLot = tickValue / pointsPerTick;
 
-   // Lote calculado estritamente sobre os pontos reais de risco
    double rawLot = riskMoney / (real_risk_points * moneyPerPointPerLot);
 
    double step = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP);
@@ -231,7 +223,7 @@ double CalculateRealRiskLot(double real_risk_points)
 }
 
 //+------------------------------------------------------------------+
-//| PONTO 1: Deteccao de Pontos de Swing (Pivots)                    |
+//| Checa Pivo de Swing (Joe Ross)                                   |
 //+------------------------------------------------------------------+
 bool IsSwingLow(const MqlRates &rates[], int index, int strength, int total)
 {
@@ -258,250 +250,251 @@ bool IsSwingHigh(const MqlRates &rates[], int index, int strength, int total)
 }
 
 //+------------------------------------------------------------------+
-//| Identifica o Padrao 1-2-3 (Joe Ross Classico ou 3 Barras)        |
+//| DETECCAO DO SETUP 1: TRAP NO FUNDO DO 1-2-3 (VIDEO COMPLETO)     |
 //+------------------------------------------------------------------+
-SPoint123 FindPatternBuy(const MqlRates &rates[], int total, double atr)
+SSetupSignal DetectStormerTrapBuy(const MqlRates &rates[], int total, double atr)
 {
-   SPoint123 pt;
-   pt.valid = false;
+   SSetupSignal sig;
+   sig.valid = false;
+   if(total < 8) return sig;
 
-   if(InpPatternType == PATTERN_STORMER_3BAR)
+   // 1. Identifica se a barra 1 (ou barra 2 com barra 1 sendo inside bar) foi um Trap
+   // Um trap ocorre quando um candle perde a minima do 1-2-3 anterior
+   int trapIdx = 1; // Barra fechada mais recente
+   bool isInsideBar = (rates[0].high <= rates[1].high && rates[0].low >= rates[1].low);
+   
+   // Se a barra 1 for inside bar da barra 2, o trap pode ter sido na barra 2
+   if(rates[0].high <= rates[1].high && rates[0].low >= rates[1].low && rates[1].low < rates[2].low)
    {
-      // Pivo Simples de 3 Barras (Barra 1=rates[2], Barra 2=rates[1], Barra 3=rates[0])
-      if(total < 3) return pt;
-      if(rates[1].low < rates[2].low && rates[0].low > rates[1].low)
-      {
-         pt.valid = true;
-         pt.time1 = rates[2].time;
-         pt.price1 = rates[2].low;
-         pt.time2 = rates[0].time;
-         pt.price2 = rates[0].high; // Gatilho na maxima da barra 3
-         pt.time3 = rates[1].time;
-         pt.price3 = rates[1].low;  // Stop na minima da barra 2
-
-         // PONTO 2: Calculo do Alvo
-         if(InpTargetMode == TARGET_FIBO_100)
-         {
-            double leg = pt.price2 - pt.price3;
-            pt.target = pt.price2 + leg;
-         }
-         else if(InpTargetMode == TARGET_FIXED_RR)
-         {
-            double risk = pt.price2 - pt.price3;
-            pt.target = pt.price2 + (risk * InpTargetRRMultiplier);
-         }
-         else // TARGET_SWING_PREVIOUS
-         {
-            double highest = rates[2].high;
-            for(int k = 2; k < MathMin(total, InpSwingLookback); k++)
-            {
-               if(rates[k].high > highest) highest = rates[k].high;
-            }
-            pt.target = highest;
-         }
-      }
-      return pt;
+      // Dentro da filosofia do Stormer: Inside bar nao cancela o Trap!
+      trapIdx = 1;
    }
 
-   // --- PATTERN_JOE_ROSS_SWING (1-2-3 Classico) ---
-   // Procura Ponto 3 (fundo de swing mais recente entre as barras fechadas)
-   int idx3 = -1;
-   for(int i = 1; i < MathMin(total - InpSwingStrength, 15); i++)
+   // Fundo do 1-2-3 anterior procurado entre as barras [trapIdx + 1] a [trapIdx + 5]
+   double priorSwingLow = rates[trapIdx + 1].low;
+   int priorLowIdx = trapIdx + 1;
+   for(int k = trapIdx + 1; k <= trapIdx + 5; k++)
    {
-      if(IsSwingLow(rates, i, InpSwingStrength, total))
+      if(rates[k].low < priorSwingLow)
       {
-         idx3 = i;
-         break;
-      }
-   }
-   if(idx3 == -1) return pt;
-
-   // Procura Ponto 2 (topo de swing anterior ao Ponto 3)
-   int idx2 = -1;
-   for(int i = idx3 + 1; i < MathMin(total - InpSwingStrength, idx3 + 20); i++)
-   {
-      if(IsSwingHigh(rates, i, InpSwingStrength, total))
-      {
-         idx2 = i;
-         break;
-      }
-   }
-   if(idx2 == -1) return pt;
-
-   // Procura Ponto 1 (fundo de swing mais baixo que Ponto 3, anterior ao Ponto 2)
-   int idx1 = -1;
-   for(int i = idx2 + 1; i < MathMin(total - InpSwingStrength, idx2 + 25); i++)
-   {
-      if(IsSwingLow(rates, i, InpSwingStrength, total))
-      {
-         if(rates[i].low < rates[idx3].low) // Ponto 1 deve ser mais baixo que Ponto 3
-         {
-            idx1 = i;
-            break;
-         }
-      }
-   }
-   if(idx1 == -1) return pt;
-
-   // Valida estrutura Joe Ross:
-   // Ponto 1 (rates[idx1].low) = Fundo mais baixo
-   // Ponto 2 (rates[idx2].high) = Topo da reacao
-   // Ponto 3 (rates[idx3].low)  = Fundo mais alto (Low[Ponto 3] > Low[Ponto 1])
-   if(rates[idx3].low > rates[idx1].low && rates[idx2].high > rates[idx3].low)
-   {
-      pt.valid = true;
-      pt.time1 = rates[idx1].time;
-      pt.price1 = rates[idx1].low;
-      pt.time2 = rates[idx2].time;
-      pt.price2 = rates[idx2].high; // Gatilho no rompimento do Ponto 2
-      pt.time3 = rates[idx3].time;
-      pt.price3 = rates[idx3].low;  // Stop tecnico na minima do Ponto 3
-
-      // PONTO 2: Alvo Dinamico e Flexivel
-      if(InpTargetMode == TARGET_FIBO_100)
-      {
-         // Projecao 100% da Perna 1-2 a partir de 3
-         double leg12 = pt.price2 - pt.price1;
-         pt.target = pt.price3 + leg12;
-      }
-      else if(InpTargetMode == TARGET_FIXED_RR)
-      {
-         double risk = pt.price2 - pt.price3;
-         pt.target = pt.price2 + (risk * InpTargetRRMultiplier);
-      }
-      else // TARGET_SWING_PREVIOUS com filtro de ATR
-      {
-         double highest = pt.price2;
-         for(int k = idx2 + 1; k < MathMin(total, idx2 + InpSwingLookback); k++)
-         {
-            if(rates[k].high > highest) highest = rates[k].high;
-         }
-         // Se o topo anterior for muito distante (> 6 ATR), trava em 3 ATR
-         if(highest - pt.price2 > 6.0 * atr)
-            highest = pt.price2 + (3.0 * atr);
-         pt.target = highest;
+         priorSwingLow = rates[k].low;
+         priorLowIdx = k;
       }
    }
 
-   return pt;
+   // O candle do Trap (rates[trapIdx]) PERDEU a minima do fundo anterior!
+   if(rates[trapIdx].low < priorSwingLow)
+   {
+      // Rejeicao: a barra do trap nao fechou na minima absoluta ou formou pavio/martelo
+      // Ponto de entrada: Ruptura da maxima do candle do Trap
+      sig.valid = true;
+      sig.timeRef = rates[trapIdx].time;
+      sig.triggerPrice = rates[trapIdx].high;
+      sig.stopLossPrice = rates[trapIdx].low - (InpBufferPoints * _Point);
+
+      double risk = sig.triggerPrice - sig.stopLossPrice;
+
+      // Calculo do Alvo Oficial:
+      if(InpTargetMode == TARGET_2X_RISK)
+      {
+         // "o alvo a gente vai largar no minimo duas vezes nosso risco para cima" - Stormer
+         sig.targetPrice = sig.triggerPrice + (risk * InpTargetRRMultiplier);
+      }
+      else if(InpTargetMode == TARGET_FIBO_100)
+      {
+         // Expansao 100% da perna anterior
+         double leg = rates[priorLowIdx].high - priorSwingLow;
+         sig.targetPrice = sig.triggerPrice + MathMax(leg, risk * 2.0);
+      }
+      else // TARGET_SWING_PREVIOUS
+      {
+         double highest = rates[priorLowIdx].high;
+         for(int m = priorLowIdx; m < MathMin(total, priorLowIdx + 15); m++)
+         {
+            if(rates[m].high > highest) highest = rates[m].high;
+         }
+         sig.targetPrice = highest;
+      }
+      sig.desc = "Trap no 1-2-3 de Fundo";
+   }
+
+   return sig;
 }
 
-SPoint123 FindPatternSell(const MqlRates &rates[], int total, double atr)
+SSetupSignal DetectStormerTrapSell(const MqlRates &rates[], int total, double atr)
 {
-   SPoint123 pt;
-   pt.valid = false;
+   SSetupSignal sig;
+   sig.valid = false;
+   if(total < 8) return sig;
 
-   if(InpPatternType == PATTERN_STORMER_3BAR)
+   int trapIdx = 1;
+   double priorSwingHigh = rates[trapIdx + 1].high;
+   int priorHighIdx = trapIdx + 1;
+   for(int k = trapIdx + 1; k <= trapIdx + 5; k++)
    {
-      if(total < 3) return pt;
-      if(rates[1].high > rates[2].high && rates[0].high < rates[1].high)
+      if(rates[k].high > priorSwingHigh)
       {
-         pt.valid = true;
-         pt.time1 = rates[2].time;
-         pt.price1 = rates[2].high;
-         pt.time2 = rates[0].time;
-         pt.price2 = rates[0].low;  // Gatilho na minima da barra 3
-         pt.time3 = rates[1].time;
-         pt.price3 = rates[1].high; // Stop na maxima da barra 2
-
-         if(InpTargetMode == TARGET_FIBO_100)
-         {
-            double leg = pt.price3 - pt.price2;
-            pt.target = pt.price2 - leg;
-         }
-         else if(InpTargetMode == TARGET_FIXED_RR)
-         {
-            double risk = pt.price3 - pt.price2;
-            pt.target = pt.price2 - (risk * InpTargetRRMultiplier);
-         }
-         else
-         {
-            double lowest = rates[2].low;
-            for(int k = 2; k < MathMin(total, InpSwingLookback); k++)
-            {
-               if(rates[k].low < lowest) lowest = rates[k].low;
-            }
-            pt.target = lowest;
-         }
-      }
-      return pt;
-   }
-
-   // --- PATTERN_JOE_ROSS_SWING Vendedor ---
-   int idx3 = -1;
-   for(int i = 1; i < MathMin(total - InpSwingStrength, 15); i++)
-   {
-      if(IsSwingHigh(rates, i, InpSwingStrength, total))
-      {
-         idx3 = i;
-         break;
+         priorSwingHigh = rates[k].high;
+         priorHighIdx = k;
       }
    }
-   if(idx3 == -1) return pt;
 
-   int idx2 = -1;
-   for(int i = idx3 + 1; i < MathMin(total - InpSwingStrength, idx3 + 20); i++)
+   // Candle do Trap violou a maxima anterior (falso rompimento de topo)
+   if(rates[trapIdx].high > priorSwingHigh)
    {
-      if(IsSwingLow(rates, i, InpSwingStrength, total))
-      {
-         idx2 = i;
-         break;
-      }
-   }
-   if(idx2 == -1) return pt;
+      sig.valid = true;
+      sig.timeRef = rates[trapIdx].time;
+      sig.triggerPrice = rates[trapIdx].low;
+      sig.stopLossPrice = rates[trapIdx].high + (InpBufferPoints * _Point);
 
-   int idx1 = -1;
-   for(int i = idx2 + 1; i < MathMin(total - InpSwingStrength, idx2 + 25); i++)
-   {
-      if(IsSwingHigh(rates, i, InpSwingStrength, total))
-      {
-         if(rates[i].high > rates[idx3].high)
-         {
-            idx1 = i;
-            break;
-         }
-      }
-   }
-   if(idx1 == -1) return pt;
+      double risk = sig.stopLossPrice - sig.triggerPrice;
 
-   if(rates[idx3].high < rates[idx1].high && rates[idx2].low < rates[idx3].high)
-   {
-      pt.valid = true;
-      pt.time1 = rates[idx1].time;
-      pt.price1 = rates[idx1].high;
-      pt.time2 = rates[idx2].time;
-      pt.price2 = rates[idx2].low;  // Gatilho no rompimento do Ponto 2
-      pt.time3 = rates[idx3].time;
-      pt.price3 = rates[idx3].high; // Stop na maxima do Ponto 3
-
-      if(InpTargetMode == TARGET_FIBO_100)
+      if(InpTargetMode == TARGET_2X_RISK)
+         sig.targetPrice = sig.triggerPrice - (risk * InpTargetRRMultiplier);
+      else if(InpTargetMode == TARGET_FIBO_100)
       {
-         double leg12 = pt.price1 - pt.price2;
-         pt.target = pt.price3 - leg12;
-      }
-      else if(InpTargetMode == TARGET_FIXED_RR)
-      {
-         double risk = pt.price3 - pt.price2;
-         pt.target = pt.price2 - (risk * InpTargetRRMultiplier);
+         double leg = priorSwingHigh - rates[priorHighIdx].low;
+         sig.targetPrice = sig.triggerPrice - MathMax(leg, risk * 2.0);
       }
       else
       {
-         double lowest = pt.price2;
-         for(int k = idx2 + 1; k < MathMin(total, idx2 + InpSwingLookback); k++)
+         double lowest = rates[priorHighIdx].low;
+         for(int m = priorHighIdx; m < MathMin(total, priorHighIdx + 15); m++)
          {
-            if(rates[k].low < lowest) lowest = rates[k].low;
+            if(rates[m].low < lowest) lowest = rates[m].low;
          }
-         if(pt.price2 - lowest > 6.0 * atr)
-            lowest = pt.price2 - (3.0 * atr);
-         pt.target = lowest;
+         sig.targetPrice = lowest;
       }
+      sig.desc = "Trap no 1-2-3 de Topo";
    }
 
-   return pt;
+   return sig;
 }
 
 //+------------------------------------------------------------------+
-//| PONTO 3: Gerencia e Cancela Ordens Pendentes Invalidadas         |
+//| DETECCAO JOE ROSS SWING & PIVO 3 BARRAS                          |
+//+------------------------------------------------------------------+
+SSetupSignal DetectClassic123Buy(const MqlRates &rates[], int total, double atr)
+{
+   SSetupSignal sig;
+   sig.valid = false;
+
+   if(InpPatternType == PATTERN_STORMER_3BAR)
+   {
+      if(total < 3) return sig;
+      if(rates[1].low < rates[2].low && rates[0].low > rates[1].low)
+      {
+         sig.valid = true;
+         sig.timeRef = rates[0].time;
+         sig.triggerPrice = rates[0].high;
+         sig.stopLossPrice = rates[1].low - (InpBufferPoints * _Point);
+         double risk = sig.triggerPrice - sig.stopLossPrice;
+         sig.targetPrice = sig.triggerPrice + (risk * InpTargetRRMultiplier);
+         sig.desc = "Pivo 1-2-3 de 3 Barras";
+      }
+      return sig;
+   }
+
+   // Joe Ross Swing
+   int idx3 = -1;
+   for(int i = 1; i < MathMin(total - InpSwingStrength, 15); i++)
+   {
+      if(IsSwingLow(rates, i, InpSwingStrength, total)) { idx3 = i; break; }
+   }
+   if(idx3 == -1) return sig;
+
+   int idx2 = -1;
+   for(int i = idx3 + 1; i < MathMin(total - InpSwingStrength, idx3 + 20); i++)
+   {
+      if(IsSwingHigh(rates, i, InpSwingStrength, total)) { idx2 = i; break; }
+   }
+   if(idx2 == -1) return sig;
+
+   int idx1 = -1;
+   for(int i = idx2 + 1; i < MathMin(total - InpSwingStrength, idx2 + 25); i++)
+   {
+      if(IsSwingLow(rates, i, InpSwingStrength, total))
+      {
+         if(rates[i].low < rates[idx3].low) { idx1 = i; break; }
+      }
+   }
+   if(idx1 == -1) return sig;
+
+   if(rates[idx3].low > rates[idx1].low && rates[idx2].high > rates[idx3].low)
+   {
+      sig.valid = true;
+      sig.timeRef = rates[idx2].time;
+      sig.triggerPrice = rates[idx2].high;
+      sig.stopLossPrice = rates[idx3].low - (InpBufferPoints * _Point);
+      double risk = sig.triggerPrice - sig.stopLossPrice;
+      sig.targetPrice = sig.triggerPrice + (risk * InpTargetRRMultiplier);
+      sig.desc = "Joe Ross 1-2-3 Swing";
+   }
+
+   return sig;
+}
+
+SSetupSignal DetectClassic123Sell(const MqlRates &rates[], int total, double atr)
+{
+   SSetupSignal sig;
+   sig.valid = false;
+
+   if(InpPatternType == PATTERN_STORMER_3BAR)
+   {
+      if(total < 3) return sig;
+      if(rates[1].high > rates[2].high && rates[0].high < rates[1].high)
+      {
+         sig.valid = true;
+         sig.timeRef = rates[0].time;
+         sig.triggerPrice = rates[0].low;
+         sig.stopLossPrice = rates[1].high + (InpBufferPoints * _Point);
+         double risk = sig.stopLossPrice - sig.triggerPrice;
+         sig.targetPrice = sig.triggerPrice - (risk * InpTargetRRMultiplier);
+         sig.desc = "Pivo 1-2-3 de Topo 3 Barras";
+      }
+      return sig;
+   }
+
+   int idx3 = -1;
+   for(int i = 1; i < MathMin(total - InpSwingStrength, 15); i++)
+   {
+      if(IsSwingHigh(rates, i, InpSwingStrength, total)) { idx3 = i; break; }
+   }
+   if(idx3 == -1) return sig;
+
+   int idx2 = -1;
+   for(int i = idx3 + 1; i < MathMin(total - InpSwingStrength, idx3 + 20); i++)
+   {
+      if(IsSwingLow(rates, i, InpSwingStrength, total)) { idx2 = i; break; }
+   }
+   if(idx2 == -1) return sig;
+
+   int idx1 = -1;
+   for(int i = idx2 + 1; i < MathMin(total - InpSwingStrength, idx2 + 25); i++)
+   {
+      if(IsSwingHigh(rates, i, InpSwingStrength, total))
+      {
+         if(rates[i].high > rates[idx3].high) { idx1 = i; break; }
+      }
+   }
+   if(idx1 == -1) return sig;
+
+   if(rates[idx3].high < rates[idx1].high && rates[idx2].low < rates[idx3].high)
+   {
+      sig.valid = true;
+      sig.timeRef = rates[idx2].time;
+      sig.triggerPrice = rates[idx2].low;
+      sig.stopLossPrice = rates[idx3].high + (InpBufferPoints * _Point);
+      double risk = sig.stopLossPrice - sig.triggerPrice;
+      sig.targetPrice = sig.triggerPrice - (risk * InpTargetRRMultiplier);
+      sig.desc = "Joe Ross 1-2-3 Topo";
+   }
+
+   return sig;
+}
+
+//+------------------------------------------------------------------+
+//| Gerencia e Cancela Ordens Pendentes Invalidadas                 |
 //+------------------------------------------------------------------+
 void ManagePendingOrders()
 {
@@ -518,22 +511,20 @@ void ManagePendingOrders()
       ENUM_ORDER_TYPE oType = ordInfo.OrderType();
       double sl = ordInfo.StopLoss();
 
-      // Se for Buy Stop e o preco caiu abaixo do Stop Loss (Ponto 3), o padrao foi violado! Cancela ordem.
       if(oType == ORDER_TYPE_BUY_STOP)
       {
          if(sl > 0 && currentBid <= sl)
          {
             trade.OrderDelete(ticket);
-            PrintFormat("[ORDEM CANCELADA] Buy Stop #%d cancelada: padrao invalidado pela quebra do fundo (SL: %.5f)", ticket, sl);
+            PrintFormat("[ORDEM CANCELADA] Buy Stop #%d cancelada: padrao violado pela quebra do fundo (SL: %.5f)", ticket, sl);
          }
       }
-      // Se for Sell Stop e o preco subiu acima do Stop Loss, padrao invalidado! Cancela ordem.
       else if(oType == ORDER_TYPE_SELL_STOP)
       {
          if(sl > 0 && currentAsk >= sl)
          {
             trade.OrderDelete(ticket);
-            PrintFormat("[ORDEM CANCELADA] Sell Stop #%d cancelada: padrao invalidado pelo rompimento do topo (SL: %.5f)", ticket, sl);
+            PrintFormat("[ORDEM CANCELADA] Sell Stop #%d cancelada: padrao violado pelo rompimento do topo (SL: %.5f)", ticket, sl);
          }
       }
    }
@@ -567,7 +558,7 @@ void ManageOpenPositions()
                {
                   double newSL = openPrice + 2 * _Point;
                   trade.PositionModify(posInfo.Ticket(), newSL, currentTP);
-                  PrintFormat("[BREAK-EVEN] Compra #%d protegida no zero a zero (SL: %.5f)", posInfo.Ticket(), newSL);
+                  PrintFormat("[BREAK-EVEN] Compra #%d movida para 0x0 (SL: %.5f)", posInfo.Ticket(), newSL);
                }
             }
          }
@@ -580,7 +571,7 @@ void ManageOpenPositions()
                {
                   double newSL = openPrice - 2 * _Point;
                   trade.PositionModify(posInfo.Ticket(), newSL, currentTP);
-                  PrintFormat("[BREAK-EVEN] Venda #%d protegida no zero a zero (SL: %.5f)", posInfo.Ticket(), newSL);
+                  PrintFormat("[BREAK-EVEN] Venda #%d movida para 0x0 (SL: %.5f)", posInfo.Ticket(), newSL);
                }
             }
          }
@@ -645,33 +636,25 @@ void OnTick()
    symInfo.Refresh();
    symInfo.RefreshRates();
 
-   // Gerenciamento contínuo
    ManageOpenPositions();
    ManagePendingOrders();
    UpdateDashboard();
 
-   // Novos sinais avaliados na abertura de barra fechada
    if(!IsNewBar()) return;
-
-   // Respeita operacao ativa (Swing trade de 1 posicao por vez)
    if(HasOpenOrderOrPosition()) return;
 
-   // Checa spread maximo
    double currentSpread = (symInfo.Ask() - symInfo.Bid()) / _Point;
    if(currentSpread > InpMaxSpreadPoints) return;
 
-   // Leitura da EMA 70 nas barras fechadas (shift 1 e shift 2)
    double emaVal[2];
    if(CopyBuffer(h_ema, 0, 1, 2, emaVal) < 2) return;
    bool emaSubindo  = (emaVal[1] > emaVal[0]);
    bool emaDescendo = (emaVal[1] < emaVal[0]);
 
-   // Leitura do ATR para limites de alvo
    double atrVal[1];
    if(CopyBuffer(h_atr, 0, 1, 1, atrVal) < 1) return;
    double atr = atrVal[0];
 
-   // PONTO 5: Array Dinamico sem limite fixo de 10
    double stochMain[];
    double stochSig[];
    ArraySetAsSeries(stochMain, true);
@@ -690,7 +673,6 @@ void OnTick()
       if(stochMain[i] > InpStochOverbought) stochEstiveOverbought = true;
    }
 
-   // Copia taxas historicas
    MqlRates rates[];
    ArraySetAsSeries(rates, true);
    int ratesCount = CopyRates(_Symbol, InpTimeframe, 1, InpMaxBarsSearch + 10, rates);
@@ -700,7 +682,7 @@ void OnTick()
    double slippageReal = InpSlippageEstimate * _Point;
 
    //+---------------------------------------------------------------+
-   //| 1. SINAL DE COMPRA 1-2-3 (JOE ROSS OU 3 BARRAS)               |
+   //| 1. SINAL DE COMPRA                                            |
    //+---------------------------------------------------------------+
    if(InpAllowBuy)
    {
@@ -709,14 +691,20 @@ void OnTick()
 
       if(condTrend && stochEstiveOversold)
       {
-         SPoint123 buyPt = FindPatternBuy(rates, ratesCount, atr);
-         if(buyPt.valid)
-         {
-            double triggerPrice = buyPt.price2; // Rompimento do Ponto 2
-            double rawSL = buyPt.price3 - (InpBufferPoints * _Point);
-            double rawTP = buyPt.target;
+         SSetupSignal buySig;
+         buySig.valid = false;
 
-            // PONTO 4: Preco de Execucao Real e Risco Efetivo
+         if(InpPatternType == PATTERN_STORMER_TRAP)
+            buySig = DetectStormerTrapBuy(rates, ratesCount, atr);
+         else
+            buySig = DetectClassic123Buy(rates, ratesCount, atr);
+
+         if(buySig.valid)
+         {
+            double triggerPrice = buySig.triggerPrice;
+            double rawSL = buySig.stopLossPrice;
+            double rawTP = buySig.targetPrice;
+
             double estimatedEntry = triggerPrice + spreadReal + slippageReal;
             double estimatedSL    = rawSL - slippageReal;
             double realRiskPoints = (estimatedEntry - estimatedSL) / _Point;
@@ -727,16 +715,15 @@ void OnTick()
                double lot = CalculateRealRiskLot(realRiskPoints);
                datetime expiration = TimeCurrent() + PeriodSeconds(InpTimeframe) * InpPendingExpireBars;
 
-               // PONTO 3: Se o preco Ask ja abriu rompendo, entra a mercado; senao coloca Buy Stop
                double currentAsk = symInfo.Ask();
                if(currentAsk >= triggerPrice)
                {
                   if(trade.Buy(lot, _Symbol, currentAsk, NormalizeDouble(rawSL, symInfo.Digits()), 
                                NormalizeDouble(rawTP, symInfo.Digits()), InpComment))
                   {
-                     PrintFormat("[COMPRA 1-2-3 EXECUTADA A MERCADO] Lote: %.2f | Preco: %.5f | SL: %.5f | TP: %.5f | R:R Real: %.2f",
-                                 lot, currentAsk, rawSL, rawTP, realRewardPoints / realRiskPoints);
-                     DrawSetupLines(buyPt.time2, rawSL, triggerPrice, rawTP, true);
+                     PrintFormat("[%s A MERCADO] Lote: %.2f | Preco: %.5f | SL: %.5f | TP: %.5f | R:R: %.2f",
+                                 buySig.desc, lot, currentAsk, rawSL, rawTP, realRewardPoints / realRiskPoints);
+                     DrawSetupLines(buySig.timeRef, rawSL, triggerPrice, rawTP, true);
                   }
                }
                else
@@ -745,9 +732,9 @@ void OnTick()
                   if(trade.BuyStop(lot, orderPrice, _Symbol, NormalizeDouble(rawSL, symInfo.Digits()), 
                                    NormalizeDouble(rawTP, symInfo.Digits()), ORDER_TIME_SPECIFIED, expiration, InpComment))
                   {
-                     PrintFormat("[BUY STOP 1-2-3 AGENDADA] Lote: %.2f | Gatilho: %.5f | SL: %.5f | TP: %.5f | R:R Real: %.2f",
-                                 lot, orderPrice, rawSL, rawTP, realRewardPoints / realRiskPoints);
-                     DrawSetupLines(buyPt.time2, rawSL, triggerPrice, rawTP, true);
+                     PrintFormat("[BUY STOP AGENDADA: %s] Lote: %.2f | Gatilho: %.5f | SL: %.5f | TP: %.5f",
+                                 buySig.desc, lot, orderPrice, rawSL, rawTP);
+                     DrawSetupLines(buySig.timeRef, rawSL, triggerPrice, rawTP, true);
                   }
                }
             }
@@ -756,7 +743,7 @@ void OnTick()
    }
 
    //+---------------------------------------------------------------+
-   //| 2. SINAL DE VENDA 1-2-3                                       |
+   //| 2. SINAL DE VENDA                                             |
    //+---------------------------------------------------------------+
    if(InpAllowSell)
    {
@@ -765,14 +752,20 @@ void OnTick()
 
       if(condTrend && stochEstiveOverbought)
       {
-         SPoint123 sellPt = FindPatternSell(rates, ratesCount, atr);
-         if(sellPt.valid)
-         {
-            double triggerPrice = sellPt.price2;
-            double rawSL = sellPt.price3 + (InpBufferPoints * _Point);
-            double rawTP = sellPt.target;
+         SSetupSignal sellSig;
+         sellSig.valid = false;
 
-            // PONTO 4: Preco Real de Venda
+         if(InpPatternType == PATTERN_STORMER_TRAP)
+            sellSig = DetectStormerTrapSell(rates, ratesCount, atr);
+         else
+            sellSig = DetectClassic123Sell(rates, ratesCount, atr);
+
+         if(sellSig.valid)
+         {
+            double triggerPrice = sellSig.triggerPrice;
+            double rawSL = sellSig.stopLossPrice;
+            double rawTP = sellSig.targetPrice;
+
             double estimatedEntry = triggerPrice - slippageReal;
             double estimatedSL    = rawSL + spreadReal + slippageReal;
             double realRiskPoints = (estimatedSL - estimatedEntry) / _Point;
@@ -789,9 +782,9 @@ void OnTick()
                   if(trade.Sell(lot, _Symbol, currentBid, NormalizeDouble(rawSL, symInfo.Digits()), 
                                 NormalizeDouble(rawTP, symInfo.Digits()), InpComment))
                   {
-                     PrintFormat("[VENDA 1-2-3 EXECUTADA A MERCADO] Lote: %.2f | Preco: %.5f | SL: %.5f | TP: %.5f | R:R Real: %.2f",
-                                 lot, currentBid, rawSL, rawTP, realRewardPoints / realRiskPoints);
-                     DrawSetupLines(sellPt.time2, rawSL, triggerPrice, rawTP, false);
+                     PrintFormat("[%s A MERCADO] Lote: %.2f | Preco: %.5f | SL: %.5f | TP: %.5f | R:R: %.2f",
+                                 sellSig.desc, lot, currentBid, rawSL, rawTP, realRewardPoints / realRiskPoints);
+                     DrawSetupLines(sellSig.timeRef, rawSL, triggerPrice, rawTP, false);
                   }
                }
                else
@@ -800,9 +793,9 @@ void OnTick()
                   if(trade.SellStop(lot, orderPrice, _Symbol, NormalizeDouble(rawSL, symInfo.Digits()), 
                                     NormalizeDouble(rawTP, symInfo.Digits()), ORDER_TIME_SPECIFIED, expiration, InpComment))
                   {
-                     PrintFormat("[SELL STOP 1-2-3 AGENDADA] Lote: %.2f | Gatilho: %.5f | SL: %.5f | TP: %.5f | R:R Real: %.2f",
-                                 lot, orderPrice, rawSL, rawTP, realRewardPoints / realRiskPoints);
-                     DrawSetupLines(sellPt.time2, rawSL, triggerPrice, rawTP, false);
+                     PrintFormat("[SELL STOP AGENDADA: %s] Lote: %.2f | Gatilho: %.5f | SL: %.5f | TP: %.5f",
+                                 sellSig.desc, lot, orderPrice, rawSL, rawTP);
+                     DrawSetupLines(sellSig.timeRef, rawSL, triggerPrice, rawTP, false);
                   }
                }
             }
@@ -852,24 +845,23 @@ void UpdateDashboard()
    if(stochVal[0] < InpStochOversold) stochState = "SOBREVENDIDO (< 20)";
    else if(stochVal[0] > InpStochOverbought) stochState = "SOBRECOMPRADO (> 80)";
 
-   string patStr = (InpPatternType == PATTERN_JOE_ROSS_SWING) ? "Joe Ross (Swing Points)" : "Pivo 3 Barras";
-   string tgtStr = (InpTargetMode == TARGET_FIBO_100) ? "100% Expansao Fibo" : 
-                   ((InpTargetMode == TARGET_SWING_PREVIOUS) ? "Topo/Fundo Anterior" : "Multiplo Fixo RR");
+   string patStr = (InpPatternType == PATTERN_STORMER_TRAP) ? "Trap no 1-2-3 (Video Oficial)" :
+                   ((InpPatternType == PATTERN_JOE_ROSS_SWING) ? "Joe Ross Swing" : "Pivo 3 Barras");
 
    string text = "\n" +
       "====================================================\n" +
-      "    ROBO STORMER & JOE ROSS H4 SWING TRADE v2.0     \n" +
+      "    ROBO STORMER SWING TRADE v3.0 (MASTERCLASS)     \n" +
       "====================================================\n" +
       StringFormat(" Ativo: %s | Timeframe: H4\n", _Symbol) +
-      StringFormat(" Estrutura 1-2-3: %s\n", patStr) +
-      StringFormat(" Modo de Alvo: %s\n", tgtStr) +
+      StringFormat(" Estrutura: %s\n", patStr) +
+      StringFormat(" Alvo: %.1fx o Risco (2R Oficial Stormer)\n", InpTargetRRMultiplier) +
       StringFormat(" Tendencia EMA 70: %s\n", trendStr) +
       StringFormat(" Estocastico Lento (8,3,3): %.2f [%s]\n", stochVal[0], stochState) +
       StringFormat(" Risco Real por Trade: %.1f%% do Capital\n", InpRiskPercent) +
       StringFormat(" Spread: %.1f pts (Max: %.1f pts)\n", (symInfo.Ask() - symInfo.Bid()) / _Point, InpMaxSpreadPoints) +
       StringFormat(" Saldo: %.2f | Equity: %.2f\n", AccountInfoDouble(ACCOUNT_BALANCE), AccountInfoDouble(ACCOUNT_EQUITY)) +
       "====================================================\n" +
-      " 5 Correcoes Forenses Aplicadas com Sucesso\n" +
+      " 'O MELHOR sinal de swing trade que eu conheco'\n" +
       "====================================================";
 
    Comment(text);
