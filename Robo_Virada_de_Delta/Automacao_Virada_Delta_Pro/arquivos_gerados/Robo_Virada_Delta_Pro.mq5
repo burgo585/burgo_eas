@@ -58,9 +58,12 @@ input bool                 InpUseTrailingStop      = true;                   // 
 input double               InpMaxDailyLossPct      = 3.5;                    // Trava de Perda Diária Máxima (%)
 input ulong                InpMagicNumber          = 145634;                 // Magic Number Exclusivo
 
-input group "=== 6. Painel Visual (HUD) ==="
-input bool                 InpShowHUD              = true;                   // Exibir Painel Visual no Gráfico
+input group "=== 6. Visual & Marcações no Gráfico ==="
+input bool                 InpShowHUD              = true;                   // Exibir Painel Visual (HUD)
 input color                InpHUDColor             = clrDeepSkyBlue;         // Cor de Destaque do HUD
+input bool                 InpShowChartLines       = true;                   // Exibir Linhas de Leilão (POC, VAH, VAL) no Gráfico
+input color                InpPocColor             = clrMagenta;             // Cor da Linha do POC 24h
+input color                InpValVahColor          = clrDeepSkyBlue;         // Cor das Linhas VAH / VAL
 
 //--- Instâncias dos Motores
 CPvsraCore        g_pvsra;
@@ -72,6 +75,7 @@ CRiskManager      g_risk;
 datetime          g_last_bar_time = 0;
 bool              g_partial_executed = false;
 string            g_hud_prefix = "MTR_DELTA_HUD_";
+uint              g_last_redraw_ms = 0;
 
 //+------------------------------------------------------------------+
 //| Função OnInit                                                    |
@@ -110,10 +114,16 @@ int OnInit()
       return(INIT_FAILED);
      }
 
-   // Timer para atualização periódica do perfil (a cada 5 segundos)
-   EventSetTimer(5);
+   // Atualização inicial das marcações e HUD
+   if(InpShowChartLines)
+      UpdateChartLines(g_vap.GetPOC(), g_vap.GetVAH(), g_vap.GetVAL());
+   if(InpShowHUD)
+      UpdateHUD();
 
-   PrintFormat("[INIT] Robô Virada de Delta Pro inicializado com sucesso em %s | Magic: %d", _Symbol, InpMagicNumber);
+   // Timer de 1 segundo para atualização do HUD leve
+   EventSetTimer(1);
+
+   PrintFormat("[INIT] Robô Virada de Delta Pro v3.1 inicializado com sucesso em %s | Magic: %d", _Symbol, InpMagicNumber);
    return(INIT_SUCCEEDED);
   }
 
@@ -127,46 +137,52 @@ void OnDeinit(const int reason)
    g_vap.Deinit();
    g_physics.Deinit();
 
-   // Limpa objetos do HUD
+   // Limpeza completa de todos os objetos e marcações do robô no gráfico
    ObjectsDeleteAll(0, g_hud_prefix);
    ChartRedraw(0);
-   Print("[DEINIT] Robô Virada de Delta Pro finalizado.");
+   Print("[DEINIT] Robô Virada de Delta Pro finalizado e marcações limpas.");
   }
 
 //+------------------------------------------------------------------+
-//| Função OnTimer                                                   |
+//| Função OnTimer (Ultraleve: 1 atualização por segundo)            |
 //+------------------------------------------------------------------+
 void OnTimer()
   {
-   // Atualiza perfil de volume a cada 5 segundos
-   g_vap.UpdateProfile();
+   // Atualiza apenas os dados visuais leves em tela sem recalcular perfis pesados
    if(InpShowHUD)
       UpdateHUD();
   }
 
 //+------------------------------------------------------------------+
-//| Função OnTick                                                    |
+//| Função OnTick (Execução Ágil e Causal)                           |
 //+------------------------------------------------------------------+
 void OnTick()
   {
-   // 1. Gerenciar posições abertas existentes
+   // 1. Gerenciar posições abertas existentes (Trail / Stop / Parcial)
    ManageOpenPosition();
 
-   // 2. Checa se abriu um novo candle para avaliar novos gatilhos
+   // 2. Checa abertura de novo candle
    datetime cur_time = iTime(_Symbol, _Period, 0);
    bool is_new_bar = (cur_time != g_last_bar_time);
 
    if(!is_new_bar) return;
    g_last_bar_time = cur_time;
 
-   // 3. Se já estiver posicionado, não abre nova ordem (1 posição por vez)
+   // 3. Atualização sincronizada do perfil na abertura do candle (Zero lag & CPU 0%)
+   g_vap.UpdateProfile();
+   if(InpShowChartLines)
+      UpdateChartLines(g_vap.GetPOC(), g_vap.GetVAH(), g_vap.GetVAL());
+   if(InpShowHUD)
+      UpdateHUD();
+
+   // 4. Se já estiver posicionado, não abre nova ordem (1 posição por vez)
    if(HasOpenPosition()) return;
 
-   // 4. Checa trava de perda diária e sessão de trading
+   // 5. Checa trava de perda diária e sessão de trading
    if(g_risk.IsDailyLossLimitHit()) return;
    if(!g_risk.IsSessionAllowed()) return;
 
-   // 5. Avalia regras de entrada do leilão
+   // 6. Avalia regras de entrada do leilão
    CheckEntrySignals();
   }
 
@@ -406,7 +422,7 @@ void UpdateHUD()
 
    int x = 20, y = 30, step_y = 18;
 
-   DrawHUDLabel("HUD_TITLE", "=== ROBÔ VIRADA DE DELTA PRO v3.0 ===", x, y, InpHUDColor, 10, true);
+   DrawHUDLabel("HUD_TITLE", "=== ROBÔ VIRADA DE DELTA PRO v3.1 ===", x, y, InpHUDColor, 10, true);
    DrawHUDLabel("HUD_POC",   StringFormat("POC 24h: %.2f | VAH: %.2f | VAL: %.2f", poc, vah, val), x, y += step_y, clrWhite, 9);
    DrawHUDLabel("HUD_STRAIN",StringFormat("Deformação Elástica Delta_t: %.2f (Crítico: >= %.1f)", delta_t, InpCritStrain), x, y += step_y, (MathAbs(delta_t) >= InpCritStrain ? clrYellow : clrWhite), 9);
    DrawHUDLabel("HUD_REGIME",StringFormat("Regime Langevin: %s (Hurst: %.2f)", txt_regime, hurst), x, y += step_y, cor_regime, 9);
@@ -414,7 +430,53 @@ void UpdateHUD()
    DrawHUDLabel("HUD_SESSION",StringFormat("Filtro Sessão: %s", g_risk.IsSessionAllowed() ? "PERMITIDO (Dentro da Janela)" : "BLOQUEADO (Fora do Horário)"), x, y += step_y, (g_risk.IsSessionAllowed() ? clrLimeGreen : clrSalmon), 9);
    DrawHUDLabel("HUD_EQUITY", StringFormat("Capital: $%.2f | Rebaixamento Diário: %s", AccountInfoDouble(ACCOUNT_EQUITY), g_risk.IsDailyLossLimitHit() ? "BLOQUEADO (Limite Atingido)" : "OK (Normal)"), x, y += step_y, clrLightSteelBlue, 9);
 
-   ChartRedraw(0);
+   // Throttle de redesenho: no máximo 1 redesenho a cada 500ms para zero lag na UI
+   uint now_ms = GetTickCount();
+   if(now_ms - g_last_redraw_ms >= 500)
+     {
+      ChartRedraw(0);
+      g_last_redraw_ms = now_ms;
+     }
+  }
+
+//+------------------------------------------------------------------+
+//| Atualização das Linhas de Leilão Institucional no Gráfico       |
+//+------------------------------------------------------------------+
+void UpdateChartLines(double poc, double vah, double val)
+  {
+   if(!InpShowChartLines)
+     {
+      ObjectDelete(0, g_hud_prefix + "LINE_POC");
+      ObjectDelete(0, g_hud_prefix + "LINE_VAH");
+      ObjectDelete(0, g_hud_prefix + "LINE_VAL");
+      return;
+     }
+
+   if(poc > 0)
+      DrawOrUpdateHLine("LINE_POC", poc, InpPocColor, STYLE_SOLID, 2, StringFormat("POC 24h: %.2f (Ímã de Liquidez)", poc));
+   if(vah > 0)
+      DrawOrUpdateHLine("LINE_VAH", vah, InpValVahColor, STYLE_DASH, 1, StringFormat("VAH: %.2f (Teto da Área de Valor)", vah));
+   if(val > 0)
+      DrawOrUpdateHLine("LINE_VAL", val, InpValVahColor, STYLE_DASH, 1, StringFormat("VAL: %.2f (Piso da Área de Valor)", val));
+  }
+
+//+------------------------------------------------------------------+
+//| Desenha ou Atualiza Linhas Horizontais Sem Flicker               |
+//+------------------------------------------------------------------+
+void DrawOrUpdateHLine(string name, double price, color clr, ENUM_LINE_STYLE style, int width, string desc)
+  {
+   string obj_name = g_hud_prefix + name;
+   if(ObjectFind(0, obj_name) < 0)
+     {
+      ObjectCreate(0, obj_name, OBJ_HLINE, 0, 0, price);
+      ObjectSetInteger(0, obj_name, OBJPROP_SELECTABLE, false);
+      ObjectSetInteger(0, obj_name, OBJPROP_BACK, true); // Fica atrás dos candles para leitura limpa
+     }
+   ObjectSetDouble(0, obj_name, OBJPROP_PRICE, price);
+   ObjectSetInteger(0, obj_name, OBJPROP_COLOR, clr);
+   ObjectSetInteger(0, obj_name, OBJPROP_STYLE, style);
+   ObjectSetInteger(0, obj_name, OBJPROP_WIDTH, width);
+   ObjectSetString(0, obj_name, OBJPROP_TEXT, desc);
   }
 
 //+------------------------------------------------------------------+

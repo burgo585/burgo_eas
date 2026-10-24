@@ -258,7 +258,7 @@ bool CRiskManager::OpenPosition(ENUM_ORDER_TYPE order_type, double volume,
   }
 
 //+------------------------------------------------------------------+
-//| Fechamento Parcial (70%)                                         |
+//| Fechamento Parcial (70%) com Suporte a Bancas Pequenas (0.01 lot)|
 //+------------------------------------------------------------------+
 bool CRiskManager::ExecutePartialClose(ulong ticket, double partial_ratio=0.70)
   {
@@ -267,6 +267,18 @@ bool CRiskManager::ExecutePartialClose(ulong ticket, double partial_ratio=0.70)
    double cur_vol  = PositionGetDouble(POSITION_VOLUME);
    double lot_step = SymbolInfoDouble(m_symbol, SYMBOL_VOLUME_STEP);
    double min_lot  = SymbolInfoDouble(m_symbol, SYMBOL_VOLUME_MIN);
+
+   // Tratamento para Bancas Pequenas (ex: $200 operando no lote mínimo 0.01)
+   if(cur_vol <= min_lot + 1e-9)
+     {
+      double entry_p = PositionGetDouble(POSITION_PRICE_OPEN);
+      long pos_type  = PositionGetInteger(POSITION_TYPE);
+      double spread  = SymbolInfoDouble(m_symbol, SYMBOL_ASK) - SymbolInfoDouble(m_symbol, SYMBOL_BID);
+      double be_price = (pos_type == POSITION_TYPE_BUY) ? (entry_p + spread) : (entry_p - spread);
+      MoveStopToBreakeven(ticket, be_price);
+      PrintFormat("[RISK] Banca pequena (lote %.2f): Parcial convertida em Breakeven Blindado em %.2f", cur_vol, be_price);
+      return(true);
+     }
 
    double close_vol = MathRound((cur_vol * partial_ratio) / lot_step) * lot_step;
    close_vol = MathMax(min_lot, MathMin(cur_vol - min_lot, close_vol));
@@ -283,16 +295,24 @@ bool CRiskManager::MoveStopToBreakeven(ulong ticket, double entry_price)
   {
    if(!PositionSelectByTicket(ticket)) return(false);
 
+   double cur_sl = PositionGetDouble(POSITION_SL);
+   double point  = SymbolInfoDouble(m_symbol, SYMBOL_POINT);
+   if(MathAbs(entry_price - cur_sl) < 2 * point) return(true);
+
    double cur_tp = PositionGetDouble(POSITION_TP);
    return(m_trade.PositionModify(ticket, entry_price, cur_tp));
   }
 
 //+------------------------------------------------------------------+
-//| Modificar Stop Loss                                              |
+//| Modificar Stop Loss com Throttle de Latência                     |
 //+------------------------------------------------------------------+
 bool CRiskManager::ModifyStopLoss(ulong ticket, double new_sl)
   {
    if(!PositionSelectByTicket(ticket)) return(false);
+
+   double cur_sl = PositionGetDouble(POSITION_SL);
+   double point  = SymbolInfoDouble(m_symbol, SYMBOL_POINT);
+   if(MathAbs(new_sl - cur_sl) < 5 * point) return(true); // Evita requisições redundantes à corretora
 
    double cur_tp = PositionGetDouble(POSITION_TP);
    return(m_trade.PositionModify(ticket, new_sl, cur_tp));

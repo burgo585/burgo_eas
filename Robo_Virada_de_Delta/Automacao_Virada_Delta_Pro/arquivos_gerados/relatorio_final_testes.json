@@ -1,0 +1,170 @@
+{
+  "XAUUSD": [
+    {
+      "Estratégia": "Rev_Confirmada_TP_Fixo_1.4R",
+      "Trades": 279,
+      "WinRate (%)": 21.9,
+      "Profit Factor": 1.09,
+      "Pontos Total": 99.9,
+      "Max DD": 129.72,
+      "Sharpe": 0.46
+    },
+    {
+      "Estratégia": "Rev_Confirmada_TP_Fixo_1.8R",
+      "Trades": 279,
+      "WinRate (%)": 21.1,
+      "Profit Factor": 1.08,
+      "Pontos Total": 89.23,
+      "Max DD": 145.36,
+      "Sharpe": 0.41
+    },
+    {
+      "Estratégia": "Rev_Confirmada_Parcial_70_30",
+      "Trades": 317,
+      "WinRate (%)": 36.0,
+      "Profit Factor": 1.05,
+      "Pontos Total": 35.96,
+      "Max DD": 84.3,
+      "Sharpe": 0.27
+    },
+    {
+      "Estratégia": "BOS_Pullback_Trend_1.6R",
+      "Trades": 125,
+      "WinRate (%)": 37.6,
+      "Profit Factor": 1.27,
+      "Pontos Total": 134.85,
+      "Max DD": 70.98,
+      "Sharpe": 1.6
+    },
+    {
+      "Estratégia": "Hibrido_Total_TP_Fixo",
+      "Trades": 375,
+      "WinRate (%)": 26.4,
+      "Profit Factor": 1.14,
+      "Pontos Total": 203.85,
+      "Max DD": 143.23,
+      "Sharpe": 0.72
+    },
+    {
+      "Estratégia": "Hibrido_Total_Parcial_70_30",
+      "Trades": 460,
+      "WinRate (%)": 38.0,
+      "Profit Factor": 1.16,
+      "Pontos Total": 154.53,
+      "Max DD": 89.53,
+      "Sharpe": 0.81
+    }
+  ],
+  "NAS100": [
+    {
+      "Estratégia": "Rev_Confirmada_TP_Fixo_1.4R",
+      "Trades": 266,
+      "WinRate (%)": 21.1,
+      "Profit Factor": 0.89,
+      "Pontos Total": -527.14,
+      "Max DD": 924.36,
+      "Sharpe": -0.65
+    },
+    {
+      "Estratégia": "Rev_Confirmada_TP_Fixo_1.8R",
+      "Trades": 266,
+      "WinRate (%)": 21.1,
+      "Profit Factor": 0.9,
+      "Pontos Total": -467.8,
+      "Max DD": 873.88,
+      "Sharpe": -0.58
+    },
+    {
+      "Estratégia": "Rev_Confirmada_Parcial_70_30",
+      "Trades": 304,
+      "WinRate (%)": 32.6,
+      "Profit Factor": 0.89,
+      "Pontos Total": -345.86,
+      "Max DD": 669.1,
+      "Sharpe": -0.64
+    },
+    {
+      "Estratégia": "BOS_Pullback_Trend_1.6R",
+      "Trades": 113,
+      "WinRate (%)": 32.7,
+      "Profit Factor": 0.86,
+      "Pontos Total": -338.5,
+      "Max DD": 747.38,
+      "Sharpe": -1.03
+    },
+    {
+      "Estratégia": "Hibrido_Total_TP_Fixo",
+      "Trades": 362,
+      "WinRate (%)": 24.3,
+      "Profit Factor": 0.85,
+      "Pontos Total": -1065.77,
+      "Max DD": 1300.97,
+      "Sharpe": -1.0
+    },
+    {
+      "Estratégia": "Hibrido_Total_Parcial_70_30",
+      "Trades": 440,
+      "WinRate (%)": 33.6,
+      "Profit Factor": 0.94,
+      "Pontos Total": -281.84,
+      "Max DD": 569.12,
+      "Sharpe": -0.37
+    }
+  ],
+  "BTCUSD": [
+    {
+      "Estratégia": "Rev_Confirmada_TP_Fixo_1.4R",
+      "Trades": 311,
+      "WinRate (%)": 32.5,
+      "Profit Factor": 1.31,
+      "Pontos Total": 9283.79,
+      "Max DD": 4922.76,
+      "Sharpe": 1.44
+    },
+    {
+      "Estratégia": "Rev_Confirmada_TP_Fixo_1.8R",
+      "Trades": 310,
+      "WinRate (%)": 32.3,
+      "Profit Factor": 1.32,
+      "Pontos Total": 9582.47,
+      "Max DD": 4687.24,
+      "Sharpe": 1.49
+    },
+    {
+      "Estratégia": "Rev_Confirmada_Parcial_70_30",
+      "Trades": 362,
+      "WinRate (%)": 41.2,
+      "Profit Factor": 1.32,
+      "Pontos Total": 6130.3,
+      "Max DD": 2935.73,
+      "Sharpe": 1.42
+    },
+    {
+      "Estratégia": "BOS_Pullback_Trend_1.6R",
+      "Trades": 122,
+      "WinRate (%)": 38.5,
+      "Profit Factor": 1.11,
+      "Pontos Total": 1290.03,
+      "Max DD": 3637.74,
+      "Sharpe": 0.67
+    },
+    {
+      "Estratégia": "Hibrido_Total_TP_Fixo",
+      "Trades": 398,
+      "WinRate (%)": 34.9,
+      "Profit Factor": 1.24,
+      "Pontos Total": 9392.91,
+      "Max DD": 6951.2,
+      "Sharpe": 1.21
+    },
+    {
+      "Estratégia": "Hibrido_Total_Parcial_70_30",
+      "Trades": 481,
+      "WinRate (%)": 41.4,
+      "Profit Factor": 1.36,
+      "Pontos Total": 8995.37,
+      "Max DD": 2950.96,
+      "Sharpe": 1.6
+    }
+  ]
+}

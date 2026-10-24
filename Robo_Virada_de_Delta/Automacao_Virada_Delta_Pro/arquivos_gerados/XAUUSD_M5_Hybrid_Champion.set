@@ -29,3 +29,7 @@ InpMaxDailyLossPct=3.5||3.5||1.0||10.0
 InpMagicNumber=145634||145634||0||999999
 InpShowHUD=true||true||0||1
 InpHUDColor=16760576||16760576||0||16777215
+
+InpShowChartLines=true||true||0||1
+InpPocColor=16711935||16711935||0||16777215
+InpValVahColor=16760576||16760576||0||16777215

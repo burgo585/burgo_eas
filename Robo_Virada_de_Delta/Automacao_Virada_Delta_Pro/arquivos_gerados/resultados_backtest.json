@@ -1,0 +1,278 @@
+{
+  "XAUUSD": {
+    "REVERSAL__FULL_TP": {
+      "total_trades": 544,
+      "win_rate": 16.7,
+      "profit_factor": 1.09,
+      "total_pts": 141.83,
+      "avg_trade_pts": 0.26,
+      "max_dd_pts": 166.6,
+      "avg_bars": 8.5,
+      "sharpe": 0.42
+    },
+    "REVERSAL__PARTIAL_TRAILING": {
+      "total_trades": 642,
+      "win_rate": 26.9,
+      "profit_factor": 0.98,
+      "total_pts": -20.01,
+      "avg_trade_pts": -0.03,
+      "max_dd_pts": 117.08,
+      "avg_bars": 3.3,
+      "sharpe": -0.09
+    },
+    "REVERSAL__TRAILING_ONLY": {
+      "total_trades": 642,
+      "win_rate": 26.2,
+      "profit_factor": 0.96,
+      "total_pts": -51.59,
+      "avg_trade_pts": -0.08,
+      "max_dd_pts": 153.79,
+      "avg_bars": 3.3,
+      "sharpe": -0.22
+    },
+    "BREAKOUT__FULL_TP": {
+      "total_trades": 0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "total_pts": 0.0,
+      "avg_trade_pts": 0.0,
+      "max_dd_pts": 0.0,
+      "avg_bars": 0.0,
+      "sharpe": 0.0
+    },
+    "BREAKOUT__PARTIAL_TRAILING": {
+      "total_trades": 0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "total_pts": 0.0,
+      "avg_trade_pts": 0.0,
+      "max_dd_pts": 0.0,
+      "avg_bars": 0.0,
+      "sharpe": 0.0
+    },
+    "BREAKOUT__TRAILING_ONLY": {
+      "total_trades": 0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "total_pts": 0.0,
+      "avg_trade_pts": 0.0,
+      "max_dd_pts": 0.0,
+      "avg_bars": 0.0,
+      "sharpe": 0.0
+    },
+    "HYBRID__FULL_TP": {
+      "total_trades": 544,
+      "win_rate": 16.7,
+      "profit_factor": 1.09,
+      "total_pts": 141.83,
+      "avg_trade_pts": 0.26,
+      "max_dd_pts": 166.6,
+      "avg_bars": 8.5,
+      "sharpe": 0.42
+    },
+    "HYBRID__PARTIAL_TRAILING": {
+      "total_trades": 642,
+      "win_rate": 26.9,
+      "profit_factor": 0.98,
+      "total_pts": -20.01,
+      "avg_trade_pts": -0.03,
+      "max_dd_pts": 117.08,
+      "avg_bars": 3.3,
+      "sharpe": -0.09
+    },
+    "HYBRID__TRAILING_ONLY": {
+      "total_trades": 642,
+      "win_rate": 26.2,
+      "profit_factor": 0.96,
+      "total_pts": -51.59,
+      "avg_trade_pts": -0.08,
+      "max_dd_pts": 153.79,
+      "avg_bars": 3.3,
+      "sharpe": -0.22
+    }
+  },
+  "NAS100": {
+    "REVERSAL__FULL_TP": {
+      "total_trades": 554,
+      "win_rate": 15.7,
+      "profit_factor": 1.03,
+      "total_pts": 192.18,
+      "avg_trade_pts": 0.35,
+      "max_dd_pts": 1377.65,
+      "avg_bars": 7.4,
+      "sharpe": 0.12
+    },
+    "REVERSAL__PARTIAL_TRAILING": {
+      "total_trades": 628,
+      "win_rate": 25.6,
+      "profit_factor": 1.0,
+      "total_pts": 25.38,
+      "avg_trade_pts": 0.04,
+      "max_dd_pts": 1010.44,
+      "avg_bars": 3.3,
+      "sharpe": 0.02
+    },
+    "REVERSAL__TRAILING_ONLY": {
+      "total_trades": 628,
+      "win_rate": 25.0,
+      "profit_factor": 1.03,
+      "total_pts": 144.57,
+      "avg_trade_pts": 0.23,
+      "max_dd_pts": 1021.51,
+      "avg_bars": 3.3,
+      "sharpe": 0.12
+    },
+    "BREAKOUT__FULL_TP": {
+      "total_trades": 0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "total_pts": 0.0,
+      "avg_trade_pts": 0.0,
+      "max_dd_pts": 0.0,
+      "avg_bars": 0.0,
+      "sharpe": 0.0
+    },
+    "BREAKOUT__PARTIAL_TRAILING": {
+      "total_trades": 0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "total_pts": 0.0,
+      "avg_trade_pts": 0.0,
+      "max_dd_pts": 0.0,
+      "avg_bars": 0.0,
+      "sharpe": 0.0
+    },
+    "BREAKOUT__TRAILING_ONLY": {
+      "total_trades": 0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "total_pts": 0.0,
+      "avg_trade_pts": 0.0,
+      "max_dd_pts": 0.0,
+      "avg_bars": 0.0,
+      "sharpe": 0.0
+    },
+    "HYBRID__FULL_TP": {
+      "total_trades": 554,
+      "win_rate": 15.7,
+      "profit_factor": 1.03,
+      "total_pts": 192.18,
+      "avg_trade_pts": 0.35,
+      "max_dd_pts": 1377.65,
+      "avg_bars": 7.4,
+      "sharpe": 0.12
+    },
+    "HYBRID__PARTIAL_TRAILING": {
+      "total_trades": 628,
+      "win_rate": 25.6,
+      "profit_factor": 1.0,
+      "total_pts": 25.38,
+      "avg_trade_pts": 0.04,
+      "max_dd_pts": 1010.44,
+      "avg_bars": 3.3,
+      "sharpe": 0.02
+    },
+    "HYBRID__TRAILING_ONLY": {
+      "total_trades": 628,
+      "win_rate": 25.0,
+      "profit_factor": 1.03,
+      "total_pts": 144.57,
+      "avg_trade_pts": 0.23,
+      "max_dd_pts": 1021.51,
+      "avg_bars": 3.3,
+      "sharpe": 0.12
+    }
+  },
+  "BTCUSD": {
+    "REVERSAL__FULL_TP": {
+      "total_trades": 661,
+      "win_rate": 21.9,
+      "profit_factor": 1.18,
+      "total_pts": 8157.57,
+      "avg_trade_pts": 12.34,
+      "max_dd_pts": 4644.78,
+      "avg_bars": 9.1,
+      "sharpe": 0.76
+    },
+    "REVERSAL__PARTIAL_TRAILING": {
+      "total_trades": 822,
+      "win_rate": 33.2,
+      "profit_factor": 1.54,
+      "total_pts": 17674.18,
+      "avg_trade_pts": 21.5,
+      "max_dd_pts": 2267.48,
+      "avg_bars": 3.6,
+      "sharpe": 2.04
+    },
+    "REVERSAL__TRAILING_ONLY": {
+      "total_trades": 822,
+      "win_rate": 33.0,
+      "profit_factor": 1.62,
+      "total_pts": 20079.11,
+      "avg_trade_pts": 24.43,
+      "max_dd_pts": 2343.58,
+      "avg_bars": 3.7,
+      "sharpe": 2.19
+    },
+    "BREAKOUT__FULL_TP": {
+      "total_trades": 0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "total_pts": 0.0,
+      "avg_trade_pts": 0.0,
+      "max_dd_pts": 0.0,
+      "avg_bars": 0.0,
+      "sharpe": 0.0
+    },
+    "BREAKOUT__PARTIAL_TRAILING": {
+      "total_trades": 0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "total_pts": 0.0,
+      "avg_trade_pts": 0.0,
+      "max_dd_pts": 0.0,
+      "avg_bars": 0.0,
+      "sharpe": 0.0
+    },
+    "BREAKOUT__TRAILING_ONLY": {
+      "total_trades": 0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "total_pts": 0.0,
+      "avg_trade_pts": 0.0,
+      "max_dd_pts": 0.0,
+      "avg_bars": 0.0,
+      "sharpe": 0.0
+    },
+    "HYBRID__FULL_TP": {
+      "total_trades": 661,
+      "win_rate": 21.9,
+      "profit_factor": 1.18,
+      "total_pts": 8157.57,
+      "avg_trade_pts": 12.34,
+      "max_dd_pts": 4644.78,
+      "avg_bars": 9.1,
+      "sharpe": 0.76
+    },
+    "HYBRID__PARTIAL_TRAILING": {
+      "total_trades": 822,
+      "win_rate": 33.2,
+      "profit_factor": 1.54,
+      "total_pts": 17674.18,
+      "avg_trade_pts": 21.5,
+      "max_dd_pts": 2267.48,
+      "avg_bars": 3.6,
+      "sharpe": 2.04
+    },
+    "HYBRID__TRAILING_ONLY": {
+      "total_trades": 822,
+      "win_rate": 33.0,
+      "profit_factor": 1.62,
+      "total_pts": 20079.11,
+      "avg_trade_pts": 24.43,
+      "max_dd_pts": 2343.58,
+      "avg_bars": 3.7,
+      "sharpe": 2.19
+    }
+  }
+}
