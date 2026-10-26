@@ -1,12 +1,12 @@
 //+------------------------------------------------------------------+
 //|                                                BoletaScalping.mq5 |
 //|                             Copyright 2026, Senior MQL5 Developer |
-//|           Pacote Alta Performance: Ghost TP, Guardião & Quick-Btn |
+//|         Auto ATR, Reconhecimento de Ativos & Gestão de Risco Pro  |
 //+------------------------------------------------------------------+
 #property copyright "Senior MQL5 Developer"
 #property link      "https://www.mql5.com"
-#property version   "8.00"
-#property description "Boleta Visual de Scalping com Ghost TP Dinâmico, Guardião de Capital Diário e Botões Rápidos"
+#property version   "8.50"
+#property description "Boleta Visual de Scalping com Auto ATR, Reconhecimento de Ativos, Ghost TP e Guardião de Capital"
 #property strict
 
 #include <Trade\Trade.mqh>
@@ -75,6 +75,15 @@ enum ENUM_HUD_PERIOD
    HUD_PERIOD_WALLET   // Saldo da Carteira (Balance / Equity)
 };
 
+enum ENUM_ASSET_CLASS
+{
+   ASSET_CLASS_METALS,   // Ouro / Prata (XAU, GOLD, XAG)
+   ASSET_CLASS_FOREX,    // Moedas Forex (EURUSD, GBPUSD, etc.)
+   ASSET_CLASS_INDICES,  // Índices (US30, NAS100, SPX500, etc.)
+   ASSET_CLASS_CRYPTO,   // Criptoativos (BTC, ETH, etc.)
+   ASSET_CLASS_CUSTOM    // Outros CFDs e Ações
+};
+
 //+------------------------------------------------------------------+
 //| Parâmetros de Entrada (Inputs)                                   |
 //+------------------------------------------------------------------+
@@ -84,10 +93,12 @@ input ulong           InpMagicNumber       = 123456;             // Magic Number
 input ulong           InpSlippage          = 20;                 // Desvio Máximo / Slippage (pontos)
 input bool            InpFilterSymbolOnly  = true;               // Filtrar Métricas apenas deste Ativo (false = Conta Toda)
 
-input group "=== EXIBIÇÃO DE INFORMAÇÕES (HUD & MERCADO) ==="
-input ENUM_HUD_PERIOD InpDefaultHudPeriod  = HUD_PERIOD_TODAY;   // Visualização Inicial do HUD
-input bool            InpShowCandleTimer   = true;               // Exibir Relógio do Candle
-input bool            InpShowSpread        = true;               // Exibir Spread em Pontos
+input group "=== VOLATILIDADE & AUTO ATR (RISCO:RETORNO DINÂMICO) ==="
+input bool            InpAutoATR           = true;               // Ativar Dimensionamento Automático via ATR
+input int             InpATRPeriod         = 14;                 // Período do ATR
+input ENUM_TIMEFRAMES InpATRTimeframe      = PERIOD_CURRENT;     // Timeframe do ATR (CURRENT = Gráfico Atual)
+input double          InpATR_SL_Mult       = 1.5;                // Multiplicador do Stop Loss (x ATR)
+input double          InpATR_TP_Mult       = 3.0;                // Multiplicador do Take Profit (x ATR -> R:R 1:2.0)
 
 input group "=== GUARDIÃO DE CAPITAL DIÁRIO (PROP FIRM / META & LOSS) ==="
 input bool            InpDailyLockActive   = false;              // Ativar Trava de Meta/Perda Diária
@@ -101,9 +112,9 @@ input double          InpRiskPercent       = 1.0;                // Risco Percen
 input double          InpRiskCash          = 50.0;               // Risco Financeiro Fixo Inicial ($)
 input double          InpDefaultLot        = 0.01;               // Lote Manual Inicial
 input bool            InpSLActive          = true;               // Ativar Stop Loss Inicial
-input int             InpDefaultSL         = 150;                // Stop Loss Padrão (pontos)
+input int             InpDefaultSL         = 150;                // Stop Loss Manual Inicial (pontos)
 input bool            InpTPActive          = true;               // Ativar Take Profit Inicial
-input int             InpDefaultTP         = 300;                // Take Profit Padrão (pontos)
+input int             InpDefaultTP         = 300;                // Take Profit Manual Inicial (pontos)
 input bool            InpBEActive          = true;               // Ativar Break Even Inicial
 input int             InpDefaultBE         = 100;                // Break Even Padrão (pontos)
 input bool            InpTSActive          = true;               // Ativar Trailing Stop Inicial
@@ -120,9 +131,14 @@ input bool            InpParcialMoveBE     = true;               // Mover SL par
 input group "=== INCREMENTOS DOS BOTÕES (+ / -) ==="
 input double          InpStepRiskPct       = 0.5;                // Passo do Risco Percentual (%)
 input double          InpStepRiskCash      = 10.0;               // Passo do Risco Fixo ($)
-input int             InpStepPoints        = 20;                 // Passo de Pontos (SL, TP, BE, TS, Parcial Pts)
+input int             InpStepPoints        = 20;                 // Passo de Pontos Padrão (Auto-ajustado por ativo)
 input double          InpStepParcialCash   = 5.0;                // Passo do Alvo Parcial ($)
 input double          InpStepParcialVol    = 10.0;               // Passo do Volume Parcial (%)
+
+input group "=== EXIBIÇÃO DE INFORMAÇÕES (HUD & MERCADO) ==="
+input ENUM_HUD_PERIOD InpDefaultHudPeriod  = HUD_PERIOD_TODAY;   // Visualização Inicial do HUD
+input bool            InpShowCandleTimer   = true;               // Exibir Relógio do Candle
+input bool            InpShowSpread        = true;               // Exibir Spread em Pontos
 
 input group "=== POSICIONAMENTO DA BOLETA ==="
 input int             InpPanelX            = 20;                 // Posição Inicial X no Gráfico
@@ -224,6 +240,50 @@ string GetPeriodName(ENUM_TIMEFRAMES tf)
    }
 }
 
+ENUM_ASSET_CLASS DetectAssetClass(const string sym)
+{
+   string sym_upper = sym;
+   StringToUpper(sym_upper);
+   string path = SymbolInfoString(sym, SYMBOL_PATH);
+   StringToUpper(path);
+   
+   if(StringFind(sym_upper, "XAU") >= 0 || StringFind(sym_upper, "GOLD") >= 0 ||
+      StringFind(sym_upper, "XAG") >= 0 || StringFind(sym_upper, "SILVER") >= 0 ||
+      StringFind(path, "METAL") >= 0)
+      return ASSET_CLASS_METALS;
+      
+   if(StringFind(sym_upper, "BTC") >= 0 || StringFind(sym_upper, "ETH") >= 0 ||
+      StringFind(sym_upper, "SOL") >= 0 || StringFind(sym_upper, "CRYPTO") >= 0 ||
+      StringFind(path, "CRYPTO") >= 0)
+      return ASSET_CLASS_CRYPTO;
+      
+   if(StringFind(sym_upper, "US30") >= 0 || StringFind(sym_upper, "DJ30") >= 0 ||
+      StringFind(sym_upper, "NAS") >= 0  || StringFind(sym_upper, "USTEC") >= 0 ||
+      StringFind(sym_upper, "SPX") >= 0  || StringFind(sym_upper, "US500") >= 0 ||
+      StringFind(sym_upper, "GER") >= 0  || StringFind(sym_upper, "DAX") >= 0 ||
+      StringFind(sym_upper, "WIN") >= 0  || StringFind(sym_upper, "WDO") >= 0 ||
+      StringFind(path, "INDEX") >= 0     || StringFind(path, "INDICES") >= 0)
+      return ASSET_CLASS_INDICES;
+      
+   int digits = (int)SymbolInfoInteger(sym, SYMBOL_DIGITS);
+   if(digits == 3 || digits == 5)
+      return ASSET_CLASS_FOREX;
+      
+   return ASSET_CLASS_CUSTOM;
+}
+
+string AssetClassToString(ENUM_ASSET_CLASS cls)
+{
+   switch(cls)
+   {
+      case ASSET_CLASS_METALS:  return "OURO/MET";
+      case ASSET_CLASS_FOREX:   return "FOREX";
+      case ASSET_CLASS_INDICES: return "ÍNDICE";
+      case ASSET_CLASS_CRYPTO:  return "CRIPTO";
+      default:                  return "ATIVO";
+   }
+}
+
 // Forward declaration para controle de parciais
 void MarkPartialExecuted(ulong ticket);
 
@@ -260,6 +320,18 @@ private:
    bool              m_parcial_active;
    bool              m_parcial_is_cash;
    bool              m_parcial_move_be;
+   
+   // Auto ATR & Asset Profiler
+   bool              m_auto_atr;
+   int               m_atr_period;
+   ENUM_TIMEFRAMES   m_atr_timeframe;
+   double            m_atr_sl_mult;
+   double            m_atr_tp_mult;
+   int               m_atr_handle;
+   double            m_cur_atr_value;
+   int               m_cur_atr_pts;
+   ENUM_ASSET_CLASS  m_asset_class;
+   int               m_step_points;
    
    // Guardião de Capital Diário
    bool              m_daily_lock_active;
@@ -305,6 +377,8 @@ private:
    
    void              UpdateVisibility();
    void              UpdateFieldValues();
+   void              AutoProfileAsset();
+   void              UpdateATR();
    
    int               m_last_objects_total;
    bool              m_is_rebuilding;
@@ -332,6 +406,10 @@ public:
    bool              IsParcialActive()        const { return m_parcial_active; }
    bool              IsParcialCashMode()      const { return m_parcial_is_cash; }
    bool              IsParcialMoveBE()        const { return m_parcial_move_be; }
+   
+   bool              IsAutoATR()              const { return m_auto_atr; }
+   int               GetCurATRPts()           const { return m_cur_atr_pts; }
+   ENUM_ASSET_CLASS  GetAssetClass()          const { return m_asset_class; }
    
    bool              IsDailyLockActive()      const { return m_daily_lock_active; }
    bool              IsDailyTargetHit()       const { return m_daily_target_hit; }
@@ -364,6 +442,7 @@ public:
    void              ToggleParcialMode();
    void              ToggleParcialBE();
    void              ToggleDailyGuard();
+   void              ToggleAutoATR();
    void              CycleHudPeriod();
    void              MovePanel(int new_x, int new_y);
    
@@ -417,7 +496,7 @@ CBoletaPanel::CBoletaPanel()
      m_x(20),
      m_y(40),
      m_width(245),
-     m_height(495),
+     m_height(518),
      m_header_h(24),
      m_is_minimized(false),
      m_is_dragging(false),
@@ -432,6 +511,16 @@ CBoletaPanel::CBoletaPanel()
      m_parcial_active(true),
      m_parcial_is_cash(false),
      m_parcial_move_be(true),
+     m_auto_atr(true),
+     m_atr_period(14),
+     m_atr_timeframe(PERIOD_CURRENT),
+     m_atr_sl_mult(1.5),
+     m_atr_tp_mult(3.0),
+     m_atr_handle(INVALID_HANDLE),
+     m_cur_atr_value(0.0),
+     m_cur_atr_pts(150),
+     m_asset_class(ASSET_CLASS_METALS),
+     m_step_points(20),
      m_daily_lock_active(false),
      m_daily_profit_target(100.0),
      m_max_daily_loss(50.0),
@@ -471,6 +560,52 @@ CBoletaPanel::~CBoletaPanel()
    Destroy();
 }
 
+void CBoletaPanel::AutoProfileAsset()
+{
+   m_asset_class = DetectAssetClass(m_symbol);
+   
+   if(m_asset_class == ASSET_CLASS_METALS)
+      m_step_points = 20; // Ouro: $0.20 em 2 dígitos
+   else if(m_asset_class == ASSET_CLASS_FOREX)
+      m_step_points = 20; // Forex: 2 pips
+   else if(m_asset_class == ASSET_CLASS_INDICES)
+      m_step_points = 50; // Índices: 50 pontos
+   else if(m_asset_class == ASSET_CLASS_CRYPTO)
+      m_step_points = 100; // Cripto: 100 pontos
+   else
+      m_step_points = InpStepPoints;
+}
+
+void CBoletaPanel::UpdateATR()
+{
+   if(m_atr_handle == INVALID_HANDLE)
+   {
+      m_atr_handle = iATR(m_symbol, m_atr_timeframe, m_atr_period);
+   }
+   
+   if(m_atr_handle != INVALID_HANDLE)
+   {
+      double atr_buf[2];
+      // Protocolo Quant Forense: ler ESTRITAMENTE a barra index 1 (fechada), shift(1) causal!
+      if(CopyBuffer(m_atr_handle, 0, 0, 2, atr_buf) >= 2)
+      {
+         m_cur_atr_value = atr_buf[1];
+         double pt = SymbolInfoDouble(m_symbol, SYMBOL_POINT);
+         if(pt > 0.0)
+            m_cur_atr_pts = (int)MathRound(m_cur_atr_value / pt);
+         if(m_cur_atr_pts < 10) m_cur_atr_pts = 10;
+      }
+   }
+   
+   if(m_auto_atr && m_cur_atr_pts > 0)
+   {
+      m_sl_points = (int)MathRound(m_cur_atr_pts * m_atr_sl_mult);
+      m_tp_points = (int)MathRound(m_cur_atr_pts * m_atr_tp_mult);
+      if(m_sl_points < 10) m_sl_points = 10;
+      if(m_tp_points < 10) m_tp_points = 10;
+   }
+}
+
 bool CBoletaPanel::Init(const string symbol, ulong magic, ulong slippage, int x=20, int y=40)
 {
    m_chart_id   = ChartID();
@@ -501,6 +636,15 @@ bool CBoletaPanel::Init(const string symbol, ulong magic, ulong slippage, int x=
    m_parcial_vol_pct     = InpParcialVolumePct;
    m_parcial_move_be     = InpParcialMoveBE;
    
+   m_auto_atr            = InpAutoATR;
+   m_atr_period          = InpATRPeriod;
+   m_atr_timeframe       = InpATRTimeframe;
+   m_atr_sl_mult         = InpATR_SL_Mult;
+   m_atr_tp_mult         = InpATR_TP_Mult;
+   m_atr_handle          = INVALID_HANDLE;
+   m_cur_atr_value       = 0.0;
+   m_cur_atr_pts         = 150;
+   
    m_daily_lock_active   = InpDailyLockActive;
    m_daily_profit_target = InpDailyProfitTarget;
    m_max_daily_loss      = InpMaxDailyLoss;
@@ -510,6 +654,9 @@ bool CBoletaPanel::Init(const string symbol, ulong magic, ulong slippage, int x=
    m_guard_alerted_target= false;
    m_guard_alerted_loss  = false;
    m_today_closed_net    = 0.0;
+   
+   AutoProfileAsset();
+   UpdateATR();
    
    double freeMargin = AccountInfoDouble(ACCOUNT_MARGIN_FREE);
    if(freeMargin <= 0.0) freeMargin = AccountInfoDouble(ACCOUNT_BALANCE);
@@ -537,6 +684,11 @@ bool CBoletaPanel::Init(const string symbol, ulong magic, ulong slippage, int x=
 
 void CBoletaPanel::Destroy()
 {
+   if(m_atr_handle != INVALID_HANDLE)
+   {
+      IndicatorRelease(m_atr_handle);
+      m_atr_handle = INVALID_HANDLE;
+   }
    ObjectsDeleteAll(m_chart_id, PREFIX_GUI);
    ClearGhostOrder();
    ChartRedraw(m_chart_id);
@@ -692,8 +844,14 @@ void CBoletaPanel::Render()
    CreateButton("Btn_Guard_Toggle", m_x + 12, cur_y + 1, 56, 17, m_daily_lock_active ? "GUARD" : "OFF", m_daily_lock_active ? C'0,120,80' : COLOR_STEP_BTN, COLOR_TEXT_MAIN, 7, true);
    CreateLabel("Lbl_Guard_Status", m_x + 72, cur_y + 3, "Meta: $100 | Stop: -$50", COLOR_TEXT_MUTED, 7, false);
    
-   // 6. Seção de Risco (Toggle Risco % vs Risco $)
-   cur_y += 23;
+   // 6. Faixa de Volatilidade & Risco:Retorno ATR (Auto ATR & Asset Profiler)
+   cur_y += 21;
+   CreateRectangleLabel("Strip_ATR_BG", m_x + 10, cur_y, 225, 19, COLOR_STRIP_BG, COLOR_BORDER, ZORDER_PANEL_STRIP);
+   CreateButton("Btn_ATR_Toggle", m_x + 12, cur_y + 1, 62, 17, m_auto_atr ? "ATR: AUTO" : "ATR: MAN", m_auto_atr ? C'0,120,80' : COLOR_STEP_BTN, COLOR_TEXT_MAIN, 7, true);
+   CreateLabel("Lbl_ATR_Info", m_x + 78, cur_y + 3, "ATR: -- pts | R:R 1:2.0", clrCyan, 7, true);
+   
+   // 7. Seção de Risco (Toggle Risco % vs Risco $)
+   cur_y += 22;
    bool is_auto_risk = (m_risk_mode != RISK_MODE_MANUAL);
    CreateButton("Chk_Risk", m_x + 10, cur_y + 1, 16, 16, is_auto_risk ? "X" : "", is_auto_risk ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, COLOR_TEXT_MAIN, 8, true);
    
@@ -726,17 +884,17 @@ void CBoletaPanel::Render()
    // Linha: Stop Loss (pts)
    cur_y += 21;
    CreateButton("Chk_SL", m_x + 10, cur_y + 1, 16, 16, m_sl_active ? "X" : "", m_sl_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, COLOR_TEXT_MAIN, 8, true);
-   CreateLabel("Lbl_SL", m_x + 30, cur_y + 3, "Stop Loss", COLOR_TEXT_MAIN, 8, false);
+   CreateLabel("Lbl_SL", m_x + 30, cur_y + 3, m_auto_atr ? "SL [ATR]" : "Stop Loss", m_auto_atr ? COLOR_PROFIT_GREEN : COLOR_TEXT_MAIN, 8, false);
    CreateButton("Btn_SL_Dec", m_x + 130, cur_y, 18, 18, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 8, true);
-   CreateEdit("Edit_SL", m_x + 150, cur_y, 58, 18, IntegerToString(m_sl_points), COLOR_EDIT_BG, COLOR_TEXT_MAIN, false);
+   CreateEdit("Edit_SL", m_x + 150, cur_y, 58, 18, IntegerToString(m_sl_points), COLOR_EDIT_BG, m_auto_atr ? clrYellow : COLOR_TEXT_MAIN, false);
    CreateButton("Btn_SL_Inc", m_x + 210, cur_y, 18, 18, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 8, true);
    
    // Linha: Take Profit (pts)
    cur_y += 22;
    CreateButton("Chk_TP", m_x + 10, cur_y + 1, 16, 16, m_tp_active ? "X" : "", m_tp_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, COLOR_TEXT_MAIN, 8, true);
-   CreateLabel("Lbl_TP", m_x + 30, cur_y + 3, "Take Profit", COLOR_TEXT_MUTED, 8, false);
+   CreateLabel("Lbl_TP", m_x + 30, cur_y + 3, m_auto_atr ? "TP [ATR]" : "Take Profit", m_auto_atr ? COLOR_PROFIT_GREEN : COLOR_TEXT_MUTED, 8, false);
    CreateButton("Btn_TP_Dec", m_x + 130, cur_y, 18, 18, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 8, true);
-   CreateEdit("Edit_TP", m_x + 150, cur_y, 58, 18, IntegerToString(m_tp_points), COLOR_EDIT_BG, COLOR_TEXT_MAIN, false);
+   CreateEdit("Edit_TP", m_x + 150, cur_y, 58, 18, IntegerToString(m_tp_points), COLOR_EDIT_BG, m_auto_atr ? clrYellow : COLOR_TEXT_MAIN, false);
    CreateButton("Btn_TP_Inc", m_x + 210, cur_y, 18, 18, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 8, true);
    
    // Linha: Alvo da Parcial (Toggle Pontos vs $)
@@ -779,7 +937,7 @@ void CBoletaPanel::Render()
    CreateEdit("Edit_TS", m_x + 150, cur_y, 58, 18, IntegerToString(m_ts_points), COLOR_EDIT_BG, COLOR_TEXT_MAIN, false);
    CreateButton("Btn_TS_Inc", m_x + 210, cur_y, 18, 18, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 8, true);
    
-   // 7. Grade de Botões de Ação
+   // 8. Grade de Botões de Ação
    cur_y += 25;
    CreateButton("Btn_Buy", m_x + 10, cur_y, 109, 28, "COMPRAR", COLOR_BUY_BTN, COLOR_TEXT_MAIN, 9, true);
    CreateButton("Btn_Sell", m_x + 126, cur_y, 109, 28, "VENDER", COLOR_SELL_BTN, COLOR_TEXT_MAIN, 9, true);
@@ -928,7 +1086,23 @@ void CBoletaPanel::UpdateLiveMetrics()
    ObjectSetString(m_chart_id, PREFIX_GUI + "Lbl_Mkt_Spread", OBJPROP_TEXT, InpShowSpread ? StringFormat("Sp: %d", spread) : "");
    ObjectSetString(m_chart_id, PREFIX_GUI + "Lbl_Mkt_Timer",  OBJPROP_TEXT, InpShowCandleTimer ? StringFormat("[%s] %s", tf_name, timer_str) : "");
    
-   // 2. Atualiza Estatísticas do Histórico / Carteira
+   // 2. Atualiza ATR e Métricas de Volatilidade
+   UpdateATR();
+   
+   double cur_rr = (m_sl_points > 0) ? ((double)m_tp_points / (double)m_sl_points) : 0.0;
+   string atr_info_str = StringFormat("ATR:%d | R:R 1:%.1f [%s]", m_cur_atr_pts, cur_rr, AssetClassToString(m_asset_class));
+   ObjectSetString(m_chart_id, PREFIX_GUI + "Lbl_ATR_Info", OBJPROP_TEXT, atr_info_str);
+   
+   // Se estiver no modo Auto ATR, sincroniza os campos de SL e TP automaticamente
+   if(m_auto_atr)
+   {
+      ObjectSetString(m_chart_id, PREFIX_GUI + "Edit_SL", OBJPROP_TEXT, IntegerToString(m_sl_points));
+      ObjectSetString(m_chart_id, PREFIX_GUI + "Edit_TP", OBJPROP_TEXT, IntegerToString(m_tp_points));
+      if(m_risk_mode != RISK_MODE_MANUAL)
+         RecalculateRiskLot();
+   }
+   
+   // 3. Atualiza Estatísticas do Histórico / Carteira
    CalculateHistoricalStats();
    
    string period_btn_text = "Hoje";
@@ -968,7 +1142,7 @@ void CBoletaPanel::UpdateLiveMetrics()
       ObjectSetInteger(m_chart_id, PREFIX_GUI + "Lbl_Hud_P3", OBJPROP_COLOR, (m_history_net >= 0) ? COLOR_PROFIT_GREEN : COLOR_LOSS_RED);
    }
    
-   // 3. Monitoramento do Guardião de Capital Diário
+   // 4. Monitoramento do Guardião de Capital Diário
    double today_total_pnl = m_today_closed_net + m_floating_pnl;
    
    if(m_daily_lock_active)
@@ -1049,7 +1223,7 @@ void CBoletaPanel::UpdateLiveMetrics()
       ObjectSetInteger(m_chart_id, PREFIX_GUI + "Lbl_Guard_Status", OBJPROP_COLOR, COLOR_TEXT_MUTED);
    }
    
-   // 4. Atualiza Texto do Botão Zerar Tudo com Flutuante
+   // 5. Atualiza Texto do Botão Zerar Tudo com Flutuante
    if(MathAbs(m_floating_pnl) > 0.001)
    {
       string close_text = StringFormat("ZERAR TUDO (%s$%.2f)", (m_floating_pnl >= 0) ? "+" : "-", MathAbs(m_floating_pnl));
@@ -1093,6 +1267,19 @@ void CBoletaPanel::ToggleDailyGuard()
    PlaySound("tick.wav");
 }
 
+void CBoletaPanel::ToggleAutoATR()
+{
+   m_auto_atr = !m_auto_atr;
+   if(m_auto_atr)
+   {
+      UpdateATR();
+      if(m_risk_mode != RISK_MODE_MANUAL)
+         RecalculateRiskLot();
+   }
+   UpdateFieldValues();
+   PlaySound("tick.wav");
+}
+
 void CBoletaPanel::UpdateVisibility()
 {
    long timeframe_mask = m_is_minimized ? OBJ_NO_PERIODS : OBJ_ALL_PERIODS;
@@ -1126,7 +1313,15 @@ void CBoletaPanel::UpdateFieldValues()
 {
    int dec = GetLotDecimals(m_symbol);
    
-   // 1. Campo de Risco Unificado
+   // 1. Campo de Volatilidade / Auto ATR
+   ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_ATR_Toggle", OBJPROP_TEXT, m_auto_atr ? "ATR: AUTO" : "ATR: MAN");
+   ObjectSetInteger(m_chart_id, PREFIX_GUI + "Btn_ATR_Toggle", OBJPROP_BGCOLOR, m_auto_atr ? C'0,120,80' : COLOR_STEP_BTN);
+   ObjectSetString(m_chart_id, PREFIX_GUI + "Lbl_SL", OBJPROP_TEXT, m_auto_atr ? "SL [ATR]" : "Stop Loss");
+   ObjectSetInteger(m_chart_id, PREFIX_GUI + "Lbl_SL", OBJPROP_COLOR, m_auto_atr ? COLOR_PROFIT_GREEN : COLOR_TEXT_MAIN);
+   ObjectSetString(m_chart_id, PREFIX_GUI + "Lbl_TP", OBJPROP_TEXT, m_auto_atr ? "TP [ATR]" : "Take Profit");
+   ObjectSetInteger(m_chart_id, PREFIX_GUI + "Lbl_TP", OBJPROP_COLOR, m_auto_atr ? COLOR_PROFIT_GREEN : COLOR_TEXT_MUTED);
+   
+   // 2. Campo de Risco Unificado
    if(m_risk_mode == RISK_MODE_PERCENT)
    {
       ObjectSetString(m_chart_id, PREFIX_GUI + "Edit_Risk", OBJPROP_TEXT, DoubleToString(m_risk_percent, 1));
@@ -1168,22 +1363,24 @@ void CBoletaPanel::UpdateFieldValues()
    ObjectSetString(m_chart_id, PREFIX_GUI + "Chk_Risk", OBJPROP_TEXT, is_auto_risk ? "X" : "");
    ObjectSetInteger(m_chart_id, PREFIX_GUI + "Chk_Risk", OBJPROP_BGCOLOR, is_auto_risk ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT);
    
-   // 2. Campo de Lote
+   // 3. Campo de Lote
    ObjectSetString(m_chart_id, PREFIX_GUI + "Edit_Lot", OBJPROP_TEXT, DoubleToString(m_manual_lot, dec));
    ObjectSetInteger(m_chart_id, PREFIX_GUI + "Edit_Lot", OBJPROP_READONLY, is_auto_risk);
    ObjectSetInteger(m_chart_id, PREFIX_GUI + "Edit_Lot", OBJPROP_BGCOLOR, is_auto_risk ? COLOR_EDIT_RO_BG : COLOR_EDIT_BG);
    ObjectSetInteger(m_chart_id, PREFIX_GUI + "Edit_Lot", OBJPROP_COLOR, is_auto_risk ? clrYellow : COLOR_TEXT_MAIN);
    
-   // 3. Stop Loss e Take Profit
+   // 4. Stop Loss e Take Profit
    ObjectSetString(m_chart_id, PREFIX_GUI + "Edit_SL", OBJPROP_TEXT, IntegerToString(m_sl_points));
+   ObjectSetInteger(m_chart_id, PREFIX_GUI + "Edit_SL", OBJPROP_COLOR, m_auto_atr ? clrYellow : COLOR_TEXT_MAIN);
    ObjectSetString(m_chart_id, PREFIX_GUI + "Chk_SL", OBJPROP_TEXT, m_sl_active ? "X" : "");
    ObjectSetInteger(m_chart_id, PREFIX_GUI + "Chk_SL", OBJPROP_BGCOLOR, m_sl_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT);
    
    ObjectSetString(m_chart_id, PREFIX_GUI + "Edit_TP", OBJPROP_TEXT, IntegerToString(m_tp_points));
+   ObjectSetInteger(m_chart_id, PREFIX_GUI + "Edit_TP", OBJPROP_COLOR, m_auto_atr ? clrYellow : COLOR_TEXT_MAIN);
    ObjectSetString(m_chart_id, PREFIX_GUI + "Chk_TP", OBJPROP_TEXT, m_tp_active ? "X" : "");
    ObjectSetInteger(m_chart_id, PREFIX_GUI + "Chk_TP", OBJPROP_BGCOLOR, m_tp_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT);
    
-   // 4. Parcial: Alvo, Volume e Mover SL 0x0
+   // 5. Parcial: Alvo, Volume e Mover SL 0x0
    ObjectSetString(m_chart_id, PREFIX_GUI + "Chk_Parcial", OBJPROP_TEXT, m_parcial_active ? "X" : "");
    ObjectSetInteger(m_chart_id, PREFIX_GUI + "Chk_Parcial", OBJPROP_BGCOLOR, m_parcial_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT);
    
@@ -1205,7 +1402,7 @@ void CBoletaPanel::UpdateFieldValues()
    ObjectSetString(m_chart_id, PREFIX_GUI + "Chk_Parcial_BE", OBJPROP_TEXT, m_parcial_move_be ? "X" : "");
    ObjectSetInteger(m_chart_id, PREFIX_GUI + "Chk_Parcial_BE", OBJPROP_BGCOLOR, m_parcial_move_be ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT);
    
-   // 5. Break Even e Trailing Stop
+   // 6. Break Even e Trailing Stop
    ObjectSetString(m_chart_id, PREFIX_GUI + "Edit_BE", OBJPROP_TEXT, IntegerToString(m_be_points));
    ObjectSetString(m_chart_id, PREFIX_GUI + "Chk_BE", OBJPROP_TEXT, m_be_active ? "X" : "");
    ObjectSetInteger(m_chart_id, PREFIX_GUI + "Chk_BE", OBJPROP_BGCOLOR, m_be_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT);
@@ -1365,6 +1562,7 @@ void CBoletaPanel::AdjustLot(double delta)
 
 void CBoletaPanel::AdjustSL(int delta)
 {
+   m_auto_atr = false; // Desativa Auto ATR ao ajustar manualmente
    m_sl_points += delta;
    if(m_sl_points < 10) m_sl_points = 10;
    
@@ -1375,6 +1573,7 @@ void CBoletaPanel::AdjustSL(int delta)
 
 void CBoletaPanel::AdjustTP(int delta)
 {
+   m_auto_atr = false; // Desativa Auto ATR ao ajustar manualmente
    m_tp_points += delta;
    if(m_tp_points < 0) m_tp_points = 0;
    UpdateFieldValues();
@@ -1464,7 +1663,7 @@ void CBoletaPanel::HandleQuickSelect(int index)
 }
 
 //+------------------------------------------------------------------+
-//| Recálculo Matemático do Lote Dinâmico                            |
+//| Recálculo Matemático do Lote Dinâmico Baseado no SL e Risco      |
 //+------------------------------------------------------------------+
 void CBoletaPanel::RecalculateRiskLot()
 {
@@ -1530,6 +1729,10 @@ void CBoletaPanel::StartGhostOrder(ENUM_GHOST_TYPE type)
    if(point <= 0) point = 0.00001;
    int digits = (int)SymbolInfoInteger(m_symbol, SYMBOL_DIGITS);
    
+   // Se o Auto ATR estiver ativo, garante atualização fresca antes da mira
+   if(m_auto_atr)
+      UpdateATR();
+   
    int default_sl_pts = (m_sl_points > 0) ? m_sl_points : 100;
    int default_tp_pts = (m_tp_points > 0) ? m_tp_points : (default_sl_pts * 2);
    
@@ -1573,7 +1776,7 @@ void CBoletaPanel::StartGhostOrder(ENUM_GHOST_TYPE type)
    ObjectSetInteger(m_chart_id, sl_name, OBJPROP_ZORDER, 100);
    ObjectSetString(m_chart_id, sl_name, OBJPROP_TOOLTIP, "Stop Loss Fantasma (Arraste para ajustar)");
    
-   // 3. Linha de Take Profit (NOVO)
+   // 3. Linha de Take Profit
    ObjectCreate(m_chart_id, tp_name, OBJ_HLINE, 0, 0, m_ghost_tp_price);
    ObjectSetInteger(m_chart_id, tp_name, OBJPROP_COLOR, clrLimeGreen);
    ObjectSetInteger(m_chart_id, tp_name, OBJPROP_STYLE, STYLE_DASH);
@@ -1777,19 +1980,19 @@ void CBoletaPanel::UpdateGhostFromDrag(const string obj_name)
    int dist_tp_pts = (int)MathRound(MathAbs(m_ghost_entry_price - m_ghost_tp_price) / point);
    if(dist_tp_pts <= 0) dist_tp_pts = 10;
    
-   // Se o arraste foi especificamente na linha de TP:
+   // Ao arrastar manualmente, permite controle manual suave
    if(obj_name == tp_name)
    {
       m_tp_points = dist_tp_pts;
+      m_auto_atr = false;
       ObjectSetString(m_chart_id, PREFIX_GUI + "Edit_TP", OBJPROP_TEXT, IntegerToString(m_tp_points));
    }
-   // Se o arraste foi na linha de SL:
    else if(obj_name == sl_name)
    {
       m_sl_points = dist_sl_pts;
+      m_auto_atr = false;
       ObjectSetString(m_chart_id, PREFIX_GUI + "Edit_SL", OBJPROP_TEXT, IntegerToString(m_sl_points));
    }
-   // Se o arraste foi na linha de Entrada:
    else if(obj_name == entry_name)
    {
       if(m_ghost_type == GHOST_BUY)
@@ -2265,12 +2468,14 @@ void CBoletaPanel::HandleEndEdit(const string &obj_name)
    }
    else if(short_name == "Edit_SL")
    {
+      m_auto_atr = false; // Transição suave para Manual
       int sl = (int)StringToInteger(val_str);
       if(sl >= 0) m_sl_points = sl;
       if(m_risk_mode != RISK_MODE_MANUAL) RecalculateRiskLot();
    }
    else if(short_name == "Edit_TP")
    {
+      m_auto_atr = false; // Transição suave para Manual
       int tp = (int)StringToInteger(val_str);
       if(tp >= 0) m_tp_points = tp;
    }
@@ -2323,6 +2528,9 @@ void CBoletaPanel::HandleButtonClick(const string &obj_name)
    // Toggle do Guardião de Capital Diário
    if(short_name == "Btn_Guard_Toggle" || short_name == "Strip_Guard_BG") { ToggleDailyGuard(); return; }
    
+   // Toggle do Auto ATR & Risco:Retorno
+   if(short_name == "Btn_ATR_Toggle" || short_name == "Strip_ATR_BG")     { ToggleAutoATR(); return; }
+   
    // Toggle de Ativação Automática do Risco e Alternância % vs $
    if(short_name == "Chk_Risk")           { ToggleRiskAuto(); return; }
    if(short_name == "Btn_Risk_Toggle")    { ToggleRiskMode(); return; }
@@ -2359,31 +2567,32 @@ void CBoletaPanel::HandleButtonClick(const string &obj_name)
    if(short_name == "Btn_Quick_3")        { HandleQuickSelect(3); return; }
    if(short_name == "Btn_Quick_4")        { HandleQuickSelect(4); return; }
    
-   if(short_name == "Btn_SL_Dec")         { AdjustSL(-InpStepPoints); return; }
-   if(short_name == "Btn_SL_Inc")         { AdjustSL(InpStepPoints); return; }
+   // Steppers de SL e TP (ao clicar, desativa Auto ATR e permite ajuste manual)
+   if(short_name == "Btn_SL_Dec")         { AdjustSL(-m_step_points); return; }
+   if(short_name == "Btn_SL_Inc")         { AdjustSL(m_step_points); return; }
    
-   if(short_name == "Btn_TP_Dec")         { AdjustTP(-InpStepPoints); return; }
-   if(short_name == "Btn_TP_Inc")         { AdjustTP(InpStepPoints); return; }
+   if(short_name == "Btn_TP_Dec")         { AdjustTP(-m_step_points); return; }
+   if(short_name == "Btn_TP_Inc")         { AdjustTP(m_step_points); return; }
    
    // Steppers da Parcial
    if(short_name == "Btn_Parcial_Dec")
    {
-      AdjustParcialTarget(m_parcial_is_cash ? -InpStepParcialCash : -InpStepPoints);
+      AdjustParcialTarget(m_parcial_is_cash ? -InpStepParcialCash : -m_step_points);
       return;
    }
    if(short_name == "Btn_Parcial_Inc")
    {
-      AdjustParcialTarget(m_parcial_is_cash ? InpStepParcialCash : InpStepPoints);
+      AdjustParcialTarget(m_parcial_is_cash ? InpStepParcialCash : m_step_points);
       return;
    }
    if(short_name == "Btn_Parcial_Vol_Dec") { AdjustParcialVol(-InpStepParcialVol); return; }
    if(short_name == "Btn_Parcial_Vol_Inc") { AdjustParcialVol(InpStepParcialVol); return; }
    
-   if(short_name == "Btn_BE_Dec")         { AdjustBE(-InpStepPoints); return; }
-   if(short_name == "Btn_BE_Inc")         { AdjustBE(InpStepPoints); return; }
+   if(short_name == "Btn_BE_Dec")         { AdjustBE(-m_step_points); return; }
+   if(short_name == "Btn_BE_Inc")         { AdjustBE(m_step_points); return; }
    
-   if(short_name == "Btn_TS_Dec")         { AdjustTS(-InpStepPoints); return; }
-   if(short_name == "Btn_TS_Inc")         { AdjustTS(InpStepPoints); return; }
+   if(short_name == "Btn_TS_Dec")         { AdjustTS(-m_step_points); return; }
+   if(short_name == "Btn_TS_Inc")         { AdjustTS(m_step_points); return; }
    
    // Ações Operacionais
    if(short_name == "Btn_Buy")            { ExecuteBuy(); return; }
@@ -2542,6 +2751,9 @@ void CBoletaPanel::OnChartEvent(const int id, const long &lparam, const double &
    
    if(id == CHARTEVENT_CHART_CHANGE)
    {
+      // Se o usuário alternou timeframe ou template, recarrega o ATR e o perfil do ativo
+      AutoProfileAsset();
+      UpdateATR();
       BringToFront();
       return;
    }
@@ -2835,7 +3047,7 @@ int OnInit()
    
    if(!g_panel.Init(InpSymbol, InpMagicNumber, InpSlippage, InpPanelX, InpPanelY))
    {
-      Print("Erro ao inicializar Boleta Scalping Pro v8.00!");
+      Print("Erro ao inicializar Boleta Scalping Pro v8.50!");
       return INIT_FAILED;
    }
    
