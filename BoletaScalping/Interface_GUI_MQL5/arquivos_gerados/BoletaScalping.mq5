@@ -1,12 +1,12 @@
 //+------------------------------------------------------------------+
 //|                                                BoletaScalping.mq5 |
 //|                             Copyright 2026, Senior MQL5 Developer |
-//|                     Front-end GUI & Risco Pro + Parciais Dinâmicas |
+//|           Pacote Alta Performance: Ghost TP, Guardião & Quick-Btn |
 //+------------------------------------------------------------------+
 #property copyright "Senior MQL5 Developer"
 #property link      "https://www.mql5.com"
-#property version   "7.20"
-#property description "Boleta Visual de Scalping com z-index Máximo (Always On Top), Risco Pro, HUD e Parciais"
+#property version   "8.00"
+#property description "Boleta Visual de Scalping com Ghost TP Dinâmico, Guardião de Capital Diário e Botões Rápidos"
 #property strict
 
 #include <Trade\Trade.mqh>
@@ -89,6 +89,12 @@ input ENUM_HUD_PERIOD InpDefaultHudPeriod  = HUD_PERIOD_TODAY;   // Visualizaç�
 input bool            InpShowCandleTimer   = true;               // Exibir Relógio do Candle
 input bool            InpShowSpread        = true;               // Exibir Spread em Pontos
 
+input group "=== GUARDIÃO DE CAPITAL DIÁRIO (PROP FIRM / META & LOSS) ==="
+input bool            InpDailyLockActive   = false;              // Ativar Trava de Meta/Perda Diária
+input double          InpDailyProfitTarget = 100.0;              // Meta de Ganho Diário ($)
+input double          InpMaxDailyLoss      = 50.0;               // Limite de Perda Diária ($)
+input bool            InpSendPushAlerts    = false;              // Enviar Notificação Push / Alerta Sonoro
+
 input group "=== GESTÃO DE RISCO (PERCENTUAL E FINANCEIRO FIXO) ==="
 input ENUM_RISK_MODE  InpDefaultRiskMode   = RISK_MODE_PERCENT;  // Modo de Risco Inicial
 input double          InpRiskPercent       = 1.0;                // Risco Percentual Inicial (%)
@@ -146,7 +152,6 @@ double NormalizeLot(double lot, const string sym)
    if(minLot <= 0.0)  minLot = 0.01;
    if(maxLot <= 0.0)  maxLot = 100.0;
    
-   // Arredondamento para baixo (MathFloor) baseado no SYMBOL_VOLUME_STEP p/ segurança absoluta
    double norm = MathFloor(lot / stepLot) * stepLot;
    if(norm < minLot) norm = minLot;
    if(norm > maxLot) norm = maxLot;
@@ -256,6 +261,17 @@ private:
    bool              m_parcial_is_cash;
    bool              m_parcial_move_be;
    
+   // Guardião de Capital Diário
+   bool              m_daily_lock_active;
+   double            m_daily_profit_target;
+   double            m_max_daily_loss;
+   bool              m_daily_target_hit;
+   bool              m_daily_loss_hit;
+   bool              m_send_push_alerts;
+   bool              m_guard_alerted_target;
+   bool              m_guard_alerted_loss;
+   double            m_today_closed_net;
+   
    // Valores Operacionais
    double            m_risk_percent;
    double            m_risk_cash;
@@ -274,11 +290,12 @@ private:
    double            m_history_net;
    double            m_floating_pnl;
    
-   // Ordem Fantasma
+   // Ordem Fantasma (com Ghost TP e R:R)
    ENUM_GHOST_TYPE   m_ghost_type;
    bool              m_ghost_aiming;
    double            m_ghost_entry_price;
    double            m_ghost_sl_price;
+   double            m_ghost_tp_price;
    double            m_ghost_lot;
    
    void              CreateRectangleLabel(const string name, int x, int y, int w, int h, color bg_color, color border_color, int zorder=ZORDER_PANEL_BG);
@@ -316,6 +333,10 @@ public:
    bool              IsParcialCashMode()      const { return m_parcial_is_cash; }
    bool              IsParcialMoveBE()        const { return m_parcial_move_be; }
    
+   bool              IsDailyLockActive()      const { return m_daily_lock_active; }
+   bool              IsDailyTargetHit()       const { return m_daily_target_hit; }
+   bool              IsDailyLossHit()         const { return m_daily_loss_hit; }
+   
    double            GetRiskPercent()         const { return m_risk_percent; }
    double            GetRiskCash()            const { return m_risk_cash; }
    double            GetManualLot()           const { return m_manual_lot; }
@@ -342,10 +363,11 @@ public:
    void              ToggleParcial();
    void              ToggleParcialMode();
    void              ToggleParcialBE();
+   void              ToggleDailyGuard();
    void              CycleHudPeriod();
    void              MovePanel(int new_x, int new_y);
    
-   // Ajustes (+ / -)
+   // Ajustes (+ / -) e Botões Rápidos
    void              AdjustRisk(double delta);
    void              AdjustLot(double delta);
    void              AdjustSL(int delta);
@@ -354,6 +376,7 @@ public:
    void              AdjustTS(int delta);
    void              AdjustParcialTarget(double delta);
    void              AdjustParcialVol(double delta);
+   void              HandleQuickSelect(int index);
    
    // Execuções
    void              ExecuteBuy();
@@ -366,7 +389,7 @@ public:
    void              ExecuteCancelPendings();
    void              ExecuteParcialManual();
    
-   // Fantasmas
+   // Fantasmas com Linha de TP e R:R
    void              StartGhostOrder(ENUM_GHOST_TYPE type);
    void              UpdateGhostAiming(double price, datetime dt);
    void              LockGhostAiming(double price, datetime dt);
@@ -394,7 +417,7 @@ CBoletaPanel::CBoletaPanel()
      m_x(20),
      m_y(40),
      m_width(245),
-     m_height(450),
+     m_height(495),
      m_header_h(24),
      m_is_minimized(false),
      m_is_dragging(false),
@@ -409,6 +432,15 @@ CBoletaPanel::CBoletaPanel()
      m_parcial_active(true),
      m_parcial_is_cash(false),
      m_parcial_move_be(true),
+     m_daily_lock_active(false),
+     m_daily_profit_target(100.0),
+     m_max_daily_loss(50.0),
+     m_daily_target_hit(false),
+     m_daily_loss_hit(false),
+     m_send_push_alerts(false),
+     m_guard_alerted_target(false),
+     m_guard_alerted_loss(false),
+     m_today_closed_net(0.0),
      m_risk_percent(1.0),
      m_risk_cash(50.0),
      m_manual_lot(0.01),
@@ -426,10 +458,11 @@ CBoletaPanel::CBoletaPanel()
      m_ghost_type(GHOST_NONE),
      m_ghost_aiming(false),
      m_ghost_entry_price(0.0),
-      m_ghost_sl_price(0.0),
-      m_ghost_lot(0.01),
-      m_last_objects_total(0),
-      m_is_rebuilding(false)
+     m_ghost_sl_price(0.0),
+     m_ghost_tp_price(0.0),
+     m_ghost_lot(0.01),
+     m_last_objects_total(0),
+     m_is_rebuilding(false)
 {
 }
 
@@ -468,6 +501,16 @@ bool CBoletaPanel::Init(const string symbol, ulong magic, ulong slippage, int x=
    m_parcial_vol_pct     = InpParcialVolumePct;
    m_parcial_move_be     = InpParcialMoveBE;
    
+   m_daily_lock_active   = InpDailyLockActive;
+   m_daily_profit_target = InpDailyProfitTarget;
+   m_max_daily_loss      = InpMaxDailyLoss;
+   m_send_push_alerts    = InpSendPushAlerts;
+   m_daily_target_hit    = false;
+   m_daily_loss_hit      = false;
+   m_guard_alerted_target= false;
+   m_guard_alerted_loss  = false;
+   m_today_closed_net    = 0.0;
+   
    double freeMargin = AccountInfoDouble(ACCOUNT_MARGIN_FREE);
    if(freeMargin <= 0.0) freeMargin = AccountInfoDouble(ACCOUNT_BALANCE);
    
@@ -481,7 +524,7 @@ bool CBoletaPanel::Init(const string symbol, ulong magic, ulong slippage, int x=
    
    SymbolSelect(m_symbol, true);
    ChartSetInteger(m_chart_id, CHART_EVENT_MOUSE_MOVE, true);
-   ChartSetInteger(m_chart_id, CHART_FOREGROUND, false); // Força gráfico (candles/grid) para segundo plano
+   ChartSetInteger(m_chart_id, CHART_FOREGROUND, false);
    
    m_last_objects_total = ObjectsTotal(m_chart_id, -1, -1);
    m_is_rebuilding      = false;
@@ -513,26 +556,15 @@ void CBoletaPanel::BringToFront()
    if(m_is_rebuilding || m_is_dragging) return;
    m_is_rebuilding = true;
    
-   // 1. Força os candles, grade e buffers de indicadores para o plano de fundo
    if(ChartGetInteger(m_chart_id, CHART_FOREGROUND) != 0)
       ChartSetInteger(m_chart_id, CHART_FOREGROUND, false);
    
-   // 2. Remove todos os objetos visuais da boleta
    ObjectsDeleteAll(m_chart_id, PREFIX_GUI);
-   
-   // 3. Recria todos os objetos da boleta na tela com Z-Order / "z-index" máximo (999.999)
-   // No MetaTrader 5, a renderização visual é regida estritamente pela ordem de criação.
-   // Ao recriar aqui, os objetos da boleta passam a ter a criação mais recente de todo o gráfico,
-   // garantindo sobreposição física e visual sobre qualquer indicador, vela ou objeto existente.
    Render();
-   
-   // 4. Restaura textos e métricas
    UpdateFieldValues();
    UpdateLiveMetrics();
    
-   // 5. Atualiza o contador de objetos do watchdog
    m_last_objects_total = ObjectsTotal(m_chart_id, -1, -1);
-   
    ChartRedraw(m_chart_id);
    m_is_rebuilding = false;
 }
@@ -626,7 +658,6 @@ void CBoletaPanel::CreateLabel(const string name, int x, int y, const string tex
 //+------------------------------------------------------------------+
 void CBoletaPanel::Render()
 {
-   // Força os candles/barras e a grade para o plano de fundo (atrás dos objetos gráficos)
    ChartSetInteger(m_chart_id, CHART_FOREGROUND, false);
    
    int cur_h = m_is_minimized ? m_header_h : m_height;
@@ -655,8 +686,14 @@ void CBoletaPanel::Render()
    CreateLabel("Lbl_Hud_P2", m_x + 118, cur_y + 3, "-$0.00", COLOR_LOSS_RED, 8, true);
    CreateLabel("Lbl_Hud_P3", m_x + 180, cur_y + 3, "Líq: $0", clrWhite, 8, true);
    
-   // 5. Seção de Risco (Toggle Risco % vs Risco $)
-   cur_y += 24;
+   // 5. Faixa do Guardião de Capital Diário (Prop Firm / Meta & Loss Lock)
+   cur_y += 22;
+   CreateRectangleLabel("Strip_Guard_BG", m_x + 10, cur_y, 225, 19, COLOR_STRIP_BG, COLOR_BORDER, ZORDER_PANEL_STRIP);
+   CreateButton("Btn_Guard_Toggle", m_x + 12, cur_y + 1, 56, 17, m_daily_lock_active ? "GUARD" : "OFF", m_daily_lock_active ? C'0,120,80' : COLOR_STEP_BTN, COLOR_TEXT_MAIN, 7, true);
+   CreateLabel("Lbl_Guard_Status", m_x + 72, cur_y + 3, "Meta: $100 | Stop: -$50", COLOR_TEXT_MUTED, 7, false);
+   
+   // 6. Seção de Risco (Toggle Risco % vs Risco $)
+   cur_y += 23;
    bool is_auto_risk = (m_risk_mode != RISK_MODE_MANUAL);
    CreateButton("Chk_Risk", m_x + 10, cur_y + 1, 16, 16, is_auto_risk ? "X" : "", is_auto_risk ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, COLOR_TEXT_MAIN, 8, true);
    
@@ -669,73 +706,81 @@ void CBoletaPanel::Render()
    CreateEdit("Edit_Risk", m_x + 150, cur_y, 58, 18, init_risk_str, COLOR_EDIT_BG, COLOR_TEXT_MAIN, false);
    CreateButton("Btn_Risk_Inc", m_x + 210, cur_y, 18, 18, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 8, true);
    
-   // Linha 2: Lote
-   cur_y += 23;
+   // Linha: Lote
+   cur_y += 22;
    int dec = GetLotDecimals(m_symbol);
    CreateLabel("Lbl_Lot", m_x + 30, cur_y + 3, "Lote", COLOR_TEXT_MAIN, 8, false);
    CreateButton("Btn_Lot_Dec", m_x + 130, cur_y, 18, 18, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 8, true);
    CreateEdit("Edit_Lot", m_x + 150, cur_y, 58, 18, DoubleToString(m_manual_lot, dec), is_auto_risk ? COLOR_EDIT_RO_BG : COLOR_EDIT_BG, is_auto_risk ? clrYellow : COLOR_TEXT_MAIN, is_auto_risk);
    CreateButton("Btn_Lot_Inc", m_x + 210, cur_y, 18, 18, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 8, true);
    
-   // Linha 3: Stop Loss (pts)
-   cur_y += 23;
+   // Linha: Botões Rápidos de 1 Clique (Row Quick Risk / Lots)
+   cur_y += 21;
+   int q_w = 53;
+   int q_gap = 4;
+   CreateButton("Btn_Quick_1", m_x + 10 + 0*(q_w+q_gap), cur_y, q_w, 17, "0.5%", COLOR_PERIOD_BTN, COLOR_TEXT_MAIN, 7, true);
+   CreateButton("Btn_Quick_2", m_x + 10 + 1*(q_w+q_gap), cur_y, q_w, 17, "1.0%", COLOR_PERIOD_BTN, COLOR_TEXT_MAIN, 7, true);
+   CreateButton("Btn_Quick_3", m_x + 10 + 2*(q_w+q_gap), cur_y, q_w, 17, "1.5%", COLOR_PERIOD_BTN, COLOR_TEXT_MAIN, 7, true);
+   CreateButton("Btn_Quick_4", m_x + 10 + 3*(q_w+q_gap), cur_y, q_w, 17, "2.0%", COLOR_PERIOD_BTN, COLOR_TEXT_MAIN, 7, true);
+   
+   // Linha: Stop Loss (pts)
+   cur_y += 21;
    CreateButton("Chk_SL", m_x + 10, cur_y + 1, 16, 16, m_sl_active ? "X" : "", m_sl_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, COLOR_TEXT_MAIN, 8, true);
    CreateLabel("Lbl_SL", m_x + 30, cur_y + 3, "Stop Loss", COLOR_TEXT_MAIN, 8, false);
    CreateButton("Btn_SL_Dec", m_x + 130, cur_y, 18, 18, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 8, true);
    CreateEdit("Edit_SL", m_x + 150, cur_y, 58, 18, IntegerToString(m_sl_points), COLOR_EDIT_BG, COLOR_TEXT_MAIN, false);
    CreateButton("Btn_SL_Inc", m_x + 210, cur_y, 18, 18, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 8, true);
    
-   // Linha 4: Take Profit (pts)
-   cur_y += 23;
+   // Linha: Take Profit (pts)
+   cur_y += 22;
    CreateButton("Chk_TP", m_x + 10, cur_y + 1, 16, 16, m_tp_active ? "X" : "", m_tp_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, COLOR_TEXT_MAIN, 8, true);
    CreateLabel("Lbl_TP", m_x + 30, cur_y + 3, "Take Profit", COLOR_TEXT_MUTED, 8, false);
    CreateButton("Btn_TP_Dec", m_x + 130, cur_y, 18, 18, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 8, true);
    CreateEdit("Edit_TP", m_x + 150, cur_y, 58, 18, IntegerToString(m_tp_points), COLOR_EDIT_BG, COLOR_TEXT_MAIN, false);
    CreateButton("Btn_TP_Inc", m_x + 210, cur_y, 18, 18, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 8, true);
    
-   // Linha 5: Alvo da Parcial (Toggle Pontos vs $)
-   cur_y += 23;
+   // Linha: Alvo da Parcial (Toggle Pontos vs $)
+   cur_y += 22;
    CreateButton("Chk_Parcial", m_x + 10, cur_y + 1, 16, 16, m_parcial_active ? "X" : "", m_parcial_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, COLOR_TEXT_MAIN, 8, true);
    CreateLabel("Lbl_Parcial", m_x + 30, cur_y + 3, "Alvo Parcial", COLOR_TEXT_MUTED, 8, false);
    string parcial_toggle_text = m_parcial_is_cash ? "$" : "Pts";
    color parcial_toggle_bg = m_parcial_is_cash ? COLOR_TOGGLE_CASH : COLOR_TOGGLE_PCT;
    CreateButton("Btn_Parcial_Toggle", m_x + 94, cur_y, 33, 18, parcial_toggle_text, parcial_toggle_bg, COLOR_TEXT_MAIN, 8, true);
-   
    CreateButton("Btn_Parcial_Dec", m_x + 130, cur_y, 18, 18, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 8, true);
    string init_parcial_target = m_parcial_is_cash ? DoubleToString(m_parcial_target_cash, 2) : IntegerToString(m_parcial_target_pts);
    CreateEdit("Edit_Parcial_Target", m_x + 150, cur_y, 58, 18, init_parcial_target, COLOR_EDIT_BG, COLOR_TEXT_MAIN, false);
    CreateButton("Btn_Parcial_Inc", m_x + 210, cur_y, 18, 18, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 8, true);
    
-   // Linha 6: Volume da Parcial (% da Posição)
-   cur_y += 23;
+   // Linha: Volume da Parcial (% da Posição)
+   cur_y += 22;
    CreateLabel("Lbl_Parcial_Vol", m_x + 30, cur_y + 3, "Vol. Parcial (%) [P]", COLOR_TEXT_MUTED, 8, false);
    CreateButton("Btn_Parcial_Vol_Dec", m_x + 130, cur_y, 18, 18, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 8, true);
    CreateEdit("Edit_Parcial_Vol", m_x + 150, cur_y, 58, 18, StringFormat("%.0f%%", m_parcial_vol_pct), COLOR_EDIT_BG, COLOR_TEXT_MAIN, false);
    CreateButton("Btn_Parcial_Vol_Inc", m_x + 210, cur_y, 18, 18, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 8, true);
    
-   // Linha 7: Mover SL para Zero a Zero pós Parcial
-   cur_y += 21;
+   // Linha: Mover SL para Zero a Zero pós Parcial
+   cur_y += 20;
    CreateButton("Chk_Parcial_BE", m_x + 10, cur_y + 1, 16, 16, m_parcial_move_be ? "X" : "", m_parcial_move_be ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, COLOR_TEXT_MAIN, 8, true);
    CreateLabel("Lbl_Parcial_BE", m_x + 30, cur_y + 3, "Mover SL para o zero a zero", COLOR_TEXT_MUTED, 8, false);
    
-   // Linha 8: Break Even (pts)
-   cur_y += 23;
+   // Linha: Break Even (pts)
+   cur_y += 22;
    CreateButton("Chk_BE", m_x + 10, cur_y + 1, 16, 16, m_be_active ? "X" : "", m_be_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, COLOR_TEXT_MAIN, 8, true);
    CreateLabel("Lbl_BE", m_x + 30, cur_y + 3, "Break Even", COLOR_TEXT_MUTED, 8, false);
    CreateButton("Btn_BE_Dec", m_x + 130, cur_y, 18, 18, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 8, true);
    CreateEdit("Edit_BE", m_x + 150, cur_y, 58, 18, IntegerToString(m_be_points), COLOR_EDIT_BG, COLOR_TEXT_MAIN, false);
    CreateButton("Btn_BE_Inc", m_x + 210, cur_y, 18, 18, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 8, true);
    
-   // Linha 8: Trailing Stop (pts)
-   cur_y += 23;
+   // Linha: Trailing Stop (pts)
+   cur_y += 22;
    CreateButton("Chk_TS", m_x + 10, cur_y + 1, 16, 16, m_ts_active ? "X" : "", m_ts_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, COLOR_TEXT_MAIN, 8, true);
    CreateLabel("Lbl_TS", m_x + 30, cur_y + 3, "Trailing", COLOR_TEXT_MUTED, 8, false);
    CreateButton("Btn_TS_Dec", m_x + 130, cur_y, 18, 18, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 8, true);
    CreateEdit("Edit_TS", m_x + 150, cur_y, 58, 18, IntegerToString(m_ts_points), COLOR_EDIT_BG, COLOR_TEXT_MAIN, false);
    CreateButton("Btn_TS_Inc", m_x + 210, cur_y, 18, 18, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 8, true);
    
-   // 6. Grade de Botões de Ação
-   cur_y += 26;
+   // 7. Grade de Botões de Ação
+   cur_y += 25;
    CreateButton("Btn_Buy", m_x + 10, cur_y, 109, 28, "COMPRAR", COLOR_BUY_BTN, COLOR_TEXT_MAIN, 9, true);
    CreateButton("Btn_Sell", m_x + 126, cur_y, 109, 28, "VENDER", COLOR_SELL_BTN, COLOR_TEXT_MAIN, 9, true);
    
@@ -765,26 +810,53 @@ void CBoletaPanel::Render()
 //+------------------------------------------------------------------+
 void CBoletaPanel::CalculateHistoricalStats()
 {
-   m_history_profit = 0.0;
-   m_history_loss   = 0.0;
-   m_history_net    = 0.0;
-   m_floating_pnl   = 0.0;
+   m_history_profit   = 0.0;
+   m_history_loss     = 0.0;
+   m_history_net      = 0.0;
+   m_floating_pnl     = 0.0;
+   m_today_closed_net = 0.0;
    
    datetime start_time = 0;
    datetime cur_time   = TimeCurrent();
    
+   MqlDateTime dt_today;
+   TimeToStruct(cur_time, dt_today);
+   dt_today.hour = 0;
+   dt_today.min  = 0;
+   dt_today.sec  = 0;
+   datetime today_00 = StructToTime(dt_today);
+   
+   // 1. Sempre calcula o fechado de hoje para o Guardião de Capital Diário
+   if(HistorySelect(today_00, cur_time))
+   {
+      int total_today = HistoryDealsTotal();
+      for(int i = 0; i < total_today; i++)
+      {
+         ulong ticket = HistoryDealGetTicket(i);
+         if(ticket <= 0) continue;
+         
+         if(InpFilterSymbolOnly)
+         {
+            string deal_sym = HistoryDealGetString(ticket, DEAL_SYMBOL);
+            if(deal_sym != m_symbol && m_symbol != "") continue;
+         }
+         
+         ENUM_DEAL_ENTRY entry = (ENUM_DEAL_ENTRY)HistoryDealGetInteger(ticket, DEAL_ENTRY);
+         if(entry != DEAL_ENTRY_OUT && entry != DEAL_ENTRY_OUT_BY) continue;
+         
+         double pnl  = HistoryDealGetDouble(ticket, DEAL_PROFIT);
+         double comm = HistoryDealGetDouble(ticket, DEAL_COMMISSION);
+         double swap = HistoryDealGetDouble(ticket, DEAL_SWAP);
+         m_today_closed_net += (pnl + comm + swap);
+      }
+   }
+   
+   // 2. Calcula para o período visual selecionado no HUD
    switch(m_hud_period)
    {
       case HUD_PERIOD_TODAY:
-      {
-         MqlDateTime dt;
-         TimeToStruct(cur_time, dt);
-         dt.hour = 0;
-         dt.min  = 0;
-         dt.sec  = 0;
-         start_time = StructToTime(dt);
+         start_time = today_00;
          break;
-      }
       case HUD_PERIOD_WEEK:
          start_time = cur_time - (7 * 86400);
          break;
@@ -828,7 +900,7 @@ void CBoletaPanel::CalculateHistoricalStats()
       }
    }
    
-   // P&L Aberto
+   // P&L Flutuante Aberto
    CPositionInfo pos;
    for(int i = PositionsTotal() - 1; i >= 0; i--)
    {
@@ -896,7 +968,88 @@ void CBoletaPanel::UpdateLiveMetrics()
       ObjectSetInteger(m_chart_id, PREFIX_GUI + "Lbl_Hud_P3", OBJPROP_COLOR, (m_history_net >= 0) ? COLOR_PROFIT_GREEN : COLOR_LOSS_RED);
    }
    
-   // 3. Atualiza Texto do Botão Zerar Tudo com Flutuante
+   // 3. Monitoramento do Guardião de Capital Diário
+   double today_total_pnl = m_today_closed_net + m_floating_pnl;
+   
+   if(m_daily_lock_active)
+   {
+      // Atingiu Meta Diária
+      if(m_daily_profit_target > 0.0 && today_total_pnl >= m_daily_profit_target)
+      {
+         m_daily_target_hit = true;
+         m_daily_loss_hit   = false;
+         
+         ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_Guard_Toggle", OBJPROP_TEXT, "META 🏆");
+         ObjectSetInteger(m_chart_id, PREFIX_GUI + "Btn_Guard_Toggle", OBJPROP_BGCOLOR, C'0,140,60');
+         ObjectSetInteger(m_chart_id, PREFIX_GUI + "Strip_Guard_BG", OBJPROP_BGCOLOR, C'15,80,40');
+         
+         string status_str = StringFormat("TRAVADO NO GANHO: +$%.2f", today_total_pnl);
+         ObjectSetString(m_chart_id, PREFIX_GUI + "Lbl_Guard_Status", OBJPROP_TEXT, status_str);
+         ObjectSetInteger(m_chart_id, PREFIX_GUI + "Lbl_Guard_Status", OBJPROP_COLOR, COLOR_PROFIT_GREEN);
+         
+         if(!m_guard_alerted_target)
+         {
+            m_guard_alerted_target = true;
+            PlaySound("expert.wav");
+            Alert(StringFormat("🏆 GUARDIÃO DE CAPITAL: Meta Diária Batida! Lucro: +$%.2f (Meta: $%.2f). Novas ordens travadas.", today_total_pnl, m_daily_profit_target));
+            if(m_send_push_alerts)
+               SendNotification(StringFormat("[%s] Meta Diária Batida: +$%.2f", m_symbol, today_total_pnl));
+         }
+      }
+      // Atingiu Limite de Perda Diária (Stop Diário / Prop Firm)
+      else if(m_max_daily_loss > 0.0 && today_total_pnl <= -MathAbs(m_max_daily_loss))
+      {
+         m_daily_loss_hit   = true;
+         m_daily_target_hit = false;
+         
+         ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_Guard_Toggle", OBJPROP_TEXT, "STOP 🛑");
+         ObjectSetInteger(m_chart_id, PREFIX_GUI + "Btn_Guard_Toggle", OBJPROP_BGCOLOR, C'180,34,34');
+         ObjectSetInteger(m_chart_id, PREFIX_GUI + "Strip_Guard_BG", OBJPROP_BGCOLOR, C'100,20,20');
+         
+         string status_str = StringFormat("BLOQUEADO: -$%.2f (ZERADO)", MathAbs(today_total_pnl));
+         ObjectSetString(m_chart_id, PREFIX_GUI + "Lbl_Guard_Status", OBJPROP_TEXT, status_str);
+         ObjectSetInteger(m_chart_id, PREFIX_GUI + "Lbl_Guard_Status", OBJPROP_COLOR, COLOR_LOSS_RED);
+         
+         if(!m_guard_alerted_loss)
+         {
+            m_guard_alerted_loss = true;
+            PlaySound("timeout.wav");
+            Alert(StringFormat("🛑 GUARDIÃO DE CAPITAL: Limite de Perda Diária Atingido! Prejuízo: -$%.2f (Limite: -$%.2f). Zerando posições e bloqueando novas ordens.", MathAbs(today_total_pnl), MathAbs(m_max_daily_loss)));
+            if(m_send_push_alerts)
+               SendNotification(StringFormat("[%s] Limite de Perda Diária Atingido: -$%.2f. Posições zeradas.", m_symbol, MathAbs(today_total_pnl)));
+            
+            // Ação de Emergência: Zerar tudo e cancelar pendentes
+            ExecuteCloseAll();
+            ExecuteCancelPendings();
+         }
+      }
+      // Operando dentro da margem segura
+      else
+      {
+         m_daily_target_hit = false;
+         m_daily_loss_hit   = false;
+         
+         ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_Guard_Toggle", OBJPROP_TEXT, "GUARD: ON");
+         ObjectSetInteger(m_chart_id, PREFIX_GUI + "Btn_Guard_Toggle", OBJPROP_BGCOLOR, C'0,120,80');
+         ObjectSetInteger(m_chart_id, PREFIX_GUI + "Strip_Guard_BG", OBJPROP_BGCOLOR, COLOR_STRIP_BG);
+         
+         string status_str = StringFormat("Hoje: %s$%.1f | M:+$%.0f | L:-$%.0f", (today_total_pnl>=0)?"+":"-", MathAbs(today_total_pnl), m_daily_profit_target, MathAbs(m_max_daily_loss));
+         ObjectSetString(m_chart_id, PREFIX_GUI + "Lbl_Guard_Status", OBJPROP_TEXT, status_str);
+         ObjectSetInteger(m_chart_id, PREFIX_GUI + "Lbl_Guard_Status", OBJPROP_COLOR, clrWhite);
+      }
+   }
+   else
+   {
+      ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_Guard_Toggle", OBJPROP_TEXT, "GUARD: OFF");
+      ObjectSetInteger(m_chart_id, PREFIX_GUI + "Btn_Guard_Toggle", OBJPROP_BGCOLOR, COLOR_STEP_BTN);
+      ObjectSetInteger(m_chart_id, PREFIX_GUI + "Strip_Guard_BG", OBJPROP_BGCOLOR, COLOR_STRIP_BG);
+      
+      string status_str = StringFormat("Meta: $%.0f | Stop: -$%.0f (Inativo)", m_daily_profit_target, MathAbs(m_max_daily_loss));
+      ObjectSetString(m_chart_id, PREFIX_GUI + "Lbl_Guard_Status", OBJPROP_TEXT, status_str);
+      ObjectSetInteger(m_chart_id, PREFIX_GUI + "Lbl_Guard_Status", OBJPROP_COLOR, COLOR_TEXT_MUTED);
+   }
+   
+   // 4. Atualiza Texto do Botão Zerar Tudo com Flutuante
    if(MathAbs(m_floating_pnl) > 0.001)
    {
       string close_text = StringFormat("ZERAR TUDO (%s$%.2f)", (m_floating_pnl >= 0) ? "+" : "-", MathAbs(m_floating_pnl));
@@ -924,6 +1077,20 @@ void CBoletaPanel::CycleHudPeriod()
       m_hud_period = HUD_PERIOD_TODAY;
    
    UpdateLiveMetrics();
+}
+
+void CBoletaPanel::ToggleDailyGuard()
+{
+   m_daily_lock_active = !m_daily_lock_active;
+   if(!m_daily_lock_active)
+   {
+      m_daily_target_hit = false;
+      m_daily_loss_hit   = false;
+      m_guard_alerted_target = false;
+      m_guard_alerted_loss   = false;
+   }
+   UpdateLiveMetrics();
+   PlaySound("tick.wav");
 }
 
 void CBoletaPanel::UpdateVisibility()
@@ -965,18 +1132,36 @@ void CBoletaPanel::UpdateFieldValues()
       ObjectSetString(m_chart_id, PREFIX_GUI + "Edit_Risk", OBJPROP_TEXT, DoubleToString(m_risk_percent, 1));
       ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_Risk_Toggle", OBJPROP_TEXT, "Risco: %");
       ObjectSetInteger(m_chart_id, PREFIX_GUI + "Btn_Risk_Toggle", OBJPROP_BGCOLOR, COLOR_TOGGLE_PCT);
+      
+      // Botões Rápidos em %
+      ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_Quick_1", OBJPROP_TEXT, "0.5%");
+      ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_Quick_2", OBJPROP_TEXT, "1.0%");
+      ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_Quick_3", OBJPROP_TEXT, "1.5%");
+      ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_Quick_4", OBJPROP_TEXT, "2.0%");
    }
    else if(m_risk_mode == RISK_MODE_CASH)
    {
       ObjectSetString(m_chart_id, PREFIX_GUI + "Edit_Risk", OBJPROP_TEXT, DoubleToString(m_risk_cash, 2));
       ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_Risk_Toggle", OBJPROP_TEXT, "Risco: $");
       ObjectSetInteger(m_chart_id, PREFIX_GUI + "Btn_Risk_Toggle", OBJPROP_BGCOLOR, COLOR_TOGGLE_CASH);
+      
+      // Botões Rápidos em $
+      ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_Quick_1", OBJPROP_TEXT, "$25");
+      ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_Quick_2", OBJPROP_TEXT, "$50");
+      ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_Quick_3", OBJPROP_TEXT, "$100");
+      ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_Quick_4", OBJPROP_TEXT, "$200");
    }
    else
    {
       ObjectSetString(m_chart_id, PREFIX_GUI + "Edit_Risk", OBJPROP_TEXT, "--");
       ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_Risk_Toggle", OBJPROP_TEXT, "Risco: Man");
       ObjectSetInteger(m_chart_id, PREFIX_GUI + "Btn_Risk_Toggle", OBJPROP_BGCOLOR, COLOR_EDIT_BG);
+      
+      // Botões Rápidos de Lote Manual
+      ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_Quick_1", OBJPROP_TEXT, "0.01");
+      ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_Quick_2", OBJPROP_TEXT, "0.05");
+      ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_Quick_3", OBJPROP_TEXT, "0.10");
+      ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_Quick_4", OBJPROP_TEXT, "0.25");
    }
    
    bool is_auto_risk = (m_risk_mode != RISK_MODE_MANUAL);
@@ -1232,6 +1417,52 @@ void CBoletaPanel::AdjustParcialVol(double delta)
    UpdateFieldValues();
 }
 
+void CBoletaPanel::HandleQuickSelect(int index)
+{
+   double freeMargin = AccountInfoDouble(ACCOUNT_MARGIN_FREE);
+   if(freeMargin <= 0.0) freeMargin = AccountInfoDouble(ACCOUNT_BALANCE);
+   
+   if(m_risk_mode == RISK_MODE_PERCENT)
+   {
+      double p = 1.0;
+      if(index == 1)      p = 0.5;
+      else if(index == 2) p = 1.0;
+      else if(index == 3) p = 1.5;
+      else if(index == 4) p = 2.0;
+      
+      m_risk_percent = p;
+      if(freeMargin > 0.0)
+         m_risk_cash = freeMargin * (m_risk_percent / 100.0);
+      RecalculateRiskLot();
+   }
+   else if(m_risk_mode == RISK_MODE_CASH)
+   {
+      double c = 50.0;
+      if(index == 1)      c = 25.0;
+      else if(index == 2) c = 50.0;
+      else if(index == 3) c = 100.0;
+      else if(index == 4) c = 200.0;
+      
+      m_risk_cash = c;
+      if(freeMargin > 0.0)
+         m_risk_percent = (m_risk_cash / freeMargin) * 100.0;
+      RecalculateRiskLot();
+   }
+   else // RISK_MODE_MANUAL
+   {
+      double lot = 0.01;
+      if(index == 1)      lot = 0.01;
+      else if(index == 2) lot = 0.05;
+      else if(index == 3) lot = 0.10;
+      else if(index == 4) lot = 0.25;
+      
+      m_manual_lot = NormalizeLot(lot, m_symbol);
+   }
+   
+   UpdateFieldValues();
+   PlaySound("tick.wav");
+}
+
 //+------------------------------------------------------------------+
 //| Recálculo Matemático do Lote Dinâmico                            |
 //+------------------------------------------------------------------+
@@ -1268,15 +1499,9 @@ void CBoletaPanel::RecalculateRiskLot()
    if(denominator > 0.0)
    {
       if(m_risk_mode == RISK_MODE_PERCENT)
-      {
-         // Lote = (Saldo Livre * (Valor_Input / 100)) / (Distância_SL_Pontos * Tick_Value)
          calculated_lot = (freeMargin * (m_risk_percent / 100.0)) / denominator;
-      }
       else if(m_risk_mode == RISK_MODE_CASH)
-      {
-         // Lote = Valor_Input / (Distância_SL_Pontos * Tick_Value)
          calculated_lot = m_risk_cash / denominator;
-      }
    }
    
    m_manual_lot = NormalizeLot(calculated_lot, m_symbol);
@@ -1290,6 +1515,9 @@ double CBoletaPanel::GetEffectiveLot()
    return NormalizeLot(m_manual_lot, m_symbol);
 }
 
+//+------------------------------------------------------------------+
+//| Ordem Fantasma com Mira Visual, Linha de TP e R:R em Tempo Real  |
+//+------------------------------------------------------------------+
 void CBoletaPanel::StartGhostOrder(ENUM_GHOST_TYPE type)
 {
    ClearGhostOrder();
@@ -1302,23 +1530,28 @@ void CBoletaPanel::StartGhostOrder(ENUM_GHOST_TYPE type)
    if(point <= 0) point = 0.00001;
    int digits = (int)SymbolInfoInteger(m_symbol, SYMBOL_DIGITS);
    
-   int default_dist_pts = (m_sl_points > 0) ? m_sl_points : 100;
+   int default_sl_pts = (m_sl_points > 0) ? m_sl_points : 100;
+   int default_tp_pts = (m_tp_points > 0) ? m_tp_points : (default_sl_pts * 2);
    
    if(type == GHOST_BUY)
    {
       m_ghost_entry_price = ask;
-      m_ghost_sl_price    = NormalizeDouble(ask - (default_dist_pts * point), digits);
+      m_ghost_sl_price    = NormalizeDouble(ask - (default_sl_pts * point), digits);
+      m_ghost_tp_price    = NormalizeDouble(ask + (default_tp_pts * point), digits);
    }
    else if(type == GHOST_SELL)
    {
       m_ghost_entry_price = bid;
-      m_ghost_sl_price    = NormalizeDouble(bid + (default_dist_pts * point), digits);
+      m_ghost_sl_price    = NormalizeDouble(bid + (default_sl_pts * point), digits);
+      m_ghost_tp_price    = NormalizeDouble(bid - (default_tp_pts * point), digits);
    }
    
    string entry_name = PREFIX_GHOST + "ENTRY";
    string sl_name    = PREFIX_GHOST + "SL";
+   string tp_name    = PREFIX_GHOST + "TP";
    string tag_name   = PREFIX_GHOST + "TAG";
    
+   // 1. Linha de Entrada
    ObjectCreate(m_chart_id, entry_name, OBJ_HLINE, 0, 0, m_ghost_entry_price);
    ObjectSetInteger(m_chart_id, entry_name, OBJPROP_COLOR, (type == GHOST_BUY) ? clrDodgerBlue : clrCrimson);
    ObjectSetInteger(m_chart_id, entry_name, OBJPROP_STYLE, STYLE_SOLID);
@@ -1329,6 +1562,7 @@ void CBoletaPanel::StartGhostOrder(ENUM_GHOST_TYPE type)
    ObjectSetInteger(m_chart_id, entry_name, OBJPROP_ZORDER, 100);
    ObjectSetString(m_chart_id, entry_name, OBJPROP_TOOLTIP, "Mira da Entrada Fantasma (Mova o mouse e clique para fixar)");
    
+   // 2. Linha de Stop Loss
    ObjectCreate(m_chart_id, sl_name, OBJ_HLINE, 0, 0, m_ghost_sl_price);
    ObjectSetInteger(m_chart_id, sl_name, OBJPROP_COLOR, clrRed);
    ObjectSetInteger(m_chart_id, sl_name, OBJPROP_STYLE, STYLE_DASH);
@@ -1337,8 +1571,20 @@ void CBoletaPanel::StartGhostOrder(ENUM_GHOST_TYPE type)
    ObjectSetInteger(m_chart_id, sl_name, OBJPROP_SELECTED, false);
    ObjectSetInteger(m_chart_id, sl_name, OBJPROP_BACK, false);
    ObjectSetInteger(m_chart_id, sl_name, OBJPROP_ZORDER, 100);
-   ObjectSetString(m_chart_id, sl_name, OBJPROP_TOOLTIP, "Stop Loss Fantasma");
+   ObjectSetString(m_chart_id, sl_name, OBJPROP_TOOLTIP, "Stop Loss Fantasma (Arraste para ajustar)");
    
+   // 3. Linha de Take Profit (NOVO)
+   ObjectCreate(m_chart_id, tp_name, OBJ_HLINE, 0, 0, m_ghost_tp_price);
+   ObjectSetInteger(m_chart_id, tp_name, OBJPROP_COLOR, clrLimeGreen);
+   ObjectSetInteger(m_chart_id, tp_name, OBJPROP_STYLE, STYLE_DASH);
+   ObjectSetInteger(m_chart_id, tp_name, OBJPROP_WIDTH, 2);
+   ObjectSetInteger(m_chart_id, tp_name, OBJPROP_SELECTABLE, false);
+   ObjectSetInteger(m_chart_id, tp_name, OBJPROP_SELECTED, false);
+   ObjectSetInteger(m_chart_id, tp_name, OBJPROP_BACK, false);
+   ObjectSetInteger(m_chart_id, tp_name, OBJPROP_ZORDER, 100);
+   ObjectSetString(m_chart_id, tp_name, OBJPROP_TOOLTIP, "Take Profit Fantasma (Arraste para ajustar Alvo / R:R)");
+   
+   // 4. Tag com Informações de Preço, Risco, Alvo e Risco:Retorno
    datetime cur_time = (datetime)SeriesInfoInteger(m_symbol, _Period, SERIES_LASTBAR_DATE);
    if(cur_time == 0) cur_time = TimeCurrent();
    
@@ -1363,12 +1609,19 @@ void CBoletaPanel::UpdateGhostAiming(double price, datetime dt)
    if(point <= 0) point = 0.00001;
    
    m_ghost_entry_price = NormalizeDouble(price, digits);
-   int dist_pts = (m_sl_points > 0) ? m_sl_points : 100;
+   int dist_sl_pts = (m_sl_points > 0) ? m_sl_points : 100;
+   int dist_tp_pts = (m_tp_points > 0) ? m_tp_points : (dist_sl_pts * 2);
    
    if(m_ghost_type == GHOST_BUY)
-      m_ghost_sl_price = NormalizeDouble(m_ghost_entry_price - (dist_pts * point), digits);
+   {
+      m_ghost_sl_price = NormalizeDouble(m_ghost_entry_price - (dist_sl_pts * point), digits);
+      m_ghost_tp_price = NormalizeDouble(m_ghost_entry_price + (dist_tp_pts * point), digits);
+   }
    else
-      m_ghost_sl_price = NormalizeDouble(m_ghost_entry_price + (dist_pts * point), digits);
+   {
+      m_ghost_sl_price = NormalizeDouble(m_ghost_entry_price + (dist_sl_pts * point), digits);
+      m_ghost_tp_price = NormalizeDouble(m_ghost_entry_price - (dist_tp_pts * point), digits);
+   }
       
    double freeMargin = AccountInfoDouble(ACCOUNT_MARGIN_FREE);
    if(freeMargin <= 0.0) freeMargin = AccountInfoDouble(ACCOUNT_BALANCE);
@@ -1383,7 +1636,7 @@ void CBoletaPanel::UpdateGhostAiming(double price, datetime dt)
    }
    if(tickValue <= 0.0) tickValue = 1.0;
    
-   double denominator = dist_pts * tickValue;
+   double denominator = dist_sl_pts * tickValue;
    double raw_lot = 0.0;
    double riskMoney = 0.0;
    
@@ -1411,13 +1664,17 @@ void CBoletaPanel::UpdateGhostAiming(double price, datetime dt)
    }
    
    m_ghost_lot = NormalizeLot(raw_lot, m_symbol);
+   double profitMoney = dist_tp_pts * tickValue * m_ghost_lot;
+   double rr_ratio = (dist_sl_pts > 0) ? ((double)dist_tp_pts / (double)dist_sl_pts) : 0.0;
    
    string entry_name = PREFIX_GHOST + "ENTRY";
    string sl_name    = PREFIX_GHOST + "SL";
+   string tp_name    = PREFIX_GHOST + "TP";
    string tag_name   = PREFIX_GHOST + "TAG";
    
    ObjectMove(m_chart_id, entry_name, 0, 0, m_ghost_entry_price);
    ObjectMove(m_chart_id, sl_name, 0, 0, m_ghost_sl_price);
+   ObjectMove(m_chart_id, tp_name, 0, 0, m_ghost_tp_price);
    
    datetime cur_time = dt;
    if(cur_time <= 0)
@@ -1428,10 +1685,9 @@ void CBoletaPanel::UpdateGhostAiming(double price, datetime dt)
    
    int dec = GetLotDecimals(m_symbol);
    string type_str = (m_ghost_type == GHOST_BUY) ? "COMPRA" : "VENDA";
-   string risk_label = (m_risk_mode == RISK_MODE_PERCENT) ? StringFormat("%.1f%%", m_risk_percent) : StringFormat("$%.2f", m_risk_cash);
    
-   string tag_text = StringFormat(" 🎯 [CLIQUE P/ FIXAR] %s @ %.*f | SL: %.*f (%d pts) | Lote: %.*f | Risco: %s ($%.2f) | [ESC] Cancelar",
-                                  type_str, digits, m_ghost_entry_price, digits, m_ghost_sl_price, dist_pts, dec, m_ghost_lot, risk_label, riskMoney);
+   string tag_text = StringFormat(" 🎯 [CLIQUE P/ FIXAR] %s @ %.*f | SL: %.*f (%d pts | -$%.2f) | TP: %.*f (%d pts | +$%.2f | R:R 1:%.2f) | Lote: %.*f | [ESC] Cancelar",
+                                  type_str, digits, m_ghost_entry_price, digits, m_ghost_sl_price, dist_sl_pts, riskMoney, digits, m_ghost_tp_price, dist_tp_pts, profitMoney, rr_ratio, dec, m_ghost_lot);
                                   
    ObjectMove(m_chart_id, tag_name, 0, cur_time, m_ghost_entry_price);
    ObjectSetString(m_chart_id, tag_name, OBJPROP_TEXT, tag_text);
@@ -1457,24 +1713,36 @@ void CBoletaPanel::LockGhostAiming(double price, datetime dt)
    if(price > 0.0)
    {
       m_ghost_entry_price = NormalizeDouble(price, digits);
-      int dist_pts = (m_sl_points > 0) ? m_sl_points : 100;
+      int dist_sl_pts = (m_sl_points > 0) ? m_sl_points : 100;
+      int dist_tp_pts = (m_tp_points > 0) ? m_tp_points : (dist_sl_pts * 2);
+      
       if(m_ghost_type == GHOST_BUY)
-         m_ghost_sl_price = NormalizeDouble(m_ghost_entry_price - (dist_pts * point), digits);
+      {
+         m_ghost_sl_price = NormalizeDouble(m_ghost_entry_price - (dist_sl_pts * point), digits);
+         m_ghost_tp_price = NormalizeDouble(m_ghost_entry_price + (dist_tp_pts * point), digits);
+      }
       else
-         m_ghost_sl_price = NormalizeDouble(m_ghost_entry_price + (dist_pts * point), digits);
+      {
+         m_ghost_sl_price = NormalizeDouble(m_ghost_entry_price + (dist_sl_pts * point), digits);
+         m_ghost_tp_price = NormalizeDouble(m_ghost_entry_price - (dist_tp_pts * point), digits);
+      }
    }
    
    string entry_name = PREFIX_GHOST + "ENTRY";
    string sl_name    = PREFIX_GHOST + "SL";
+   string tp_name    = PREFIX_GHOST + "TP";
    string tag_name   = PREFIX_GHOST + "TAG";
    
    ObjectMove(m_chart_id, entry_name, 0, 0, m_ghost_entry_price);
    ObjectMove(m_chart_id, sl_name, 0, 0, m_ghost_sl_price);
+   ObjectMove(m_chart_id, tp_name, 0, 0, m_ghost_tp_price);
    
    ObjectSetInteger(m_chart_id, entry_name, OBJPROP_SELECTABLE, true);
    ObjectSetInteger(m_chart_id, entry_name, OBJPROP_SELECTED, true);
    ObjectSetInteger(m_chart_id, sl_name, OBJPROP_SELECTABLE, true);
    ObjectSetInteger(m_chart_id, sl_name, OBJPROP_SELECTED, true);
+   ObjectSetInteger(m_chart_id, tp_name, OBJPROP_SELECTABLE, true);
+   ObjectSetInteger(m_chart_id, tp_name, OBJPROP_SELECTED, true);
    ObjectSetInteger(m_chart_id, tag_name, OBJPROP_COLOR, clrWhite);
    
    UpdateGhostFromDrag(sl_name);
@@ -1492,16 +1760,53 @@ void CBoletaPanel::UpdateGhostFromDrag(const string obj_name)
    
    string entry_name = PREFIX_GHOST + "ENTRY";
    string sl_name    = PREFIX_GHOST + "SL";
+   string tp_name    = PREFIX_GHOST + "TP";
    string tag_name   = PREFIX_GHOST + "TAG";
    
    m_ghost_entry_price = ObjectGetDouble(m_chart_id, entry_name, OBJPROP_PRICE);
    m_ghost_sl_price    = ObjectGetDouble(m_chart_id, sl_name, OBJPROP_PRICE);
+   m_ghost_tp_price    = ObjectGetDouble(m_chart_id, tp_name, OBJPROP_PRICE);
    
    double point = SymbolInfoDouble(m_symbol, SYMBOL_POINT);
    if(point <= 0) point = 0.00001;
+   int digits = (int)SymbolInfoInteger(m_symbol, SYMBOL_DIGITS);
    
-   int dist_pts = (int)MathRound(MathAbs(m_ghost_entry_price - m_ghost_sl_price) / point);
-   if(dist_pts <= 0) dist_pts = 1;
+   int dist_sl_pts = (int)MathRound(MathAbs(m_ghost_entry_price - m_ghost_sl_price) / point);
+   if(dist_sl_pts <= 0) dist_sl_pts = 10;
+   
+   int dist_tp_pts = (int)MathRound(MathAbs(m_ghost_entry_price - m_ghost_tp_price) / point);
+   if(dist_tp_pts <= 0) dist_tp_pts = 10;
+   
+   // Se o arraste foi especificamente na linha de TP:
+   if(obj_name == tp_name)
+   {
+      m_tp_points = dist_tp_pts;
+      ObjectSetString(m_chart_id, PREFIX_GUI + "Edit_TP", OBJPROP_TEXT, IntegerToString(m_tp_points));
+   }
+   // Se o arraste foi na linha de SL:
+   else if(obj_name == sl_name)
+   {
+      m_sl_points = dist_sl_pts;
+      ObjectSetString(m_chart_id, PREFIX_GUI + "Edit_SL", OBJPROP_TEXT, IntegerToString(m_sl_points));
+   }
+   // Se o arraste foi na linha de Entrada:
+   else if(obj_name == entry_name)
+   {
+      if(m_ghost_type == GHOST_BUY)
+      {
+         m_ghost_sl_price = NormalizeDouble(m_ghost_entry_price - (m_sl_points * point), digits);
+         m_ghost_tp_price = NormalizeDouble(m_ghost_entry_price + (m_tp_points * point), digits);
+      }
+      else
+      {
+         m_ghost_sl_price = NormalizeDouble(m_ghost_entry_price + (m_sl_points * point), digits);
+         m_ghost_tp_price = NormalizeDouble(m_ghost_entry_price - (m_tp_points * point), digits);
+      }
+      ObjectMove(m_chart_id, sl_name, 0, 0, m_ghost_sl_price);
+      ObjectMove(m_chart_id, tp_name, 0, 0, m_ghost_tp_price);
+      dist_sl_pts = m_sl_points;
+      dist_tp_pts = m_tp_points;
+   }
    
    double freeMargin = AccountInfoDouble(ACCOUNT_MARGIN_FREE);
    if(freeMargin <= 0.0) freeMargin = AccountInfoDouble(ACCOUNT_BALANCE);
@@ -1516,7 +1821,7 @@ void CBoletaPanel::UpdateGhostFromDrag(const string obj_name)
    }
    if(tickValue <= 0.0) tickValue = 1.0;
    
-   double denominator = dist_pts * tickValue;
+   double denominator = dist_sl_pts * tickValue;
    double raw_lot = 0.0;
    double riskMoney = 0.0;
    
@@ -1524,13 +1829,11 @@ void CBoletaPanel::UpdateGhostFromDrag(const string obj_name)
    {
       if(m_risk_mode == RISK_MODE_PERCENT)
       {
-         // Lote = (Saldo Livre * (Valor_Input / 100)) / (Distância_SL_Pontos * Tick_Value)
          riskMoney = freeMargin * (m_risk_percent / 100.0);
          raw_lot   = riskMoney / denominator;
       }
       else if(m_risk_mode == RISK_MODE_CASH)
       {
-         // Lote = Valor_Input / (Distância_SL_Pontos * Tick_Value)
          riskMoney = m_risk_cash;
          raw_lot   = riskMoney / denominator;
       }
@@ -1546,23 +1849,21 @@ void CBoletaPanel::UpdateGhostFromDrag(const string obj_name)
    }
    
    m_ghost_lot = NormalizeLot(raw_lot, m_symbol);
+   double profitMoney = dist_tp_pts * tickValue * m_ghost_lot;
+   double rr_ratio = (dist_sl_pts > 0) ? ((double)dist_tp_pts / (double)dist_sl_pts) : 0.0;
    
    datetime cur_time = (datetime)SeriesInfoInteger(m_symbol, _Period, SERIES_LASTBAR_DATE);
    if(cur_time == 0) cur_time = TimeCurrent();
    
    int dec = GetLotDecimals(m_symbol);
-   int digits = (int)SymbolInfoInteger(m_symbol, SYMBOL_DIGITS);
    string type_str = (m_ghost_type == GHOST_BUY) ? "BUY PENDENTE" : "SELL PENDENTE";
-   string risk_label = (m_risk_mode == RISK_MODE_PERCENT) ? StringFormat("%.1f%%", m_risk_percent) : StringFormat("$%.2f", m_risk_cash);
-   string tag_text = StringFormat(" ✅ %s @ %.*f | Lote: %.*f | Dist SL: %d pts | Risco: %s ($%.2f) | [ENTER] Executar", 
-                                  type_str, digits, m_ghost_entry_price, dec, m_ghost_lot, dist_pts, risk_label, riskMoney);
+   string tag_text = StringFormat(" ✅ %s @ %.*f | Lote: %.*f | SL: %d pts (-$%.2f) | TP: %d pts (+$%.2f | R:R 1:%.2f) | [ENTER] Executar", 
+                                  type_str, digits, m_ghost_entry_price, dec, m_ghost_lot, dist_sl_pts, riskMoney, dist_tp_pts, profitMoney, rr_ratio);
    
    ObjectMove(m_chart_id, tag_name, 0, cur_time, m_ghost_entry_price);
    ObjectSetString(m_chart_id, tag_name, OBJPROP_TEXT, tag_text);
    
-   m_sl_points  = dist_pts;
    m_manual_lot = m_ghost_lot;
-   ObjectSetString(m_chart_id, PREFIX_GUI + "Edit_SL", OBJPROP_TEXT, IntegerToString(m_sl_points));
    ObjectSetString(m_chart_id, PREFIX_GUI + "Edit_Lot", OBJPROP_TEXT, DoubleToString(m_manual_lot, dec));
    
    ChartRedraw(m_chart_id);
@@ -1571,6 +1872,15 @@ void CBoletaPanel::UpdateGhostFromDrag(const string obj_name)
 void CBoletaPanel::ExecuteGhostOrder()
 {
    if(!HasGhostOrder()) return;
+   
+   // Verificação de Segurança do Guardião de Capital Diário
+   if(m_daily_lock_active && (m_daily_target_hit || m_daily_loss_hit))
+   {
+      string reason = m_daily_target_hit ? "Meta Diária Batida! Operações Bloqueadas." : "Limite de Perda Diária Atingido! Operações Bloqueadas.";
+      Alert("GUARDIÃO DE CAPITAL: " + reason);
+      PlaySound("timeout.wav");
+      return;
+   }
    
    if(m_ghost_aiming)
       LockGhostAiming(m_ghost_entry_price, TimeCurrent());
@@ -1583,17 +1893,9 @@ void CBoletaPanel::ExecuteGhostOrder()
    
    double ask = SymbolInfoDouble(m_symbol, SYMBOL_ASK);
    double bid = SymbolInfoDouble(m_symbol, SYMBOL_BID);
-   double point = SymbolInfoDouble(m_symbol, SYMBOL_POINT);
    
    double sl = m_sl_active ? m_ghost_sl_price : 0.0;
-   double tp = 0.0;
-   if(m_tp_active && m_tp_points > 0)
-   {
-      if(m_ghost_type == GHOST_BUY)
-         tp = m_ghost_entry_price + (m_tp_points * point);
-      else
-         tp = m_ghost_entry_price - (m_tp_points * point);
-   }
+   double tp = (m_tp_active && m_ghost_tp_price > 0.0) ? m_ghost_tp_price : 0.0;
    
    bool sent = false;
    if(m_ghost_type == GHOST_BUY)
@@ -1616,7 +1918,7 @@ void CBoletaPanel::ExecuteGhostOrder()
    }
    
    if(sent)
-      PrintFormat("Ordem Fantasma Executada em %s! Ticket: %I64u", m_symbol, trade.ResultOrder());
+      PrintFormat("Ordem Fantasma Executada em %s! Ticket: %I64u | SL: %.5f | TP: %.5f", m_symbol, trade.ResultOrder(), sl, tp);
    else
       PrintFormat("Falha ao Enviar Fantasma em %s: RetCode %u (%s)", m_symbol, trade.ResultRetcode(), trade.ResultRetcodeDescription());
    
@@ -1637,6 +1939,14 @@ void CBoletaPanel::ClearGhostOrder()
 
 void CBoletaPanel::ExecuteBuy()
 {
+   if(m_daily_lock_active && (m_daily_target_hit || m_daily_loss_hit))
+   {
+      string reason = m_daily_target_hit ? "Meta Diária Batida! Operações Bloqueadas." : "Limite de Perda Diária Atingido! Operações Bloqueadas.";
+      Alert("GUARDIÃO DE CAPITAL: " + reason);
+      PlaySound("timeout.wav");
+      return;
+   }
+   
    CTrade trade;
    trade.SetExpertMagicNumber(m_magic);
    trade.SetDeviationInPoints(m_slippage);
@@ -1656,6 +1966,14 @@ void CBoletaPanel::ExecuteBuy()
 
 void CBoletaPanel::ExecuteSell()
 {
+   if(m_daily_lock_active && (m_daily_target_hit || m_daily_loss_hit))
+   {
+      string reason = m_daily_target_hit ? "Meta Diária Batida! Operações Bloqueadas." : "Limite de Perda Diária Atingido! Operações Bloqueadas.";
+      Alert("GUARDIÃO DE CAPITAL: " + reason);
+      PlaySound("timeout.wav");
+      return;
+   }
+   
    CTrade trade;
    trade.SetExpertMagicNumber(m_magic);
    trade.SetDeviationInPoints(m_slippage);
@@ -1675,6 +1993,14 @@ void CBoletaPanel::ExecuteSell()
 
 void CBoletaPanel::ExecuteInvert()
 {
+   if(m_daily_lock_active && (m_daily_target_hit || m_daily_loss_hit))
+   {
+      string reason = m_daily_target_hit ? "Meta Diária Batida! Operações Bloqueadas." : "Limite de Perda Diária Atingido! Operações Bloqueadas.";
+      Alert("GUARDIÃO DE CAPITAL: " + reason);
+      PlaySound("timeout.wav");
+      return;
+   }
+   
    CTrade trade;
    trade.SetExpertMagicNumber(m_magic);
    trade.SetDeviationInPoints(m_slippage);
@@ -1715,6 +2041,14 @@ void CBoletaPanel::ExecuteInvert()
 
 void CBoletaPanel::ExecuteHedge()
 {
+   if(m_daily_lock_active && (m_daily_target_hit || m_daily_loss_hit))
+   {
+      string reason = m_daily_target_hit ? "Meta Diária Batida! Operações Bloqueadas." : "Limite de Perda Diária Atingido! Operações Bloqueadas.";
+      Alert("GUARDIÃO DE CAPITAL: " + reason);
+      PlaySound("timeout.wav");
+      return;
+   }
+   
    CTrade trade;
    trade.SetExpertMagicNumber(m_magic);
    trade.SetDeviationInPoints(m_slippage);
@@ -1986,6 +2320,9 @@ void CBoletaPanel::HandleButtonClick(const string &obj_name)
    // Alternância de Período do HUD (Hoje, 7D, 30D, Tudo, Saldo)
    if(short_name == "Btn_Hud_Period")     { CycleHudPeriod(); return; }
    
+   // Toggle do Guardião de Capital Diário
+   if(short_name == "Btn_Guard_Toggle" || short_name == "Strip_Guard_BG") { ToggleDailyGuard(); return; }
+   
    // Toggle de Ativação Automática do Risco e Alternância % vs $
    if(short_name == "Chk_Risk")           { ToggleRiskAuto(); return; }
    if(short_name == "Btn_Risk_Toggle")    { ToggleRiskMode(); return; }
@@ -2015,6 +2352,12 @@ void CBoletaPanel::HandleButtonClick(const string &obj_name)
    if(lot_step <= 0.0) lot_step = 0.01;
    if(short_name == "Btn_Lot_Dec")        { AdjustLot(-lot_step); return; }
    if(short_name == "Btn_Lot_Inc")        { AdjustLot(lot_step); return; }
+   
+   // Botões Rápidos de 1 Clique
+   if(short_name == "Btn_Quick_1")        { HandleQuickSelect(1); return; }
+   if(short_name == "Btn_Quick_2")        { HandleQuickSelect(2); return; }
+   if(short_name == "Btn_Quick_3")        { HandleQuickSelect(3); return; }
+   if(short_name == "Btn_Quick_4")        { HandleQuickSelect(4); return; }
    
    if(short_name == "Btn_SL_Dec")         { AdjustSL(-InpStepPoints); return; }
    if(short_name == "Btn_SL_Inc")         { AdjustSL(InpStepPoints); return; }
@@ -2086,7 +2429,6 @@ void CBoletaPanel::OnChartEvent(const int id, const long &lparam, const double &
          return;
       }
       
-      // Se clicou em outro objeto no gráfico enquanto mirava a ordem fantasma, fixa no local
       if(m_ghost_aiming)
       {
          LockGhostAiming(m_ghost_entry_price, TimeCurrent());
@@ -2142,7 +2484,7 @@ void CBoletaPanel::OnChartEvent(const int id, const long &lparam, const double &
       bool on_panel = (mouse_x >= m_x && mouse_x <= m_x + m_width &&
                        mouse_y >= m_y && mouse_y <= m_y + cur_h);
       
-      // 1. Rastreamento da mira do mouse para Ordem Fantasma
+      // 1. Rastreamento da mira do mouse para Ordem Fantasma (com SL e TP dinâmicos)
       if(m_ghost_aiming && !m_is_dragging && !on_panel)
       {
          datetime dt = 0;
@@ -2182,7 +2524,7 @@ void CBoletaPanel::OnChartEvent(const int id, const long &lparam, const double &
          if(m_is_dragging)
          {
             m_is_dragging = false;
-            BringToFront(); // Garante sobreposição no topo absoluto ao soltar o painel
+            BringToFront();
          }
          m_is_dragging = false;
       }
@@ -2191,8 +2533,6 @@ void CBoletaPanel::OnChartEvent(const int id, const long &lparam, const double &
    
    if(id == CHARTEVENT_OBJECT_CREATE || id == CHARTEVENT_OBJECT_CHANGE)
    {
-      // Se um objeto foi criado ou modificado no gráfico por um indicador ou usuário (não pela boleta),
-      // trazemos imediatamente a boleta para a frente para cobri-lo com z-index máximo!
       if(StringFind(sparam, PREFIX_GUI) != 0 && StringFind(sparam, PREFIX_GHOST) != 0)
       {
          BringToFront();
@@ -2202,8 +2542,6 @@ void CBoletaPanel::OnChartEvent(const int id, const long &lparam, const double &
    
    if(id == CHARTEVENT_CHART_CHANGE)
    {
-      // Se o usuário alternar templates, timeframes ou configurações do gráfico (F8),
-      // garante que a boleta seja reconstruída no topo absoluto da tela.
       BringToFront();
       return;
    }
@@ -2492,19 +2830,16 @@ void GerenciarPosicoesAbertas()
 //+------------------------------------------------------------------+
 int OnInit()
 {
-   // Força o gráfico (candles, wicks e grade) para o segundo plano
    ChartSetInteger(ChartID(), CHART_FOREGROUND, false);
    ChartSetInteger(ChartID(), CHART_EVENT_MOUSE_MOVE, true);
    
    if(!g_panel.Init(InpSymbol, InpMagicNumber, InpSlippage, InpPanelX, InpPanelY))
    {
-      Print("Erro ao inicializar Boleta Scalping Pro v7.20!");
+      Print("Erro ao inicializar Boleta Scalping Pro v8.00!");
       return INIT_FAILED;
    }
    
-   // Timer de 1 segundo para atualizar o relógio do candle com fluidez
    EventSetTimer(1);
-   
    return INIT_SUCCEEDED;
 }
 
@@ -2524,7 +2859,6 @@ void OnTimer()
 {
    g_panel.CheckForegroundState();
    
-   // Watchdog: se algum indicador criou objetos no gráfico silenciosamente, traz o painel para a frente
    int cur_objs = ObjectsTotal(ChartID(), -1, -1);
    if(cur_objs != g_panel.GetLastObjectsTotal() && !g_panel.IsDragging())
    {
@@ -2541,7 +2875,6 @@ void OnTick()
 {
    g_panel.CheckForegroundState();
    
-   // Watchdog dinâmico por tick
    int cur_objs = ObjectsTotal(ChartID(), -1, -1);
    if(cur_objs != g_panel.GetLastObjectsTotal() && !g_panel.IsDragging())
    {
