@@ -5,8 +5,8 @@
 //+------------------------------------------------------------------+
 #property copyright "Senior MQL5 Developer"
 #property link      "https://www.mql5.com"
-#property version   "9.00"
-#property description "Boleta Visual de Scalping com Seletor R:R Dinâmico, Sincronização Lote/SL/TP, Auto ATR e Guardião"
+#property version   "9.10"
+#property description "Boleta Visual de Scalping com Modo Auto Scalper Causal, Seletor R:R Dinâmico, Sincronização Lote/SL/TP e Guardião"
 #property strict
 
 #include <Trade\Trade.mqh>
@@ -92,6 +92,13 @@ input string          InpSymbol            = "";                 // Ativo Operad
 input ulong           InpMagicNumber       = 123456;             // Magic Number das Ordens
 input ulong           InpSlippage          = 20;                 // Desvio Máximo / Slippage (pontos)
 input bool            InpFilterSymbolOnly  = true;               // Filtrar Métricas apenas deste Ativo (false = Conta Toda)
+
+input group "=== MODO AUTO SCALPER (ENTRADAS AUTOMÁTICAS) ==="
+input bool            InpAutoTrading       = false;              // Ativar Modo Auto Scalper Inicial
+input int             InpFastEMA           = 9;                  // Período da Média Rápida (EMA)
+input int             InpSlowEMA           = 21;                 // Período da Média Lenta (EMA)
+input double          InpMaxSpreadPts      = 50.0;               // Filtro Spread Máximo Permitido (pontos)
+input bool            InpTradeOnlyLondonNY = false;              // Operar Apenas em Horário de Alta Liquidez (Londres/NY)
 
 input group "=== GESTÃO DE RISCO:RETORNO & VOLATILIDADE (ATR) ==="
 input double          InpDefaultRR         = 2.0;                // Relação Risco:Retorno Inicial (ex: 2.0 = 1:2, 1.5 = 1:1.5)
@@ -363,6 +370,17 @@ private:
    double            m_history_net;
    double            m_floating_pnl;
    
+   // Modo Auto Scalper
+   bool              m_auto_trading;
+   int               m_fast_ema_period;
+   int               m_slow_ema_period;
+   int               m_fast_ema_handle;
+   int               m_slow_ema_handle;
+   double            m_max_spread_pts;
+   bool              m_trade_only_london_ny;
+   datetime          m_last_auto_bar;
+   string            m_auto_status_text;
+
    // Ordem Fantasma (com Ghost TP e R:R)
    ENUM_GHOST_TYPE   m_ghost_type;
    bool              m_ghost_aiming;
@@ -448,6 +466,12 @@ public:
    void              ToggleAutoATR();
    void              SetRRRatio(double rr);
    void              AdjustRRRatio(double delta);
+   
+   // Auto Scalper
+   bool              IsAutoTrading()          const { return m_auto_trading; }
+   void              ToggleAutoTrading();
+   void              CheckAutoSignal();
+   void              UpdateAutoButtonUI();
    void              CycleHudPeriod();
    void              MovePanel(int new_x, int new_y);
    
@@ -501,7 +525,7 @@ CBoletaPanel::CBoletaPanel()
      m_x(20),
      m_y(40),
      m_width(245),
-     m_height(540),
+     m_height(568),
      m_header_h(24),
      m_is_minimized(false),
      m_is_dragging(false),
@@ -737,6 +761,16 @@ void CBoletaPanel::Destroy()
    {
       IndicatorRelease(m_atr_handle);
       m_atr_handle = INVALID_HANDLE;
+   }
+   if(m_fast_ema_handle != INVALID_HANDLE)
+   {
+      IndicatorRelease(m_fast_ema_handle);
+      m_fast_ema_handle = INVALID_HANDLE;
+   }
+   if(m_slow_ema_handle != INVALID_HANDLE)
+   {
+      IndicatorRelease(m_slow_ema_handle);
+      m_slow_ema_handle = INVALID_HANDLE;
    }
    ObjectsDeleteAll(m_chart_id, PREFIX_GUI);
    ClearGhostOrder();
@@ -1018,6 +1052,12 @@ void CBoletaPanel::Render()
    
    cur_y += 25;
    CreateButton("Btn_GhostConfirm", m_x + 10, cur_y, 225, 22, HasGhostOrder() ? "[ENTER] Enviar Fantasma" : "FANTASMA: [Up/Dn]", HasGhostOrder() ? COLOR_GHOST_CONFIRM : C'40,40,45', COLOR_TEXT_MAIN, 8, true);
+   
+   // 10. Botão Auto Scalper (Entradas Automáticas)
+   cur_y += 24;
+   string auto_txt = m_auto_trading ? "⚡ AUTO SCALPER: [ ATIVO ]" : "⚡ AUTO SCALPER: [ DESLIGADO ]";
+   color auto_bg   = m_auto_trading ? COLOR_BUY_BTN : C'55,55,65';
+   CreateButton("Btn_AutoTrade", m_x + 10, cur_y, 225, 23, auto_txt, auto_bg, COLOR_TEXT_MAIN, 8, true);
    
    UpdateVisibility();
    ChartRedraw(m_chart_id);
@@ -2501,6 +2541,186 @@ void CBoletaPanel::ExecuteCancelPendings()
    UpdateLiveMetrics();
 }
 
+//+------------------------------------------------------------------+
+//| Alternar Modo Auto Scalper (Ligar / Desligar)                    |
+//+------------------------------------------------------------------+
+void CBoletaPanel::ToggleAutoTrading()
+{
+   m_auto_trading = !m_auto_trading;
+   UpdateAutoButtonUI();
+   
+   if(m_auto_trading)
+   {
+      PrintFormat("⚡ [AutoScalper] ATIVADO! Monitorando setup de Pullback (EMA%d/EMA%d) no %s...",
+                  m_fast_ema_period, m_slow_ema_period, m_symbol);
+      PlaySound("expert.wav");
+   }
+   else
+   {
+      Print("⚡ [AutoScalper] DESATIVADO pelo operador.");
+      PlaySound("tick.wav");
+   }
+}
+
+void CBoletaPanel::UpdateAutoButtonUI()
+{
+   string btn_name = PREFIX_GUI + "Btn_AutoTrade";
+   if(ObjectFind(m_chart_id, btn_name) >= 0)
+   {
+      string txt = m_auto_trading ? "⚡ AUTO SCALPER: [ ATIVO ]" : "⚡ AUTO SCALPER: [ DESLIGADO ]";
+      color bg   = m_auto_trading ? COLOR_BUY_BTN : C'55,55,65';
+      ObjectSetString(m_chart_id, btn_name, OBJPROP_TEXT, txt);
+      ObjectSetInteger(m_chart_id, btn_name, OBJPROP_BGCOLOR, bg);
+      ChartRedraw(m_chart_id);
+   }
+}
+
+//+------------------------------------------------------------------+
+//| Avaliação Causal e Disparo Automático (Strictly Causal Bar Open) |
+//+------------------------------------------------------------------+
+void CBoletaPanel::CheckAutoSignal()
+{
+   if(!m_auto_trading)
+      return;
+      
+   // 1. Guardião de Capital Diário
+   if(m_daily_lock_active && (m_daily_target_hit || m_daily_loss_hit))
+      return;
+      
+   // 2. Verificar se já existe posição aberta neste ativo
+   CPositionInfo pos;
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   {
+      if(pos.SelectByIndex(i))
+      {
+         if(pos.Symbol() == m_symbol && pos.Magic() == m_magic)
+            return; // Scalper opera estritamente 1 posição por vez
+      }
+   }
+   
+   // 3. Execução Causal: Avalia somente na abertura de uma nova barra (sem lookahead)
+   datetime cur_bar_time = (datetime)SeriesInfoInteger(m_symbol, Period(), SERIES_LASTBAR_DATE);
+   if(cur_bar_time == 0 || cur_bar_time == m_last_auto_bar)
+      return;
+      
+   // 4. Filtro de Spread Forense
+   double ask = SymbolInfoDouble(m_symbol, SYMBOL_ASK);
+   double bid = SymbolInfoDouble(m_symbol, SYMBOL_BID);
+   double point = SymbolInfoDouble(m_symbol, SYMBOL_POINT);
+   int digits = (int)SymbolInfoInteger(m_symbol, SYMBOL_DIGITS);
+   if(point <= 0.0) return;
+   
+   double cur_spread_pts = (ask - bid) / point;
+   if(cur_spread_pts > m_max_spread_pts)
+   {
+      PrintFormat("⚡ [AutoScalper] Entrada bloqueada: Spread atual de %.1f pts excede o limite máximo de %.1f pts.",
+                  cur_spread_pts, m_max_spread_pts);
+      return;
+   }
+   
+   // 5. Filtro de Sessão (Londres/NY se ativo)
+   if(m_trade_only_london_ny)
+   {
+      MqlDateTime dt;
+      TimeCurrent(dt);
+      if(dt.hour < 7 || dt.hour >= 20)
+         return;
+   }
+   
+   // 6. Leitura Causal dos Indicadores na Barra 1 (Barra anterior fechada)
+   double ema_fast[2], ema_slow[2], atr[1];
+   if(CopyBuffer(m_fast_ema_handle, 0, 1, 2, ema_fast) < 2) return;
+   if(CopyBuffer(m_slow_ema_handle, 0, 1, 2, ema_slow) < 2) return;
+   if(CopyBuffer(m_atr_handle, 0, 1, 1, atr) < 1) return;
+   
+   MqlRates rates[2];
+   if(CopyRates(m_symbol, Period(), 1, 2, rates) < 2) return;
+   
+   // rates[1] é a barra index 1 (última fechada)
+   // ema_fast[1] e ema_slow[1] são as médias calculadas na barra index 1 fechada
+   bool buy_signal  = (ema_fast[1] > ema_slow[1]) && 
+                      (rates[1].low <= ema_fast[1]) && 
+                      (rates[1].close > ema_fast[1]);
+                      
+   bool sell_signal = (ema_fast[1] < ema_slow[1]) && 
+                      (rates[1].high >= ema_fast[1]) && 
+                      (rates[1].close < ema_fast[1]);
+                      
+   if(!buy_signal && !sell_signal)
+      return;
+      
+   // 7. Dimensionamento de Stop Loss e Take Profit
+   int sl_pts = m_sl_points;
+   if(m_auto_atr && atr[0] > 0.0)
+   {
+      sl_pts = (int)MathRound((atr[0] * m_atr_sl_mult) / point);
+   }
+   if(sl_pts < 30) sl_pts = 30; // Proteção mínima
+   
+   int tp_pts = (int)MathRound(sl_pts * m_rr_ratio);
+   if(tp_pts < 10) tp_pts = 10;
+   
+   // 8. Dimensionamento de Lote pelo Motor de Risco da Boleta
+   double lot = 0.01;
+   double tick_val = SymbolInfoDouble(m_symbol, SYMBOL_TRADE_TICK_VALUE);
+   double tick_sz  = SymbolInfoDouble(m_symbol, SYMBOL_TRADE_TICK_SIZE);
+   double pt_val   = (tick_sz > 0.0) ? (tick_val * (point / tick_sz)) : 1.0;
+   
+   if(m_risk_mode == RISK_MODE_PERCENT)
+   {
+      double equity = AccountInfoDouble(ACCOUNT_EQUITY);
+      double risk_money = equity * (m_risk_percent / 100.0);
+      if(sl_pts > 0 && pt_val > 0.0)
+         lot = NormalizeLot(risk_money / (sl_pts * pt_val), m_symbol);
+   }
+   else if(m_risk_mode == RISK_MODE_CASH)
+   {
+      if(sl_pts > 0 && pt_val > 0.0)
+         lot = NormalizeLot(m_risk_cash / (sl_pts * pt_val), m_symbol);
+   }
+   else
+   {
+      lot = GetEffectiveLot();
+   }
+   
+   CTrade trade;
+   trade.SetExpertMagicNumber(m_magic);
+   trade.SetDeviationInPoints(m_slippage);
+   trade.SetMarginMode();
+   SetBestFillingMode(trade, m_symbol);
+   
+   if(buy_signal)
+   {
+      double entry = ask;
+      double sl    = (m_sl_active && sl_pts > 0) ? NormalizeDouble(entry - (sl_pts * point), digits) : 0.0;
+      double tp    = (m_tp_active && tp_pts > 0) ? NormalizeDouble(entry + (tp_pts * point), digits) : 0.0;
+      
+      if(trade.Buy(lot, m_symbol, entry, sl, tp, "AutoScalp_v91 Buy"))
+      {
+         m_last_auto_bar = cur_bar_time;
+         PrintFormat("⚡ [AutoScalper] COMPRA Executada! Lote: %.2f | Preço: %s | SL: %s (%d pts) | TP: %s (%d pts) | R:R: 1:%.1f",
+                     lot, DoubleToString(entry, digits), DoubleToString(sl, digits), sl_pts, DoubleToString(tp, digits), tp_pts, m_rr_ratio);
+         UpdateLiveMetrics();
+         PlaySound("expert.wav");
+      }
+   }
+   else if(sell_signal)
+   {
+      double entry = bid;
+      double sl    = (m_sl_active && sl_pts > 0) ? NormalizeDouble(entry + (sl_pts * point), digits) : 0.0;
+      double tp    = (m_tp_active && tp_pts > 0) ? NormalizeDouble(entry - (tp_pts * point), digits) : 0.0;
+      
+      if(trade.Sell(lot, m_symbol, entry, sl, tp, "AutoScalp_v91 Sell"))
+      {
+         m_last_auto_bar = cur_bar_time;
+         PrintFormat("⚡ [AutoScalper] VENDA Executada! Lote: %.2f | Preço: %s | SL: %s (%d pts) | TP: %s (%d pts) | R:R: 1:%.1f",
+                     lot, DoubleToString(entry, digits), DoubleToString(sl, digits), sl_pts, DoubleToString(tp, digits), tp_pts, m_rr_ratio);
+         UpdateLiveMetrics();
+         PlaySound("expert.wav");
+      }
+   }
+}
+
 void CBoletaPanel::ExecuteParcialManual()
 {
    CTrade trade;
@@ -3240,6 +3460,7 @@ void OnTick()
    }
    
    g_panel.UpdateLiveMetrics();
+   g_panel.CheckAutoSignal();
    GerenciarPosicoesAbertas();
 }
 
