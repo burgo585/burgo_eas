@@ -5,8 +5,8 @@
 //+------------------------------------------------------------------+
 #property copyright "Senior MQL5 Developer"
 #property link      "https://www.mql5.com"
-#property version   "9.10"
-#property description "Boleta Visual de Scalping com Modo Auto Scalper Causal, Seletor R:R Dinâmico, Sincronização Lote/SL/TP e Guardião"
+#property version   "9.20"
+#property description "Boleta Visual de Scalping v9.20: Hedge com Destrava CloseBy sem Margem, Auto Scalper e Guardião"
 #property strict
 
 #include <Trade\Trade.mqh>
@@ -97,7 +97,7 @@ input group "=== MODO AUTO SCALPER (ENTRADAS AUTOMÁTICAS) ==="
 input bool            InpAutoTrading       = false;              // Ativar Modo Auto Scalper Inicial
 input int             InpFastEMA           = 9;                  // Período da Média Rápida (EMA)
 input int             InpSlowEMA           = 21;                 // Período da Média Lenta (EMA)
-input double          InpMaxSpreadPts      = 50.0;               // Filtro Spread Máximo Permitido (pontos)
+input double          InpMaxSpreadPts      = 70.0;               // Filtro Spread Máximo Permitido (pontos)
 input bool            InpTradeOnlyLondonNY = false;              // Operar Apenas em Horário de Alta Liquidez (Londres/NY)
 
 input group "=== GESTÃO DE RISCO:RETORNO & VOLATILIDADE (ATR) ==="
@@ -491,6 +491,7 @@ public:
    void              ExecuteSell();
    void              ExecuteInvert();
    void              ExecuteHedge();
+   void              ExecuteDestravarHedge();
    void              ExecuteCloseAll();
    void              ExecuteCloseProfit();
    void              ExecuteCloseLoss();
@@ -2408,6 +2409,112 @@ void CBoletaPanel::ExecuteInvert()
    UpdateLiveMetrics();
 }
 
+void CBoletaPanel::ExecuteDestravarHedge()
+{
+   CTrade trade;
+   trade.SetExpertMagicNumber(m_magic);
+   trade.SetDeviationInPoints(m_slippage);
+   trade.SetMarginMode();
+   SetBestFillingMode(trade, m_symbol);
+   
+   bool close_by_allowed = ((SymbolInfoInteger(m_symbol, SYMBOL_ORDER_MODE) & SYMBOL_ORDER_CLOSEBY) != 0);
+   
+   // Coletar tickets de compras e vendas abertas neste símbolo
+   ulong buy_tickets[];
+   ulong sell_tickets[];
+   int buys_count = 0, sells_count = 0;
+   
+   CPositionInfo pos;
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   {
+      if(pos.SelectByIndex(i) && pos.Symbol() == m_symbol)
+      {
+         if(pos.PositionType() == POSITION_TYPE_BUY)
+         {
+            ArrayResize(buy_tickets, buys_count + 1);
+            buy_tickets[buys_count++] = pos.Ticket();
+         }
+         else if(pos.PositionType() == POSITION_TYPE_SELL)
+         {
+            ArrayResize(sell_tickets, sells_count + 1);
+            sell_tickets[sells_count++] = pos.Ticket();
+         }
+      }
+   }
+   
+   if(buys_count == 0 && sells_count == 0)
+   {
+      PrintFormat("Destravar Hedge em %s: Nenhuma posição aberta.", m_symbol);
+      return;
+   }
+   
+   PrintFormat("Destravar Hedge em %s iniciado: %d compras e %d vendas encontradas. CloseBy permitido: %s",
+               m_symbol, buys_count, sells_count, close_by_allowed ? "SIM" : "NÃO");
+               
+   // 1. Fechamento por contraposição mútua (PositionCloseBy) para não exigir margem
+   if(close_by_allowed)
+   {
+      int b_idx = 0;
+      int s_idx = 0;
+      while(b_idx < buys_count && s_idx < sells_count)
+      {
+         ulong t_buy  = buy_tickets[b_idx];
+         ulong t_sell = sell_tickets[s_idx];
+         
+         if(PositionSelectByTicket(t_buy) && PositionSelectByTicket(t_sell))
+         {
+            double v_buy  = PositionGetDouble(POSITION_VOLUME);
+            double v_sell = PositionGetDouble(POSITION_VOLUME);
+            
+            if(trade.PositionCloseBy(t_buy, t_sell))
+            {
+               PrintFormat("Destrava CloseBy executada com sucesso: Buy #%I64u x Sell #%I64u (sem impacto de margem).", t_buy, t_sell);
+               if(MathAbs(v_buy - v_sell) < 0.00001)
+               {
+                  b_idx++;
+                  s_idx++;
+               }
+               else if(v_buy > v_sell)
+               {
+                  s_idx++; // Sell foi liquidada inteira, Buy teve parcial
+               }
+               else
+               {
+                  b_idx++; // Buy foi liquidada inteira, Sell teve parcial
+               }
+            }
+            else
+            {
+               PrintFormat("Falha no CloseBy #%I64u x #%I64u (%u %s). Tentando a mercado...",
+                           t_buy, t_sell, trade.ResultRetcode(), trade.ResultRetcodeDescription());
+               trade.PositionClose(t_buy);
+               trade.PositionClose(t_sell);
+               b_idx++;
+               s_idx++;
+            }
+         }
+         else
+         {
+            b_idx++;
+            s_idx++;
+         }
+      }
+   }
+   
+   // 2. Fechar qualquer resíduo restante que não tenha par oposto
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   {
+      if(pos.SelectByIndex(i) && pos.Symbol() == m_symbol)
+      {
+         trade.PositionClose(pos.Ticket());
+      }
+   }
+   
+   PrintFormat("Destravar Hedge em %s concluído! Margem liberada com sucesso.", m_symbol);
+   PlaySound("expert.wav");
+   UpdateLiveMetrics();
+}
+
 void CBoletaPanel::ExecuteHedge()
 {
    if(m_daily_lock_active && (m_daily_target_hit || m_daily_loss_hit))
@@ -2443,6 +2550,15 @@ void CBoletaPanel::ExecuteHedge()
    double ask = SymbolInfoDouble(m_symbol, SYMBOL_ASK);
    double bid = SymbolInfoDouble(m_symbol, SYMBOL_BID);
    
+   // Se o ativo já está 100% hedged (compras = vendas > 0), o comando HEDGE agora DESTRAVA sem margem!
+   if(total_buy_vol > 0.00001 && total_sell_vol > 0.00001 && MathAbs(net_exposure) < 0.00001)
+   {
+      PrintFormat("Ativo %s já está 100%% travado (%.2f C x %.2f V). Executando DESTRAVA via CloseBy...",
+                  m_symbol, total_buy_vol, total_sell_vol);
+      ExecuteDestravarHedge();
+      return;
+   }
+   
    if(net_exposure > 0.00001)
    {
       double lot_to_hedge = NormalizeLot(net_exposure, m_symbol);
@@ -2454,10 +2570,6 @@ void CBoletaPanel::ExecuteHedge()
       double lot_to_hedge = NormalizeLot(MathAbs(net_exposure), m_symbol);
       trade.Buy(lot_to_hedge, m_symbol, ask, 0, 0, "Hedge Trava Venda");
       PrintFormat("Hedge Ativado em %s: Comprado %.2f para zerar delta.", m_symbol, lot_to_hedge);
-   }
-   else if(total_buy_vol > 0.0 && total_sell_vol > 0.0)
-   {
-      Alert(StringFormat("O ativo %s já está 100%% hedged (Volume Comprado = Volume Vendido)!", m_symbol));
    }
    else
    {
