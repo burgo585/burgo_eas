@@ -1,4 +1,4 @@
-; Preset Oficial: XAUUSD XM Ultra Low Standard - Banca $300
+; Preset Oficial: XAUUSD XM Ultra Low Standard - Banca $300 (Versao 9.70 Institucional Anti-Chop)
 InpSymbol=
 InpMagicNumber=123456
 InpSlippage=20
@@ -8,7 +8,8 @@ InpAutoTriggerMode=0
 InpExecutionTimeframe=15
 InpUseMacroTrend=true
 InpMacroEMA=200
-InpMinWickRatio=0.20
+InpMinWickRatio=0.30
+InpMinEMADiffPts=50.0
 InpFastEMA=9
 InpSlowEMA=21
 InpMaxSpreadPts=60.0
@@ -20,7 +21,7 @@ InpATRPeriod=14
 InpATRTimeframe=15
 InpATR_SL_Mult=1.5
 InpDailyLockActive=true
-InpDailyProfitTarget=16.0
+InpDailyProfitTarget=15.0
 InpMaxDailyLoss=8.0
 InpSendPushAlerts=false
 InpDefaultRiskMode=2
@@ -31,7 +32,7 @@ InpSLActive=true
 InpDefaultSL=250
 InpTPActive=true
 InpDefaultTP=500
-InpBEActive=false
+InpBEActive=true
 InpDefaultBE=100
 InpTSActive=false
 InpDefaultTS=120
