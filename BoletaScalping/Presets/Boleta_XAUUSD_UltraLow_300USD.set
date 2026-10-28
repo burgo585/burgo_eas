@@ -1,4 +1,4 @@
-; Preset Oficial: XAUUSD XM Ultra Low Standard - Banca $300 (Versao 9.70 Institucional Anti-Chop)
+; Preset Oficial: XAUUSD XM Ultra Low Standard - Banca $300 (Versao 9.75 Institucional Anti-Tempestade)
 InpSymbol=
 InpMagicNumber=123456
 InpSlippage=20
@@ -13,6 +13,7 @@ InpMinEMADiffPts=50.0
 InpFastEMA=9
 InpSlowEMA=21
 InpMaxSpreadPts=60.0
+InpMaxATRPts=800.0
 InpTradeOnlyLondonNY=true
 InpDefaultRR=2.0
 InpSyncSLWithLot=true

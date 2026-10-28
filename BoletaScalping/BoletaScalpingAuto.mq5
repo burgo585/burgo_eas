@@ -422,6 +422,8 @@ input int                InpFastEMA           = 9;                        // Per
 input int                InpSlowEMA           = 21;                       // Período da Média Lenta (EMA)
 
 input double             InpMaxSpreadPts      = 60.0;                     // Filtro Spread Máximo Permitido (pontos - XM Ultra Low = ~30 pts)
+input double             InpMaxATRPts         = 800.0;                    // Teto Maximo ATR em Pontos (800 pts = .00 - Filtro Anti-Tempestade)
+
 
 input bool               InpTradeOnlyLondonNY = true;                     // Operar Apenas em Horario Nobre (08:00 - 18:00)
 
@@ -1487,6 +1489,7 @@ private:
 
 
    double            m_max_spread_pts;
+   double            m_max_atr_pts;
 
 
 
@@ -2867,6 +2870,7 @@ bool CBoletaPanel::Init(const string symbol, ulong magic, ulong slippage, int x=
 
 
    m_max_spread_pts      = InpMaxSpreadPts;
+   m_max_atr_pts          = InpMaxATRPts;
 
 
 
@@ -3702,7 +3706,7 @@ void CBoletaPanel::Render()
 
 
 
-   CreateLabel("Lbl_Mkt_Timer",  m_x + 168, cur_y + 3, "⏳ --:--", clrCyan, 8, true);
+   CreateLabel("Lbl_Mkt_Timer",  m_x + 168, cur_y + 3, "? --:--", clrCyan, 8, true);
 
 
 
@@ -4278,7 +4282,7 @@ void CBoletaPanel::Render()
 
 
 
-   string auto_txt = m_auto_trading ? "⚡ AUTO SCALPER: [ ATIVO ]" : "⚡ AUTO SCALPER: [ DESLIGADO ]";
+   string auto_txt = m_auto_trading ? "? AUTO SCALPER: [ ATIVO ]" : "? AUTO SCALPER: [ DESLIGADO ]";
 
 
 
@@ -5070,7 +5074,7 @@ void CBoletaPanel::UpdateLiveMetrics()
 
 
 
-         ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_Guard_Toggle", OBJPROP_TEXT, "META 🏆");
+         ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_Guard_Toggle", OBJPROP_TEXT, "META ??");
 
 
 
@@ -5118,7 +5122,7 @@ void CBoletaPanel::UpdateLiveMetrics()
 
 
 
-            Alert(StringFormat("🏆 GUARDIÃO DE CAPITAL: Meta Diária Batida! Lucro: +$%.2f (Meta: $%.2f). Novas ordens travadas.", today_total_pnl, m_daily_profit_target));
+            Alert(StringFormat("?? GUARDIÃO DE CAPITAL: Meta Diária Batida! Lucro: +$%.2f (Meta: $%.2f). Novas ordens travadas.", today_total_pnl, m_daily_profit_target));
 
 
 
@@ -5162,7 +5166,7 @@ void CBoletaPanel::UpdateLiveMetrics()
 
 
 
-         ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_Guard_Toggle", OBJPROP_TEXT, "STOP 🛑");
+         ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_Guard_Toggle", OBJPROP_TEXT, "STOP ??");
 
 
 
@@ -5210,7 +5214,7 @@ void CBoletaPanel::UpdateLiveMetrics()
 
 
 
-            Alert(StringFormat("🛑 GUARDIÃO DE CAPITAL: Limite de Perda Diária Atingido! Prejuízo: -$%.2f (Limite: -$%.2f). Zerando posições e bloqueando novas ordens.", MathAbs(today_total_pnl), MathAbs(m_max_daily_loss)));
+            Alert(StringFormat("?? GUARDIÃO DE CAPITAL: Limite de Perda Diária Atingido! Prejuízo: -$%.2f (Limite: -$%.2f). Zerando posições e bloqueando novas ordens.", MathAbs(today_total_pnl), MathAbs(m_max_daily_loss)));
 
 
 
@@ -8234,7 +8238,7 @@ void CBoletaPanel::UpdateGhostAiming(double price, datetime dt)
 
 
 
-   string tag_text = StringFormat(" 🎯 [CLIQUE P/ FIXAR] %s @ %.*f | SL: %.*f (%d pts | -$%.2f) | TP: %.*f (%d pts | +$%.2f | R:R 1:%.2f) | Lote: %.*f | [ESC] Cancelar",
+   string tag_text = StringFormat(" ?? [CLIQUE P/ FIXAR] %s @ %.*f | SL: %.*f (%d pts | -$%.2f) | TP: %.*f (%d pts | +$%.2f | R:R 1:%.2f) | Lote: %.*f | [ESC] Cancelar",
 
 
 
@@ -8966,7 +8970,7 @@ void CBoletaPanel::UpdateGhostFromDrag(const string obj_name)
 
 
 
-   string tag_text = StringFormat(" ✅ %s @ %.*f | Lote: %.*f | SL: %d pts (-$%.2f) | TP: %d pts (+$%.2f | R:R 1:%.2f) | [ENTER] Executar", 
+   string tag_text = StringFormat(" ? %s @ %.*f | Lote: %.*f | SL: %d pts (-$%.2f) | TP: %d pts (+$%.2f | R:R 1:%.2f) | [ENTER] Executar", 
 
 
 
@@ -9842,7 +9846,7 @@ void CBoletaPanel::ExecuteDestravarHedge()
 
 
 
-   PrintFormat("⚡ [Destravar Hedge] Executando em %s: %d compras x %d vendas. CloseBy Suportado: %s",
+   PrintFormat("? [Destravar Hedge] Executando em %s: %d compras x %d vendas. CloseBy Suportado: %s",
 
 
 
@@ -9918,7 +9922,7 @@ void CBoletaPanel::ExecuteDestravarHedge()
 
 
 
-               PrintFormat("⚡ [Destrava CloseBy] Sucesso: Buy #%I64u x Sell #%I64u (sem impacto de margem).", t_buy, t_sell);
+               PrintFormat("? [Destrava CloseBy] Sucesso: Buy #%I64u x Sell #%I64u (sem impacto de margem).", t_buy, t_sell);
 
 
 
@@ -10042,7 +10046,7 @@ void CBoletaPanel::ExecuteDestravarHedge()
 
 
 
-   PrintFormat("⚡ [Destravar Hedge] Concluído em %s! Margem liberada com sucesso.", m_symbol);
+   PrintFormat("? [Destravar Hedge] Concluído em %s! Margem liberada com sucesso.", m_symbol);
 
 
 
@@ -10214,7 +10218,7 @@ void CBoletaPanel::ExecuteHedge()
 
 
 
-      PrintFormat("⚡ Ativo %s já está 100%% travado (%.2f C x %.2f V). Executando DESTRAVA via CloseBy...",
+      PrintFormat("? Ativo %s já está 100%% travado (%.2f C x %.2f V). Executando DESTRAVA via CloseBy...",
 
 
 
@@ -10254,7 +10258,7 @@ void CBoletaPanel::ExecuteHedge()
 
 
 
-      PrintFormat("⚡ Hedge Ativado em %s: Vendido %.2f para zerar delta.", m_symbol, lot_to_hedge);
+      PrintFormat("? Hedge Ativado em %s: Vendido %.2f para zerar delta.", m_symbol, lot_to_hedge);
 
 
 
@@ -10278,7 +10282,7 @@ void CBoletaPanel::ExecuteHedge()
 
 
 
-      PrintFormat("⚡ Hedge Ativado em %s: Comprado %.2f para zerar delta.", m_symbol, lot_to_hedge);
+      PrintFormat("? Hedge Ativado em %s: Comprado %.2f para zerar delta.", m_symbol, lot_to_hedge);
 
 
 
@@ -10306,7 +10310,7 @@ void CBoletaPanel::ExecuteHedge()
 
 
 
-      PrintFormat("⚡ Hedge Duplo Aberto em %s: Buy %.2f e Sell %.2f simultâneos.", m_symbol, lot, lot);
+      PrintFormat("? Hedge Duplo Aberto em %s: Buy %.2f e Sell %.2f simultâneos.", m_symbol, lot, lot);
 
 
 
@@ -10658,7 +10662,7 @@ void CBoletaPanel::ToggleAutoTrading()
 
 
 
-      string msg = StringFormat("⚡ Auto Scalper ATIVADO! Monitorando EMA%d/EMA%d + ATR em %s (%s).",
+      string msg = StringFormat("? Auto Scalper ATIVADO! Monitorando EMA%d/EMA%d + ATR em %s (%s).",
 
 
 
@@ -10690,7 +10694,7 @@ void CBoletaPanel::ToggleAutoTrading()
 
 
 
-      string msg = StringFormat("⚡ Auto Scalper DESLIGADO em %s.", m_symbol);
+      string msg = StringFormat("? Auto Scalper DESLIGADO em %s.", m_symbol);
 
 
 
@@ -10738,7 +10742,7 @@ void CBoletaPanel::UpdateAutoButtonUI()
 
 
 
-      string txt = m_auto_trading ? "⚡ AUTO SCALPER: [ ATIVO ]" : "⚡ AUTO SCALPER: [ DESLIGADO ]";
+      string txt = m_auto_trading ? "? AUTO SCALPER: [ ATIVO ]" : "? AUTO SCALPER: [ DESLIGADO ]";
 
 
 
@@ -10988,7 +10992,7 @@ void CBoletaPanel::CheckAutoSignal()
 
 
 
-      PrintFormat("⚡ [AutoScalper %s] Entrada bloqueada: Spread atual de %.1f pts excede o máximo de %.1f pts.",
+      PrintFormat("? [AutoScalper %s] Entrada bloqueada: Spread atual de %.1f pts excede o máximo de %.1f pts.",
 
 
 
@@ -11077,6 +11081,13 @@ void CBoletaPanel::CheckAutoSignal()
 
 
       return;
+
+   // Filtro de Tempestade de Volatilidade (Protecao da Banca de $300)
+   double cur_atr_pts_val = (point > 0.0) ? (atr[0] / point) : 0.0;
+   if(m_max_atr_pts > 0.0 && cur_atr_pts_val > m_max_atr_pts)
+   {
+      return; // ATR acima de 800 pts ($8.00) - volatilidade explosiva, fica de fora!
+   }
 
 
 
@@ -11263,11 +11274,11 @@ void CBoletaPanel::CheckAutoSignal()
 
 
 
-         if(sl_pts < 150) sl_pts = 150;
+         if(sl_pts < 200) sl_pts = 200;
 
 
 
-         if(sl_pts > 450) sl_pts = 450; // Teto de risco para banca de $300
+         if(sl_pts > 500) sl_pts = 500; // Teto de risco para banca de $300
 
 
 
@@ -11287,11 +11298,11 @@ void CBoletaPanel::CheckAutoSignal()
 
 
 
-         if(sl_pts < 150) sl_pts = 150;
+         if(sl_pts < 200) sl_pts = 200;
 
 
 
-         if(sl_pts > 450) sl_pts = 450;
+         if(sl_pts > 500) sl_pts = 500;
 
 
 
@@ -11391,7 +11402,7 @@ void CBoletaPanel::CheckAutoSignal()
 
 
 
-      PrintFormat("⚡ [AutoScalper %s %s] Barra %s: EMA%d=%.2f, EMA%d=%.2f, Close=%.2f (Spread: %.1f pts). Aguardando retração/gatilho...",
+      PrintFormat("? [AutoScalper %s %s] Barra %s: EMA%d=%.2f, EMA%d=%.2f, Close=%.2f (Spread: %.1f pts). Aguardando retração/gatilho...",
 
 
 
@@ -11611,7 +11622,7 @@ void CBoletaPanel::CheckAutoSignal()
 
 
 
-         PrintFormat("⚡ [AutoScalper] COMPRA EXECUTADA! Lote: %.2f | Preço: %s | SL: %s (%d pts) | TP: %s (%d pts) | R:R: 1:%.1f",
+         PrintFormat("? [AutoScalper] COMPRA EXECUTADA! Lote: %.2f | Preço: %s | SL: %s (%d pts) | TP: %s (%d pts) | R:R: 1:%.1f",
 
 
 
@@ -11639,7 +11650,7 @@ void CBoletaPanel::CheckAutoSignal()
 
 
 
-         PrintFormat("⚡ [AutoScalper] Falha na COMPRA (%u): %s", trade.ResultRetcode(), trade.ResultRetcodeDescription());
+         PrintFormat("? [AutoScalper] Falha na COMPRA (%u): %s", trade.ResultRetcode(), trade.ResultRetcodeDescription());
 
 
 
@@ -11683,7 +11694,7 @@ void CBoletaPanel::CheckAutoSignal()
 
 
 
-         PrintFormat("⚡ [AutoScalper] VENDA EXECUTADA! Lote: %.2f | Preço: %s | SL: %s (%d pts) | TP: %s (%d pts) | R:R: 1:%.1f",
+         PrintFormat("? [AutoScalper] VENDA EXECUTADA! Lote: %.2f | Preço: %s | SL: %s (%d pts) | TP: %s (%d pts) | R:R: 1:%.1f",
 
 
 
@@ -11711,7 +11722,7 @@ void CBoletaPanel::CheckAutoSignal()
 
 
 
-         PrintFormat("⚡ [AutoScalper] Falha na VENDA (%u): %s", trade.ResultRetcode(), trade.ResultRetcodeDescription());
+         PrintFormat("? [AutoScalper] Falha na VENDA (%u): %s", trade.ResultRetcode(), trade.ResultRetcodeDescription());
 
 
 
