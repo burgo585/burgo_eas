@@ -5,8 +5,8 @@
 //+------------------------------------------------------------------+
 #property copyright "Senior MQL5 Developer"
 #property link      "https://www.mql5.com"
-#property version   "9.30"
-#property description "Boleta Scalping v9.30: Auto Scalper Causal, Destrava Hedge CloseBy sem Margem, R:R Dinâmico e Guardião"
+#property version   "9.40"
+#property description "Boleta Scalping v9.40: Auto Scalper Interativo, Destrava Hedge CloseBy sem Margem, R:R Dinâmico e Guardião"
 #property strict
 
 #include <Trade\Trade.mqh>
@@ -94,7 +94,7 @@ input ulong           InpSlippage          = 20;                 // Desvio Máxi
 input bool            InpFilterSymbolOnly  = true;               // Filtrar Métricas apenas deste Ativo (false = Conta Toda)
 
 input group "=== MODO AUTO SCALPER (ENTRADAS AUTOMÁTICAS) ==="
-input bool            InpAutoTrading       = false;              // Ativar Modo Auto Scalper Inicial
+input bool            InpAutoTrading       = false;              // Ativar Modo Auto Scalper Inicial (ou ligue na boleta)
 input int             InpFastEMA           = 9;                  // Período da Média Rápida (EMA)
 input int             InpSlowEMA           = 21;                 // Período da Média Lenta (EMA)
 input double          InpMaxSpreadPts      = 70.0;               // Filtro Spread Máximo Permitido (pontos - XM Gold = ~55 pts)
@@ -1058,7 +1058,7 @@ void CBoletaPanel::Render()
    cur_y += 25;
    CreateButton("Btn_GhostConfirm", m_x + 10, cur_y, 225, 22, HasGhostOrder() ? "[ENTER] Enviar Fantasma" : "FANTASMA: [Up/Dn]", HasGhostOrder() ? COLOR_GHOST_CONFIRM : C'40,40,45', COLOR_TEXT_MAIN, 8, true);
    
-   // 10. Botão Auto Scalper
+   // 10. Botão Auto Scalper Interativo
    cur_y += 24;
    string auto_txt = m_auto_trading ? "⚡ AUTO SCALPER: [ ATIVO ]" : "⚡ AUTO SCALPER: [ DESLIGADO ]";
    color auto_bg   = m_auto_trading ? COLOR_BUY_BTN : C'55,55,65';
@@ -2655,13 +2655,17 @@ void CBoletaPanel::ToggleAutoTrading()
    if(m_auto_trading)
    {
       InitAutoIndicators();
-      PrintFormat("⚡ [AutoScalper] ATIVADO! Monitorando setup EMA%d/EMA%d + ATR em %s (%s)...",
-                  m_fast_ema_period, m_slow_ema_period, m_symbol, GetPeriodName((ENUM_TIMEFRAMES)Period()));
+      string msg = StringFormat("⚡ Auto Scalper ATIVADO! Monitorando EMA%d/EMA%d + ATR em %s (%s).",
+                                m_fast_ema_period, m_slow_ema_period, m_symbol, GetPeriodName((ENUM_TIMEFRAMES)Period()));
+      Print(msg);
+      Alert(msg);
       PlaySound("expert.wav");
    }
    else
    {
-      Print("⚡ [AutoScalper] DESATIVADO pelo operador.");
+      string msg = StringFormat("⚡ Auto Scalper DESLIGADO em %s.", m_symbol);
+      Print(msg);
+      Alert(msg);
       PlaySound("tick.wav");
    }
 }
@@ -3108,6 +3112,7 @@ void CBoletaPanel::HandleButtonClick(const string &obj_name)
    if(short_name == "Btn_CloseProfit")    { ExecuteCloseProfit(); return; }
    if(short_name == "Btn_CloseLoss")      { ExecuteCloseLoss(); return; }
    if(short_name == "Btn_CancelPendings") { ExecuteCancelPendings(); return; }
+   if(short_name == "Btn_AutoTrade")      { ToggleAutoTrading(); return; }
    
    if(short_name == "Btn_GhostConfirm")
    {
@@ -3268,6 +3273,7 @@ void CBoletaPanel::OnChartEvent(const int id, const long &lparam, const double &
       if(lparam == 67 || lparam == 99)  { ExecuteCancelPendings(); return; } // C
       if(lparam == 77 || lparam == 109) { ToggleMinimize(); return; }        // M
       if(lparam == 80 || lparam == 112) { ExecuteParcialManual(); return; }  // P
+   if(lparam == 65 || lparam == 97)  { ToggleAutoTrading(); return; }        // A (Auto Scalper)
       if(lparam == 38) { StartGhostOrder(GHOST_BUY); return; }               // Seta Cima
       if(lparam == 40) { StartGhostOrder(GHOST_SELL); return; }              // Seta Baixo
       if(lparam == 13) { if(HasGhostOrder()) ExecuteGhostOrder(); return; }  // Enter
