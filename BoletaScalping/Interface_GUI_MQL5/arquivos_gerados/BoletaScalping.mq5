@@ -5,8 +5,8 @@
 //+------------------------------------------------------------------+
 #property copyright "Senior MQL5 Developer"
 #property link      "https://www.mql5.com"
-#property version   "9.20"
-#property description "Boleta Visual de Scalping v9.20: Hedge com Destrava CloseBy sem Margem, Auto Scalper e Guardião"
+#property version   "9.30"
+#property description "Boleta Scalping v9.30: Auto Scalper Causal, Destrava Hedge CloseBy sem Margem, R:R Dinâmico e Guardião"
 #property strict
 
 #include <Trade\Trade.mqh>
@@ -97,7 +97,7 @@ input group "=== MODO AUTO SCALPER (ENTRADAS AUTOMÁTICAS) ==="
 input bool            InpAutoTrading       = false;              // Ativar Modo Auto Scalper Inicial
 input int             InpFastEMA           = 9;                  // Período da Média Rápida (EMA)
 input int             InpSlowEMA           = 21;                 // Período da Média Lenta (EMA)
-input double          InpMaxSpreadPts      = 70.0;               // Filtro Spread Máximo Permitido (pontos)
+input double          InpMaxSpreadPts      = 70.0;               // Filtro Spread Máximo Permitido (pontos - XM Gold = ~55 pts)
 input bool            InpTradeOnlyLondonNY = false;              // Operar Apenas em Horário de Alta Liquidez (Londres/NY)
 
 input group "=== GESTÃO DE RISCO:RETORNO & VOLATILIDADE (ATR) ==="
@@ -370,7 +370,7 @@ private:
    double            m_history_net;
    double            m_floating_pnl;
    
-   // Modo Auto Scalper
+   // Auto Scalper
    bool              m_auto_trading;
    int               m_fast_ema_period;
    int               m_slow_ema_period;
@@ -470,8 +470,12 @@ public:
    // Auto Scalper
    bool              IsAutoTrading()          const { return m_auto_trading; }
    void              ToggleAutoTrading();
-   void              CheckAutoSignal();
    void              UpdateAutoButtonUI();
+   void              InitAutoIndicators();
+   void              CheckAutoSignal();
+   
+   // Destrava Hedge sem Margem
+   void              ExecuteDestravarHedge();
    void              CycleHudPeriod();
    void              MovePanel(int new_x, int new_y);
    
@@ -491,7 +495,6 @@ public:
    void              ExecuteSell();
    void              ExecuteInvert();
    void              ExecuteHedge();
-   void              ExecuteDestravarHedge();
    void              ExecuteCloseAll();
    void              ExecuteCloseProfit();
    void              ExecuteCloseLoss();
@@ -731,6 +734,7 @@ bool CBoletaPanel::Init(const string symbol, ulong magic, ulong slippage, int x=
    
    AutoProfileAsset();
    UpdateATR();
+   InitAutoIndicators();
    
    double freeMargin = AccountInfoDouble(ACCOUNT_MARGIN_FREE);
    if(freeMargin <= 0.0) freeMargin = AccountInfoDouble(ACCOUNT_BALANCE);
@@ -1054,7 +1058,7 @@ void CBoletaPanel::Render()
    cur_y += 25;
    CreateButton("Btn_GhostConfirm", m_x + 10, cur_y, 225, 22, HasGhostOrder() ? "[ENTER] Enviar Fantasma" : "FANTASMA: [Up/Dn]", HasGhostOrder() ? COLOR_GHOST_CONFIRM : C'40,40,45', COLOR_TEXT_MAIN, 8, true);
    
-   // 10. Botão Auto Scalper (Entradas Automáticas)
+   // 10. Botão Auto Scalper
    cur_y += 24;
    string auto_txt = m_auto_trading ? "⚡ AUTO SCALPER: [ ATIVO ]" : "⚡ AUTO SCALPER: [ DESLIGADO ]";
    color auto_bg   = m_auto_trading ? COLOR_BUY_BTN : C'55,55,65';
@@ -2419,7 +2423,6 @@ void CBoletaPanel::ExecuteDestravarHedge()
    
    bool close_by_allowed = ((SymbolInfoInteger(m_symbol, SYMBOL_ORDER_MODE) & SYMBOL_ORDER_CLOSEBY) != 0);
    
-   // Coletar tickets de compras e vendas abertas neste símbolo
    ulong buy_tickets[];
    ulong sell_tickets[];
    int buys_count = 0, sells_count = 0;
@@ -2448,10 +2451,9 @@ void CBoletaPanel::ExecuteDestravarHedge()
       return;
    }
    
-   PrintFormat("Destravar Hedge em %s iniciado: %d compras e %d vendas encontradas. CloseBy permitido: %s",
+   PrintFormat("⚡ [Destravar Hedge] Executando em %s: %d compras x %d vendas. CloseBy Suportado: %s",
                m_symbol, buys_count, sells_count, close_by_allowed ? "SIM" : "NÃO");
                
-   // 1. Fechamento por contraposição mútua (PositionCloseBy) para não exigir margem
    if(close_by_allowed)
    {
       int b_idx = 0;
@@ -2468,25 +2470,17 @@ void CBoletaPanel::ExecuteDestravarHedge()
             
             if(trade.PositionCloseBy(t_buy, t_sell))
             {
-               PrintFormat("Destrava CloseBy executada com sucesso: Buy #%I64u x Sell #%I64u (sem impacto de margem).", t_buy, t_sell);
+               PrintFormat("⚡ [Destrava CloseBy] Sucesso: Buy #%I64u x Sell #%I64u (sem impacto de margem).", t_buy, t_sell);
                if(MathAbs(v_buy - v_sell) < 0.00001)
                {
                   b_idx++;
                   s_idx++;
                }
-               else if(v_buy > v_sell)
-               {
-                  s_idx++; // Sell foi liquidada inteira, Buy teve parcial
-               }
-               else
-               {
-                  b_idx++; // Buy foi liquidada inteira, Sell teve parcial
-               }
+               else if(v_buy > v_sell) s_idx++;
+               else b_idx++;
             }
             else
             {
-               PrintFormat("Falha no CloseBy #%I64u x #%I64u (%u %s). Tentando a mercado...",
-                           t_buy, t_sell, trade.ResultRetcode(), trade.ResultRetcodeDescription());
                trade.PositionClose(t_buy);
                trade.PositionClose(t_sell);
                b_idx++;
@@ -2501,16 +2495,13 @@ void CBoletaPanel::ExecuteDestravarHedge()
       }
    }
    
-   // 2. Fechar qualquer resíduo restante que não tenha par oposto
    for(int i = PositionsTotal() - 1; i >= 0; i--)
    {
       if(pos.SelectByIndex(i) && pos.Symbol() == m_symbol)
-      {
          trade.PositionClose(pos.Ticket());
-      }
    }
    
-   PrintFormat("Destravar Hedge em %s concluído! Margem liberada com sucesso.", m_symbol);
+   PrintFormat("⚡ [Destravar Hedge] Concluído em %s! Margem liberada com sucesso.", m_symbol);
    PlaySound("expert.wav");
    UpdateLiveMetrics();
 }
@@ -2553,7 +2544,7 @@ void CBoletaPanel::ExecuteHedge()
    // Se o ativo já está 100% hedged (compras = vendas > 0), o comando HEDGE agora DESTRAVA sem margem!
    if(total_buy_vol > 0.00001 && total_sell_vol > 0.00001 && MathAbs(net_exposure) < 0.00001)
    {
-      PrintFormat("Ativo %s já está 100%% travado (%.2f C x %.2f V). Executando DESTRAVA via CloseBy...",
+      PrintFormat("⚡ Ativo %s já está 100%% travado (%.2f C x %.2f V). Executando DESTRAVA via CloseBy...",
                   m_symbol, total_buy_vol, total_sell_vol);
       ExecuteDestravarHedge();
       return;
@@ -2563,20 +2554,20 @@ void CBoletaPanel::ExecuteHedge()
    {
       double lot_to_hedge = NormalizeLot(net_exposure, m_symbol);
       trade.Sell(lot_to_hedge, m_symbol, bid, 0, 0, "Hedge Trava Compra");
-      PrintFormat("Hedge Ativado em %s: Vendido %.2f para zerar delta.", m_symbol, lot_to_hedge);
+      PrintFormat("⚡ Hedge Ativado em %s: Vendido %.2f para zerar delta.", m_symbol, lot_to_hedge);
    }
    else if(net_exposure < -0.00001)
    {
       double lot_to_hedge = NormalizeLot(MathAbs(net_exposure), m_symbol);
       trade.Buy(lot_to_hedge, m_symbol, ask, 0, 0, "Hedge Trava Venda");
-      PrintFormat("Hedge Ativado em %s: Comprado %.2f para zerar delta.", m_symbol, lot_to_hedge);
+      PrintFormat("⚡ Hedge Ativado em %s: Comprado %.2f para zerar delta.", m_symbol, lot_to_hedge);
    }
    else
    {
       double lot = GetEffectiveLot();
       trade.Buy(lot, m_symbol, ask, 0, 0, "Hedge Duplo Buy");
       trade.Sell(lot, m_symbol, bid, 0, 0, "Hedge Duplo Sell");
-      PrintFormat("Hedge Duplo Aberto em %s: Buy %.2f e Sell %.2f simultâneos.", m_symbol, lot, lot);
+      PrintFormat("⚡ Hedge Duplo Aberto em %s: Buy %.2f e Sell %.2f simultâneos.", m_symbol, lot, lot);
    }
    UpdateLiveMetrics();
 }
@@ -2663,8 +2654,9 @@ void CBoletaPanel::ToggleAutoTrading()
    
    if(m_auto_trading)
    {
-      PrintFormat("⚡ [AutoScalper] ATIVADO! Monitorando setup de Pullback (EMA%d/EMA%d) no %s...",
-                  m_fast_ema_period, m_slow_ema_period, m_symbol);
+      InitAutoIndicators();
+      PrintFormat("⚡ [AutoScalper] ATIVADO! Monitorando setup EMA%d/EMA%d + ATR em %s (%s)...",
+                  m_fast_ema_period, m_slow_ema_period, m_symbol, GetPeriodName((ENUM_TIMEFRAMES)Period()));
       PlaySound("expert.wav");
    }
    else
@@ -2687,35 +2679,55 @@ void CBoletaPanel::UpdateAutoButtonUI()
    }
 }
 
-//+------------------------------------------------------------------+
-//| Avaliação Causal e Disparo Automático (Strictly Causal Bar Open) |
-//+------------------------------------------------------------------+
+void CBoletaPanel::InitAutoIndicators()
+{
+   if(m_fast_ema_handle == INVALID_HANDLE)
+   {
+      m_fast_ema_handle = iMA(m_symbol, Period(), m_fast_ema_period, 0, MODE_EMA, PRICE_CLOSE);
+      if(m_fast_ema_handle == INVALID_HANDLE)
+         PrintFormat("ERRO: Falha ao criar EMA rápida (%d) para %s: %d", m_fast_ema_period, m_symbol, GetLastError());
+   }
+   if(m_slow_ema_handle == INVALID_HANDLE)
+   {
+      m_slow_ema_handle = iMA(m_symbol, Period(), m_slow_ema_period, 0, MODE_EMA, PRICE_CLOSE);
+      if(m_slow_ema_handle == INVALID_HANDLE)
+         PrintFormat("ERRO: Falha ao criar EMA lenta (%d) para %s: %d", m_slow_ema_period, m_symbol, GetLastError());
+   }
+   if(m_atr_handle == INVALID_HANDLE)
+   {
+      m_atr_handle = iATR(m_symbol, m_atr_timeframe, m_atr_period);
+   }
+}
+
 void CBoletaPanel::CheckAutoSignal()
 {
    if(!m_auto_trading)
       return;
       
-   // 1. Guardião de Capital Diário
+   InitAutoIndicators();
+   if(m_fast_ema_handle == INVALID_HANDLE || m_slow_ema_handle == INVALID_HANDLE)
+      return;
+      
    if(m_daily_lock_active && (m_daily_target_hit || m_daily_loss_hit))
       return;
       
-   // 2. Verificar se já existe posição aberta neste ativo
    CPositionInfo pos;
    for(int i = PositionsTotal() - 1; i >= 0; i--)
    {
       if(pos.SelectByIndex(i))
       {
          if(pos.Symbol() == m_symbol && pos.Magic() == m_magic)
-            return; // Scalper opera estritamente 1 posição por vez
+            return; // 1 posição por vez
       }
    }
    
-   // 3. Execução Causal: Avalia somente na abertura de uma nova barra (sem lookahead)
    datetime cur_bar_time = (datetime)SeriesInfoInteger(m_symbol, Period(), SERIES_LASTBAR_DATE);
-   if(cur_bar_time == 0 || cur_bar_time == m_last_auto_bar)
+   if(cur_bar_time == 0) return;
+   
+   bool is_new_bar = (cur_bar_time != m_last_auto_bar);
+   if(!is_new_bar)
       return;
       
-   // 4. Filtro de Spread Forense
    double ask = SymbolInfoDouble(m_symbol, SYMBOL_ASK);
    double bid = SymbolInfoDouble(m_symbol, SYMBOL_BID);
    double point = SymbolInfoDouble(m_symbol, SYMBOL_POINT);
@@ -2725,54 +2737,63 @@ void CBoletaPanel::CheckAutoSignal()
    double cur_spread_pts = (ask - bid) / point;
    if(cur_spread_pts > m_max_spread_pts)
    {
-      PrintFormat("⚡ [AutoScalper] Entrada bloqueada: Spread atual de %.1f pts excede o limite máximo de %.1f pts.",
-                  cur_spread_pts, m_max_spread_pts);
+      PrintFormat("⚡ [AutoScalper %s] Entrada bloqueada: Spread atual de %.1f pts excede o máximo de %.1f pts.",
+                  m_symbol, cur_spread_pts, m_max_spread_pts);
+      m_last_auto_bar = cur_bar_time;
       return;
    }
    
-   // 5. Filtro de Sessão (Londres/NY se ativo)
    if(m_trade_only_london_ny)
    {
       MqlDateTime dt;
       TimeCurrent(dt);
       if(dt.hour < 7 || dt.hour >= 20)
+      {
+         m_last_auto_bar = cur_bar_time;
          return;
+      }
    }
    
-   // 6. Leitura Causal dos Indicadores na Barra 1 (Barra anterior fechada)
-   double ema_fast[2], ema_slow[2], atr[1];
-   if(CopyBuffer(m_fast_ema_handle, 0, 1, 2, ema_fast) < 2) return;
-   if(CopyBuffer(m_slow_ema_handle, 0, 1, 2, ema_slow) < 2) return;
-   if(CopyBuffer(m_atr_handle, 0, 1, 1, atr) < 1) return;
+   double ema_fast[1], ema_slow[1], atr[1];
+   if(CopyBuffer(m_fast_ema_handle, 0, 1, 1, ema_fast) < 1 ||
+      CopyBuffer(m_slow_ema_handle, 0, 1, 1, ema_slow) < 1 ||
+      CopyBuffer(m_atr_handle, 0, 1, 1, atr) < 1)
+   {
+      return;
+   }
    
-   MqlRates rates[2];
-   if(CopyRates(m_symbol, Period(), 1, 2, rates) < 2) return;
-   
-   // rates[1] é a barra index 1 (última fechada)
-   // ema_fast[1] e ema_slow[1] são as médias calculadas na barra index 1 fechada
-   bool buy_signal  = (ema_fast[1] > ema_slow[1]) && 
-                      (rates[1].low <= ema_fast[1]) && 
-                      (rates[1].close > ema_fast[1]);
-                      
-   bool sell_signal = (ema_fast[1] < ema_slow[1]) && 
-                      (rates[1].high >= ema_fast[1]) && 
-                      (rates[1].close < ema_fast[1]);
-                      
-   if(!buy_signal && !sell_signal)
+   MqlRates rates[1];
+   if(CopyRates(m_symbol, Period(), 1, 1, rates) < 1)
       return;
       
-   // 7. Dimensionamento de Stop Loss e Take Profit
+   bool buy_pullback = (ema_fast[0] > ema_slow[0]) && (rates[0].low <= ema_fast[0]) && (rates[0].close > ema_fast[0]);
+   bool buy_cross    = (ema_fast[0] > ema_slow[0]) && (rates[0].open <= ema_fast[0]) && (rates[0].close > ema_fast[0]);
+   bool buy_signal   = buy_pullback || buy_cross;
+   
+   bool sell_pullback = (ema_fast[0] < ema_slow[0]) && (rates[0].high >= ema_fast[0]) && (rates[0].close < ema_fast[0]);
+   bool sell_cross    = (ema_fast[0] < ema_slow[0]) && (rates[0].open >= ema_fast[0]) && (rates[0].close < ema_fast[0]);
+   bool sell_signal   = sell_pullback || sell_cross;
+   
+   m_last_auto_bar = cur_bar_time;
+   
+   if(!buy_signal && !sell_signal)
+   {
+      PrintFormat("⚡ [AutoScalper %s %s] Barra %s: EMA%d=%.2f, EMA%d=%.2f, Close=%.2f (Spread: %.1f pts). Aguardando retração/gatilho...",
+                  m_symbol, GetPeriodName((ENUM_TIMEFRAMES)Period()), TimeToString(cur_bar_time, TIME_MINUTES),
+                  m_fast_ema_period, ema_fast[0], m_slow_ema_period, ema_slow[0], rates[0].close, cur_spread_pts);
+      return;
+   }
+   
    int sl_pts = m_sl_points;
    if(m_auto_atr && atr[0] > 0.0)
    {
       sl_pts = (int)MathRound((atr[0] * m_atr_sl_mult) / point);
    }
-   if(sl_pts < 30) sl_pts = 30; // Proteção mínima
+   if(sl_pts < 30) sl_pts = 30;
    
    int tp_pts = (int)MathRound(sl_pts * m_rr_ratio);
    if(tp_pts < 10) tp_pts = 10;
    
-   // 8. Dimensionamento de Lote pelo Motor de Risco da Boleta
    double lot = 0.01;
    double tick_val = SymbolInfoDouble(m_symbol, SYMBOL_TRADE_TICK_VALUE);
    double tick_sz  = SymbolInfoDouble(m_symbol, SYMBOL_TRADE_TICK_SIZE);
@@ -2807,13 +2828,16 @@ void CBoletaPanel::CheckAutoSignal()
       double sl    = (m_sl_active && sl_pts > 0) ? NormalizeDouble(entry - (sl_pts * point), digits) : 0.0;
       double tp    = (m_tp_active && tp_pts > 0) ? NormalizeDouble(entry + (tp_pts * point), digits) : 0.0;
       
-      if(trade.Buy(lot, m_symbol, entry, sl, tp, "AutoScalp_v91 Buy"))
+      if(trade.Buy(lot, m_symbol, entry, sl, tp, "AutoScalp Buy"))
       {
-         m_last_auto_bar = cur_bar_time;
-         PrintFormat("⚡ [AutoScalper] COMPRA Executada! Lote: %.2f | Preço: %s | SL: %s (%d pts) | TP: %s (%d pts) | R:R: 1:%.1f",
+         PrintFormat("⚡ [AutoScalper] COMPRA EXECUTADA! Lote: %.2f | Preço: %s | SL: %s (%d pts) | TP: %s (%d pts) | R:R: 1:%.1f",
                      lot, DoubleToString(entry, digits), DoubleToString(sl, digits), sl_pts, DoubleToString(tp, digits), tp_pts, m_rr_ratio);
          UpdateLiveMetrics();
          PlaySound("expert.wav");
+      }
+      else
+      {
+         PrintFormat("⚡ [AutoScalper] Falha na COMPRA (%u): %s", trade.ResultRetcode(), trade.ResultRetcodeDescription());
       }
    }
    else if(sell_signal)
@@ -2822,17 +2846,19 @@ void CBoletaPanel::CheckAutoSignal()
       double sl    = (m_sl_active && sl_pts > 0) ? NormalizeDouble(entry + (sl_pts * point), digits) : 0.0;
       double tp    = (m_tp_active && tp_pts > 0) ? NormalizeDouble(entry - (tp_pts * point), digits) : 0.0;
       
-      if(trade.Sell(lot, m_symbol, entry, sl, tp, "AutoScalp_v91 Sell"))
+      if(trade.Sell(lot, m_symbol, entry, sl, tp, "AutoScalp Sell"))
       {
-         m_last_auto_bar = cur_bar_time;
-         PrintFormat("⚡ [AutoScalper] VENDA Executada! Lote: %.2f | Preço: %s | SL: %s (%d pts) | TP: %s (%d pts) | R:R: 1:%.1f",
+         PrintFormat("⚡ [AutoScalper] VENDA EXECUTADA! Lote: %.2f | Preço: %s | SL: %s (%d pts) | TP: %s (%d pts) | R:R: 1:%.1f",
                      lot, DoubleToString(entry, digits), DoubleToString(sl, digits), sl_pts, DoubleToString(tp, digits), tp_pts, m_rr_ratio);
          UpdateLiveMetrics();
          PlaySound("expert.wav");
       }
+      else
+      {
+         PrintFormat("⚡ [AutoScalper] Falha na VENDA (%u): %s", trade.ResultRetcode(), trade.ResultRetcodeDescription());
+      }
    }
 }
-
 void CBoletaPanel::ExecuteParcialManual()
 {
    CTrade trade;
