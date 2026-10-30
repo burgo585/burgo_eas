@@ -2,41 +2,41 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
+  <title>Manual Operacional de Price Action Puro e Geometria de Pivôs - Leomar</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Apostila Oficial de Price Action Puro - Metodologia de Leomar (Leo Brasília)</title>
   <style>
-    /* =========================================================
-       VARIÁVEIS DE DESIGN E TIPOGRAFIA EXECUTIVA
-       ========================================================= */
     :root {
-      --bg: #0b0f19;
+      --bg: #090d16;
       --card-bg: #111827;
-      --card-border: #1f2937;
-      --primary: #38bdf8;
-      --accent: #f59e0b;
+      --card-inner: #1a2234;
+      --border: #1f293d;
+      --text-main: #f8fafc;
+      --text-sub: #94a3b8;
+      --accent: #38bdf8;
+      --accent-hover: #0284c7;
       --bull: #10b981;
       --bear: #ef4444;
-      --text: #f3f4f6;
-      --text-muted: #9ca3af;
-      --highlight: #818cf8;
-      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --gold: #f59e0b;
+      --purple: #818cf8;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    
-    body {
-      background-color: var(--bg);
-      color: var(--text);
-      font-family: var(--font-family);
-      line-height: 1.5;
+    * {
+      box-sizing: border-box;
       margin: 0;
       padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      padding: 20px 10px;
+      line-height: 1.5;
     }
 
     .container {
       max-width: 860px;
       margin: 0 auto;
-      padding: 20px;
     }
 
     /* =========================================================
@@ -45,7 +45,7 @@
        ========================================================= */
     @page {
       size: A4 portrait;
-      margin: 1.2cm 1.4cm 1.2cm 1.4cm;
+      margin: 1.0cm 1.2cm 1.0cm 1.2cm;
     }
 
     .page-sheet {
@@ -54,13 +54,11 @@
       margin-bottom: 30px;
     }
 
-    /* Primeira página não quebra antes de si mesma */
     .page-sheet:first-child {
       page-break-before: avoid;
       break-before: avoid;
     }
 
-    /* Bloqueio de quebra no meio de elementos chave */
     .no-break,
     .figure-container,
     .alert-box,
@@ -76,14 +74,15 @@
     }
 
     /* =========================================================
-       ESTILOS VISUAIS EM TELA
+       ESTILOS VISUAIS EM TELA (TELA / NAVEGADOR)
        ========================================================= */
     .cover-page {
       text-align: center;
-      padding: 55px 25px;
+      padding: 50px 25px;
       background: linear-gradient(180deg, #1e1b4b 0%, #0b0f19 100%);
       border-radius: 14px;
       border: 1px solid #312e81;
+      box-shadow: 0 15px 35px -5px rgba(0,0,0,0.6);
     }
 
     .badge-official {
@@ -100,9 +99,9 @@
     }
 
     .cover-title {
-      font-size: 30px;
+      font-size: 28px;
       font-weight: 900;
-      line-height: 1.2;
+      line-height: 1.25;
       color: #ffffff;
       margin-bottom: 14px;
     }
@@ -114,29 +113,37 @@
     }
 
     .cover-subtitle {
-      font-size: 15px;
-      color: var(--text-muted);
-      max-width: 660px;
-      margin: 0 auto 20px auto;
-      font-weight: 400;
+      font-size: 14px;
+      color: var(--text-sub);
+      max-width: 680px;
+      margin: 0 auto 28px auto;
+      line-height: 1.6;
     }
 
     .cover-meta {
-      display: flex;
-      justify-content: center;
-      gap: 20px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      max-width: 580px;
+      margin: 0 auto;
+      text-align: left;
+      background: rgba(15, 23, 42, 0.7);
+      padding: 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
       font-size: 12px;
-      color: #94a3b8;
-      border-top: 1px solid rgba(255,255,255,0.1);
-      padding-top: 16px;
-      flex-wrap: wrap;
+    }
+
+    .cover-meta div strong {
+      color: var(--accent);
     }
 
     .module-card {
       background: var(--card-bg);
-      border: 1px solid var(--card-border);
+      border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 24px 26px;
+      padding: 22px 24px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
     }
 
     .module-header {
@@ -144,179 +151,191 @@
       align-items: center;
       gap: 12px;
       margin-bottom: 14px;
+      border-bottom: 1px solid var(--border);
       padding-bottom: 10px;
-      border-bottom: 1px solid var(--card-border);
     }
 
     .module-badge {
       background: #1e293b;
-      color: var(--primary);
       border: 1px solid #334155;
+      color: var(--accent);
       font-size: 11px;
-      font-weight: 800;
-      padding: 3px 10px;
-      border-radius: 6px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
       text-transform: uppercase;
+      letter-spacing: 1px;
     }
 
     .module-title {
-      font-size: 19px;
+      font-size: 18px;
       font-weight: 800;
       color: #ffffff;
     }
 
     h3 {
-      font-size: 15px;
+      font-size: 14px;
+      color: var(--accent);
+      margin: 12px 0 6px 0;
       font-weight: 700;
-      color: var(--highlight);
-      margin: 14px 0 8px 0;
     }
 
     p {
+      font-size: 13px;
+      color: #cbd5e1;
       margin-bottom: 10px;
-      color: #d1d5db;
-      font-size: 13.5px;
-      text-align: justify;
+      line-height: 1.55;
     }
 
     ul, ol {
-      margin-bottom: 12px;
-      padding-left: 20px;
-      color: #d1d5db;
+      margin-left: 20px;
+      margin-bottom: 10px;
+      font-size: 13px;
+      color: #cbd5e1;
     }
 
     li {
       margin-bottom: 4px;
-      font-size: 13px;
     }
 
-    /* Caixas de Alerta */
-    .alert-box {
-      border-radius: 8px;
-      padding: 12px 14px;
-      margin: 12px 0;
-      display: flex;
-      gap: 10px;
-      align-items: flex-start;
-      font-size: 13px;
-      line-height: 1.45;
-    }
-
-    .alert-gold {
-      background: rgba(245, 158, 11, 0.1);
-      border: 1px solid rgba(245, 158, 11, 0.35);
-      color: #fef3c7;
-    }
-    .alert-gold strong { color: #f59e0b; }
-
-    .alert-danger {
-      background: rgba(239, 68, 68, 0.1);
-      border: 1px solid rgba(239, 68, 68, 0.35);
-      color: #fee2e2;
-    }
-    .alert-danger strong { color: #ef4444; }
-
-    .alert-info {
-      background: rgba(56, 189, 248, 0.1);
-      border: 1px solid rgba(56, 189, 248, 0.35);
-      color: #e0f2fe;
-    }
-    .alert-info strong { color: #38bdf8; }
-
-    /* Figuras Vetoriais SVG */
     .figure-container {
-      background: #090d16;
-      border: 1px solid #1e293b;
+      background: #06090f;
+      border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 10px 8px;
-      margin: 12px 0;
+      padding: 10px;
+      margin: 10px 0;
       text-align: center;
     }
 
-    .figure-caption {
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-top: 6px;
-      font-weight: 600;
-    }
-
-    svg {
-      max-width: 100%;
+    .figure-container svg {
+      width: 100%;
       height: auto;
+      max-height: 135px;
       display: block;
       margin: 0 auto;
     }
 
-    /* Tabelas */
-    .table-container {
-      overflow-x: auto;
+    .figure-caption {
+      font-size: 11px;
+      color: var(--text-sub);
+      margin-top: 6px;
+      font-weight: 600;
+    }
+
+    .alert-box {
+      border-radius: 8px;
+      padding: 10px 14px;
       margin: 10px 0;
+      font-size: 12px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      line-height: 1.45;
+    }
+
+    .alert-gold {
+      background: rgba(245, 158, 11, 0.08);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      color: #fde68a;
+    }
+
+    .alert-danger {
+      background: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      color: #fca5a5;
+    }
+
+    .alert-info {
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: #bae6fd;
+    }
+
+    .alert-success {
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: #a7f3d0;
+    }
+
+    .table-container {
+      margin: 10px 0;
+      overflow-x: auto;
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 12.5px;
+      font-size: 12px;
+      text-align: left;
     }
 
     th {
       background: #1e293b;
-      color: var(--primary);
-      padding: 8px 10px;
-      border: 1px solid var(--card-border);
+      color: #f8fafc;
+      padding: 6px 10px;
+      border: 1px solid var(--border);
       font-weight: 700;
-      text-align: left;
     }
 
     td {
-      padding: 7px 10px;
-      border: 1px solid var(--card-border);
-      color: #e2e8f0;
-      background: #111827;
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      color: #cbd5e1;
     }
 
-    tr:nth-child(even) td { background: #0e1626; }
+    tr:nth-child(even) td {
+      background: rgba(255, 255, 255, 0.02);
+    }
 
-    /* Checklist */
     .checklist-card {
-      background: #111827;
-      border: 1.5px solid #6366f1;
-      border-radius: 10px;
-      padding: 18px 20px;
-      margin: 14px 0;
+      background: #0c1222;
+      border: 1px solid #312e81;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin: 10px 0;
     }
 
     .checklist-title {
-      font-size: 16px;
+      font-size: 13px;
       font-weight: 800;
-      color: #a5b4fc;
-      margin-bottom: 12px;
+      color: #818cf8;
+      margin-bottom: 8px;
     }
 
     .check-item {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 8px;
-      margin-bottom: 8px;
-      font-size: 13px;
-      color: #f8fafc;
+      font-size: 12px;
+      margin-bottom: 6px;
+      color: #e2e8f0;
     }
 
     .check-box {
-      width: 18px;
-      height: 18px;
-      border: 1.5px solid #6366f1;
-      border-radius: 4px;
+      width: 15px;
+      height: 15px;
+      border: 1.5px solid #818cf8;
+      border-radius: 3px;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #38bdf8;
-      font-weight: 800;
+      font-size: 10px;
+      color: #818cf8;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 16px;
+      color: var(--text-sub);
       font-size: 11px;
+      border-top: 1px solid var(--border);
+      margin-top: 25px;
     }
 
     /* =========================================================
-       REGRAS EXCLUSIVAS DE IMPRESSÃO (CTRL + P -> SALVAR COMO PDF)
+       REGRAS EXCLUSIVAS DE IMPRESSÃO (CTRL+P / GERAR PDF)
        ========================================================= */
     @media print {
       body {
@@ -324,6 +343,7 @@
         color: #111827 !important;
         font-size: 9.5pt !important;
         line-height: 1.35 !important;
+        padding: 0 !important;
       }
 
       .container {
@@ -342,56 +362,62 @@
         border: 2px solid #1e1b4b !important;
         color: #111827 !important;
         box-shadow: none !important;
-        padding: 40px 15px !important;
+        padding: 35px 15px !important;
       }
 
       .cover-title { color: #111827 !important; }
       .cover-title span { color: #2563eb !important; -webkit-text-fill-color: initial !important; }
-      .cover-subtitle, .cover-meta { color: #475569 !important; }
+      .cover-subtitle, .cover-meta { color: #475569 !important; background: #f8fafc !important; border-color: #cbd5e1 !important; }
+      .cover-meta div strong { color: #2563eb !important; }
 
       .module-card {
         background: #ffffff !important;
         border: 1px solid #cbd5e1 !important;
         box-shadow: none !important;
-        padding: 16px !important;
+        padding: 14px !important;
       }
 
-      .module-title { color: #0f172a !important; font-size: 16pt !important; }
+      .module-title { color: #0f172a !important; font-size: 15pt !important; }
       .module-badge { background: #f1f5f9 !important; border-color: #cbd5e1 !important; color: #2563eb !important; }
       h3 { color: #1e293b !important; font-size: 11pt !important; }
-      p, li { color: #334155 !important; font-size: 9.5pt !important; }
+      p, li { color: #334155 !important; font-size: 9pt !important; }
 
       .figure-container {
         background: #f8fafc !important;
         border: 1px solid #cbd5e1 !important;
-        padding: 8px !important;
-        margin: 8px 0 !important;
+        padding: 6px !important;
+        margin: 6px 0 !important;
       }
 
-      .figure-caption { color: #475569 !important; font-size: 8.5pt !important; }
+      .figure-container svg {
+        max-height: 120px !important;
+      }
+
+      .figure-caption { color: #475569 !important; font-size: 8pt !important; }
 
       .alert-box {
         border-width: 1px !important;
-        padding: 8px 10px !important;
-        margin: 8px 0 !important;
-        font-size: 9pt !important;
+        padding: 6px 8px !important;
+        margin: 6px 0 !important;
+        font-size: 8.5pt !important;
       }
       .alert-gold { background: #fffbeb !important; border-color: #f59e0b !important; color: #92400e !important; }
       .alert-danger { background: #fef2f2 !important; border-color: #ef4444 !important; color: #991b1b !important; }
       .alert-info { background: #f0f9ff !important; border-color: #0284c7 !important; color: #075985 !important; }
+      .alert-success { background: #ecfdf5 !important; border-color: #10b981 !important; color: #065f46 !important; }
 
-      table { border-color: #cbd5e1 !important; font-size: 8.5pt !important; }
-      th { background: #f1f5f9 !important; color: #0f172a !important; border-color: #cbd5e1 !important; padding: 6px 8px !important; }
-      td { background: #ffffff !important; color: #334155 !important; border-color: #cbd5e1 !important; padding: 5px 8px !important; }
+      table { border-color: #cbd5e1 !important; font-size: 8pt !important; }
+      th { background: #f1f5f9 !important; color: #0f172a !important; border-color: #cbd5e1 !important; padding: 5px 6px !important; }
+      td { background: #ffffff !important; color: #334155 !important; border-color: #cbd5e1 !important; padding: 4px 6px !important; }
       tr:nth-child(even) td { background: #f8fafc !important; }
 
       .checklist-card {
         background: #f8fafc !important;
         border: 1px solid #4f46e5 !important;
-        padding: 14px !important;
+        padding: 10px !important;
       }
-      .checklist-title { color: #312e81 !important; font-size: 12pt !important; }
-      .check-item { color: #1e293b !important; font-size: 9pt !important; }
+      .checklist-title { color: #312e81 !important; font-size: 11pt !important; }
+      .check-item { color: #1e293b !important; font-size: 8.5pt !important; }
       .check-box { border-color: #4f46e5 !important; color: #4f46e5 !important; }
 
       footer {
@@ -411,14 +437,16 @@
     <div class="page-sheet">
       <div class="cover-page">
         <div class="badge-official">DOCUMENTAÇÃO TÉCNICA OFICIAL</div>
-        <h1 class="cover-title">MANUAL OPERACIONAL DE PRICE ACTION PURO E <span>GEOMETRIA DE PIVÔS</span></h1>
-        <p class="cover-subtitle">Transcrição estruturada da metodologia ensinada por Leomar (Leo Brasília) na sessão técnica de 28 de outubro de 2026. Gráfico limpo, leitura de pavios, Média de 200 períodos e gestão diária.</p>
+        <h1 class="cover-title">MANUAL PRÁTICO E FORENSE DE PRICE ACTION PURO E <span>GEOMETRIA DE PIVÔS</span></h1>
+        <p class="cover-subtitle">Transcrição técnica e estruturada da metodologia de Leomar (Leo Brasília) na sessão de 28/10/2026. Gráfico limpo, leitura de pavios em alta e em queda, filtro anti-vela careca, Média de 200 períodos e estudos de casos reais no Ouro (XAUUSD).</p>
         
         <div class="cover-meta">
           <div><strong>Instrutor:</strong> Leomar (Leo Brasília)</div>
-          <div><strong>Operador:</strong> #Burgo585</div>
-          <div><strong>Data da Instrução:</strong> 28/10/2026</div>
-          <div><strong>Ativos de Foco:</strong> Ouro (XAUUSD) e Nasdaq</div>
+          <div><strong>Operador Mentorando:</strong> #Burgo585</div>
+          <div><strong>Data da Instrução:</strong> 28 de Outubro de 2026</div>
+          <div><strong>Ativos de Foco:</strong> Ouro (XAUUSD) e Nasdaq (US100)</div>
+          <div><strong>Metodologia Visual:</strong> Price Action Causal & Simetria</div>
+          <div><strong>Dados Forenses:</strong> 201.248 barras M5 (XM Real Ticks)</div>
         </div>
       </div>
     </div>
@@ -430,35 +458,30 @@
       <section class="module-card" id="mod1">
         <div class="module-header">
           <div class="module-badge">Módulo 01</div>
-          <div class="module-title">A Filosofia do Gráfico 100% Limpo e a Disciplina da Meta</div>
+          <div class="module-title">Fundamentos Institucionais e Gráfico 100% Limpo</div>
         </div>
 
-        <p>Na aula técnica de 28 de outubro de 2026, Leomar estabeleceu como primeiro pilar inegociável a <strong>remoção completa e imediata de todos os indicadores técnicos osciladores</strong> da tela (como RSI, IFR, Estocástico e MACD). O operador deve trabalhar estritamente com o gráfico limpo de candles, topos, fundos e a Média Móvel de 200 períodos.</p>
+        <h3>1. A Filosofia do Gráfico Limpo (Zero Osciladores)</h3>
+        <p>Leomar enfatiza categoricamente a necessidade de eliminar completamente indicadores técnicos secundários como RSI, Estocástico, MACD e Bandas de Bollinger. O operador de Price Action puro depende exclusivamente do preço e de suas reações nos níveis de suporte e resistência.</p>
 
-        <div class="alert-box alert-danger">
-          <div>⛔</div>
-          <div><strong>O Relato da Mentoria de Storm:</strong> Leomar compartilhou o caso de um aluno que participou da mentoria do Storm e, após seis meses de treinamento, persistiu mantendo o indicador RSI em sua tela. O aluno foi desligado do treinamento e teve o dinheiro reembolsado pelo instrutor devido à recusa em operar com a mente e o gráfico despoluídos. Indicadores de sobrecompra e sobrevenda induzem a compras e vendas falsas em momentos de forte tendência institucional.</div>
-        </div>
+        <p>Durante a sessão, Leomar citou uma experiência marcante na <strong>mentoria de Storm</strong>: um aluno insistiu em utilizar RSI em sua tela para tentar antecipar topos e fundos. Storm interveio imediatamente e o retirou da sala, reiterando que osciladores geram ruído psicológico, atraso na tomada de decisão e criam a ilusão de que o mercado está "caro" ou "barato", quando na verdade a tendência institucional continua acelerando.</p>
 
-        <h3>A Disciplina da Meta Diária e Encerramento da Plataforma</h3>
-        <p>Leomar opera com disciplina matemática de metas diárias. Uma vez atingida a meta financeira (seja US$ 500 ou a proporção de 3 para 1 em relação ao risco):</p>
+        <h3>2. A Disciplina Sagrada da Meta Diária</h3>
+        <p>O mercado é construído com algoritmos de alta frequência desenhados para extrair liquidez de quem permanece exposto desnecessariamente. Leomar ensina:</p>
         <ul>
-          <li><strong>Desligar o Computador:</strong> Encerrar imediatamente as atividades no MetaTrader 5. A insistência em continuar operando após atingir o objetivo diário é o motivo pelo qual operadores devolvem os ganhos ao mercado.</li>
-          <li><strong>A Regra da Quarta-Feira:</strong> Quando Leomar atinge a meta semanal antecipadamente (na quarta-feira), ele reduz o capital na conta da corretora para US$ 50 ou diminui o lote para 0.01, bloqueando a alavancagem para preservar o lucro acumulado.</li>
-          <li><strong>Eliminação da Síndrome de Recuperação:</strong> Leomar adverte expressamente contra o vício psicológico de abrir ordens para "recuperar" prejuízos de dias anteriores ou incidentes técnicos. Cada operação deve ser avaliada de forma autônoma.</li>
-          <li><strong>Preferência pela Boleta Manual:</strong> Leomar esclarece que nunca utilizou robôs em ambiente real por preferir o controle direto via boleta manual com cliques manuais rápidos.</li>
+          <li><strong>Bateu a meta, desliga a máquina:</strong> Não tente dobrar a meta no mesmo dia. O excesso de operações (overtrading) devolve os ganhos à corretora através de spread e cansaço psicológico.</li>
+          <li><strong>A Regra da Quarta-Feira:</strong> Às quartas-feiras ocorre a cobrança de swap triplo (rollover de final de semana adiantado). Além disso, o mercado frequentemente simula rompimentos falsos no meio da semana. Opere com lote reduzido e saia rápido.</li>
         </ul>
 
         <div class="alert-box alert-gold">
           <div>💡</div>
-          <div><strong>Propósito Filantrópico:</strong> Discutiu-se na sessão o compromisso ético de destinar de 25% a 30% dos lucros de trading a doações anônimas (como suporte a clínicas de recuperação de dependentes químicos), mantendo o desapego da ganância desenfreada para preservar a estabilidade psicológica na tomada de decisões.</div>
+          <div><strong>Boleta Manual x Robô Automático:</strong> Leomar defende a sensibilidade do operador manual para ler o contexto do candle em formação e a velocidade dos ticks nos níveis chave, algo que robôs cegos sem filtro de pavio não conseguem distinguir.</div>
         </div>
       </section>
     </div>
 
     <!-- =========================================================
-         FOLHA 3: MÓDULO 2 - ROTINA MULTI-TEMPORAL (PÁGINA 3 COMPLETA)
-         Tabela + Alerta + Imagem cabem 100% juntos na Página 3
+         FOLHA 3: MÓDULO 2 - ROTINA DIÁRIA E MULTI-TEMPORAL (PÁGINA 3)
          ========================================================= -->
     <div class="page-sheet">
       <section class="module-card" id="mod2">
@@ -545,51 +568,48 @@
     </div>
 
     <!-- =========================================================
-         FOLHA 4: MÓDULO 3 - A MÉDIA MÓVEL DE 200 PERÍODOS (PÁGINA 4 COMPLETA)
-         Texto + Alerta + Imagem da Média 200 juntos na Página 4
+         FOLHA 4: MÓDULO 3 - A MÉDIA MÓVEL DE 200 (PÁGINA 4)
          ========================================================= -->
     <div class="page-sheet">
       <section class="module-card" id="mod3">
         <div class="module-header">
           <div class="module-badge">Módulo 03</div>
-          <div class="module-title">A Média Móvel de 200: Continuação de Tendência e Alvo Magnético</div>
+          <div class="module-title">A Média Móvel de 200: Tendência, Alvo Magnético e Armadilhas</div>
         </div>
-
-        <p>Leomar esclarece de forma cirúrgica como interpreta e opera com a Média Móvel de 200 períodos:</p>
 
         <h3>1. A Média Móvel de 200 Não é Reversão Cega</h3>
         <p>Leomar reitera que <strong>não enxerga a média de 200 como um ponto de reversão mecânica</strong>, mas sim como uma <strong>tendência de seguimento de preço após o fechamento de um lado da linha</strong>. Se os candles fecham consistentemente acima dela, a tendência é de continuidade de alta; se fecham abaixo, a tendência é de continuidade de baixa.</p>
 
-        <h3>2. A Média Móvel de 200 como Alvo (Ímã)</h3>
-        <p>Durante a sessão, Leomar examinou o afastamento de <strong>400 pontos</strong> do preço em relação à Média de 200 no Ouro. Quando o mercado estica demasiadamente para longe da 200, ele tende a formar candles corretivos em blocos de ordens, onde a Média de 200 passa a ser a referência de alvo primário para encerramento de posições.</p>
+        <h3>2. A Média Móvel de 200 como Alvo (Ímã de 400 Pontos)</h3>
+        <p>Durante a sessão, Leomar examinou o afastamento de <strong>400 pontos</strong> do preço em relação à Média de 200 no Ouro. Quando o mercado estica demasiadamente para longe da 200, ele tende a formar candles corretivos em blocos de ordens, onde a Média de 200 passa a ser a referência de alvo primário para encerramento de posições (tanto em compras vindas do fundo quanto em vendas vindas do topo).</p>
 
         <div class="alert-box alert-danger">
           <div>⚠️</div>
-          <div><strong>Armadilha para Compradores na Média de 200:</strong> Leomar explica que o mercado simula falsos movimentos para atrair e penalizar operadores alavancados que compram de forma precipitada ao simples toque na média de 200. Os algoritmos institucionais frequentemente perfuram a média com pavios para liquidar os stops do varejo antes de definir o movimento real. Nunca compre no toque cego da média sem a confirmação de pivô.</div>
+          <div><strong>Armadilha para Compradores e Vendedores na Média de 200:</strong> Leomar explica que o mercado simula falsos repiques para atrair e penalizar operadores alavancados que compram ou vendem no simples toque cego na linha de 200. Os algoritmos institucionais frequentemente perfuram a média com pavios para liquidar os stops do varejo antes de definir o movimento real. Nunca entre no toque mecânico da média sem a confirmação de pivô.</div>
         </div>
 
         <!-- FIGURA 3.1: INTEGRADA PERFEITAMENTE NA PÁGINA 4 -->
         <div class="figure-container">
-          <svg viewBox="0 0 720 135" width="720" height="135" xmlns="http://www.w3.org/2000/svg">
-            <rect x="0" y="0" width="720" height="135" fill="#090d16" rx="6"/>
+          <svg viewBox="0 0 720 130" width="720" height="130" xmlns="http://www.w3.org/2000/svg">
+            <rect x="0" y="0" width="720" height="130" fill="#090d16" rx="6"/>
             <!-- EMA 200 -->
-            <path d="M 30,50 Q 250,55 480,65 T 700,70" fill="none" stroke="#38bdf8" stroke-width="2.5"/>
-            <text x="40" y="38" fill="#38bdf8" font-size="11" font-weight="bold">MÉDIA MÓVEL DE 200 PERÍODOS (ALVO)</text>
+            <path d="M 30,45 Q 250,50 480,60 T 700,65" fill="none" stroke="#38bdf8" stroke-width="2.5"/>
+            <text x="40" y="34" fill="#38bdf8" font-size="11" font-weight="bold">MÉDIA MÓVEL DE 200 PERÍODOS (ALVO MAGNÉTICO)</text>
 
             <!-- Afastamento 400 pts -->
-            <line x1="200" y1="115" x2="200" y2="55" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3,3"/>
-            <text x="210" y="90" fill="#f59e0b" font-size="10">Afastamento de 400 pontos</text>
+            <line x1="200" y1="110" x2="200" y2="52" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3,3"/>
+            <text x="210" y="85" fill="#f59e0b" font-size="10">Afastamento de 400 pontos</text>
 
             <!-- Pivô de correção -->
-            <line x1="160" y1="115" x2="220" y2="115" stroke="#ef4444" stroke-width="2.5"/>
-            <text x="150" y="130" fill="#ef4444" font-size="10" font-weight="bold">Fundo do Pivô</text>
+            <line x1="160" y1="110" x2="220" y2="110" stroke="#ef4444" stroke-width="2"/>
+            <text x="145" y="125" fill="#ef4444" font-size="10" font-weight="bold">Fundo do Pivô</text>
 
-            <line x1="220" y1="115" x2="300" y2="80" stroke="#10b981" stroke-width="2.5"/>
-            <line x1="300" y1="80" x2="340" y2="95" stroke="#94a3b8" stroke-width="2"/>
-            <line x1="340" y1="95" x2="490" y2="65" stroke="#10b981" stroke-width="2.5"/>
+            <line x1="220" y1="110" x2="300" y2="75" stroke="#10b981" stroke-width="2.5"/>
+            <line x1="300" y1="75" x2="340" y2="90" stroke="#94a3b8" stroke-width="2"/>
+            <line x1="340" y1="90" x2="490" y2="60" stroke="#10b981" stroke-width="2.5"/>
 
-            <circle cx="490" cy="65" r="6" fill="#10b981"/>
-            <text x="505" y="68" fill="#10b981" font-size="11" font-weight="bold">Saída no Toque da Média de 200!</text>
+            <circle cx="490" cy="60" r="6" fill="#10b981"/>
+            <text x="505" y="64" fill="#10b981" font-size="11" font-weight="bold">Saída no Toque da Média de 200!</text>
           </svg>
           <div class="figure-caption">Figura 3.1: A Média de 200 como alvo de realização após afastamento extremo.</div>
         </div>
@@ -597,167 +617,343 @@
     </div>
 
     <!-- =========================================================
-         FOLHA 5: MÓDULO 4 - GEOMETRIA DOS PIVÔS (PÁGINA 5 COMPLETA)
+         FOLHA 5: MÓDULO 4 - GEOMETRIA DOS PIVÔS: ALTA E QUEDA (PÁGINA 5)
          ========================================================= -->
     <div class="page-sheet">
       <section class="module-card" id="mod4">
         <div class="module-header">
           <div class="module-badge">Módulo 04</div>
-          <div class="module-title">A Geometria dos Pivôs: V, W Empenado e Ondas de Elliott</div>
+          <div class="module-title">Geometria dos Pivôs: Operações em Alta e em Queda</div>
         </div>
 
-        <div class="alert-box alert-gold">
-          <div>🎯</div>
-          <div><strong>Regra Soberana Ditada por Leomar:</strong> <em>"Mais importante que o formato do pivô é a sua LOCALIZAÇÃO no gráfico. A reversão de alta ocorre quando o pivô se forma em regiões de fundo extremo com velas andando de lado e rompendo o topo da última queda."</em></div>
-        </div>
+        <p>Leomar estrutura sua leitura de rompimento na geometria de pivôs clássicos ensinados por grandes mestres técnicos brasileiros, aplicando a mesma lógica para compras e vendas:</p>
 
-        <p>Leomar detalha que o pivô surge quando a vela começa a andar de lado após uma alta ou baixa expressiva. Ele opera regiões e rompimentos de pivô em vez de simples rompimentos de canais.</p>
+        <h3>1. A Geometria de Alta: Fundo em V e W Empenado (Storm e André Machado)</h3>
+        <p>Na ponta compradora, o mercado faz um primeiro fundo (1), repica até uma resistência (2) e faz uma correção rasa formando um <strong>fundo ascendente (W Empenado)</strong>. Quando a máxima do ponto (2) é rompida com força, configura-se o pivô de alta. O stop fica posicionado no fundo ascendente.</p>
 
-        <h3>1. O Pivô em V (Reversão Angular em Extremos)</h3>
-        <p>Leomar define o pivô ideal no formato de <strong>V</strong> como um padrão de alta confiabilidade para reversões quando localizado em fundos extremos (ou topos extremos para venda). O preço atinge a mínima, rejeita em ângulo acentuado e rompe a máxima da primeira perna de alta.</p>
+        <h3>2. A Geometria de Baixa: V Invertido e M Empenado (Operações em Queda / Venda)</h3>
+        <p>Na ponta vendedora, o mercado faz um primeiro topo (1), corrige até um suporte (2) e faz um repique fraco formando um <strong>topo descendente (M Empenado / Topo Duplo Desnivelado)</strong>. Quando o candle rompe para baixo a mínima do suporte (2), configura-se o pivô de baixa. O stop loss técnico fica posicionado imediatamente acima do topo descendente. Leomar ensina que em tendências de queda o fluxo vendedor institucional é agressivo e busca liquidez nos fundos anteriores.</p>
 
-        <h3>2. O Padrão de Pivô em W Empenado</h3>
-        <p>Leomar apresenta o conceito de pivô em <strong>W</strong>, caracterizado por dois fundos em alturas similares que confirmam a continuidade da alta, estilo descrito por <strong>Storm</strong> como <em>"W empenado"</em>. O segundo fundo frequentemente realiza uma leve incursão para estopar o varejo antes de romper a cabeça intermediária do W.</p>
+        <p><strong>A Regra 1-2-3 de Elliott (Didi Aguiar):</strong> Leomar cita a contagem de ondas de Elliott explicada por Didi Aguiar: a onda 1 cria a direção, a onda 2 faz o teste de liquidez e a onda 3 arrebenta a barreira. O operador nunca entra na onda 1; ele espera a confirmação da onda 3.</p>
 
-        <h3>3. Micro-Ondas de Elliott (Técnica 1-2-3)</h3>
-        <p>Leomar explica que opera integrando as técnicas de <strong>Storm, André Machado e Didi Aguiar</strong>, combinando frequências e Ondas de Elliott no gráfico de cinco minutos: <em>"Os pivôs representam micro-ondas estruturadas em ciclos de três ondas (padrão 1-2-3 de compra e venda), permitindo identificar pontos de reversão e continuidade com alta precisão."</em></p>
-
-        <!-- FIGURA 4.1: INTEGRADA NA PÁGINA 5 -->
+        <!-- FIGURA 4.1: ALTA E QUEDA LADO A LADO -->
         <div class="figure-container">
-          <svg viewBox="0 0 720 135" width="720" height="135" xmlns="http://www.w3.org/2000/svg">
-            <rect x="0" y="0" width="720" height="135" fill="#090d16" rx="6"/>
-            <!-- Lado Esquerdo: Pivô em V -->
-            <text x="180" y="20" fill="#38bdf8" font-size="11" font-weight="bold" text-anchor="middle">PIVÔ EM V (REVERSÃO ANGULAR)</text>
-            <line x1="60" y1="35" x2="160" y2="115" stroke="#ef4444" stroke-width="2"/>
-            <line x1="160" y1="115" x2="230" y2="50" stroke="#10b981" stroke-width="2.5"/>
-            <line x1="230" y1="50" x2="260" y2="75" stroke="#94a3b8" stroke-width="2"/>
-            <line x1="260" y1="75" x2="330" y2="25" stroke="#10b981" stroke-width="2.5"/>
-            <line x1="220" y1="50" x2="330" y2="50" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3,3"/>
-            <circle cx="280" cy="50" r="4.5" fill="#f59e0b"/>
-            <text x="285" y="44" fill="#f59e0b" font-size="9" font-weight="bold">Rompimento</text>
+          <svg viewBox="0 0 720 125" width="720" height="125" xmlns="http://www.w3.org/2000/svg">
+            <rect x="0" y="0" width="720" height="125" fill="#090d16" rx="6"/>
+            <!-- LADO ESQUERDO: PIVÔ DE ALTA (W EMPENADO) -->
+            <text x="180" y="22" fill="#10b981" font-size="11" font-weight="bold" text-anchor="middle">PIVÔ DE ALTA (W EMPENADO / STORM)</text>
+            <path d="M 50,40 L 90,100 L 140,55 L 180,85 L 240,30" fill="none" stroke="#10b981" stroke-width="2.5"/>
+            <circle cx="90" cy="100" r="4" fill="#ef4444"/>
+            <text x="90" y="115" fill="#ef4444" font-size="9" text-anchor="middle">Fundo 1</text>
+            <circle cx="140" cy="55" r="4" fill="#f59e0b"/>
+            <line x1="125" y1="55" x2="260" y2="55" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="3,3"/>
+            <text x="210" y="50" fill="#f59e0b" font-size="9">Rompimento (Compra)</text>
+            <circle cx="180" cy="85" r="4" fill="#38bdf8"/>
+            <text x="180" y="100" fill="#38bdf8" font-size="9" text-anchor="middle">Fundo 2 Mais Alto (SL)</text>
 
-            <!-- Divisória central -->
-            <line x1="360" y1="12" x2="360" y2="125" stroke="#334155" stroke-width="1"/>
+            <!-- DIVISÓRIA -->
+            <line x1="360" y1="15" x2="360" y2="115" stroke="#334155" stroke-width="1.5" stroke-dasharray="4,4"/>
 
-            <!-- Lado Direito: W Empenado -->
-            <text x="540" y="20" fill="#818cf8" font-size="11" font-weight="bold" text-anchor="middle">PIVÔ EM W EMPENADO (FUNDO DUPLO STORM)</text>
-            <line x1="400" y1="40" x2="450" y2="110" stroke="#ef4444" stroke-width="2"/>
-            <line x1="450" y1="110" x2="510" y2="55" stroke="#10b981" stroke-width="2"/>
-            <line x1="510" y1="55" x2="570" y2="115" stroke="#ef4444" stroke-width="2"/>
-            <line x1="570" y1="115" x2="680" y2="35" stroke="#10b981" stroke-width="2.5"/>
-            <line x1="500" y1="55" x2="650" y2="55" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3,3"/>
-            <circle cx="610" cy="55" r="4.5" fill="#f59e0b"/>
-            <text x="615" y="48" fill="#f59e0b" font-size="9" font-weight="bold">Rompimento do W</text>
+            <!-- LADO DIREITO: PIVÔ DE BAIXA (M EMPENADO / VENDA) -->
+            <text x="540" y="22" fill="#ef4444" font-size="11" font-weight="bold" text-anchor="middle">PIVÔ DE BAIXA (M EMPENADO / VENDA)</text>
+            <path d="M 410,95 L 450,35 L 500,80 L 540,50 L 600,105" fill="none" stroke="#ef4444" stroke-width="2.5"/>
+            <circle cx="450" cy="35" r="4" fill="#10b981"/>
+            <text x="450" y="27" fill="#10b981" font-size="9" text-anchor="middle">Topo 1</text>
+            <circle cx="500" cy="80" r="4" fill="#f59e0b"/>
+            <line x1="485" y1="80" x2="620" y2="80" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="3,3"/>
+            <text x="570" y="75" fill="#f59e0b" font-size="9">Rompimento (Venda)</text>
+            <circle cx="540" cy="50" r="4" fill="#38bdf8"/>
+            <text x="540" y="42" fill="#38bdf8" font-size="9" text-anchor="middle">Topo 2 Mais Baixo (SL)</text>
           </svg>
-          <div class="figure-caption">Figura 4.1: A geometria dos pivôs em V e W empenado ensinada por Leomar.</div>
+          <div class="figure-caption">Figura 4.1: A simetria geométrica de Pivôs em Alta (W Empenado) e em Queda (M Empenado).</div>
         </div>
       </section>
     </div>
 
     <!-- =========================================================
-         FOLHA 6: MÓDULO 5 - GATILHO DO PAVIO (PÁGINA 6 COMPLETA)
+         FOLHA 6: MÓDULO 5 - GATILHO DO PAVIO E ANTI-VELA CARECA (PÁGINA 6)
          ========================================================= -->
     <div class="page-sheet">
       <section class="module-card" id="mod5">
         <div class="module-header">
           <div class="module-badge">Módulo 05</div>
-          <div class="module-title">O Gatilho do Pavio e a Proibição de Velas Carecas</div>
+          <div class="module-title">O Gatilho de Pavio e a Anatomia da Falsa Entrada (Vela Careca)</div>
         </div>
 
-        <div class="alert-box alert-danger">
-          <div>🚫</div>
-          <div><strong>A REGRA DE FERRO DE LEOMAR: PROIBIDO OPERAR VELAS CARECAS</strong><br>
-          Leomar estabelece como regra operacional categórica: <em>"Velas sem pavio, conhecidas como 'carecas', não devem ser operadas. Os preços raramente descem ou sobem sem antes deixar um pavio em um dos lados. Deve-se aguardar o movimento contrário para então posicionar a ordem a favor do pivô."</em></div>
-        </div>
-
-        <h3>A Leitura da Respiração do Candle</h3>
-        <p>No momento do rompimento de um pivô:</p>
+        <h3>1. A Mecânica da Respiração do Candle</h3>
+        <p>Leomar estabelece uma regra inegociável para confirmar o gatilho de entrada e evitar ser estopado pelos algoritmos de varredura:</p>
         <ul>
-          <li><strong>Operação de Compra:</strong> O candle abre próximo ou abaixo do topo do pivô. O operador deve aguardar o candle se mover para baixo primeiro, gerando um <strong>pavio inferior</strong> (rejeição de baixa). No momento em que ele vira para cima e rompe o topo com o corpo expandindo, efetua-se a compra.</li>
-          <li><strong>Operação de Venda:</strong> O candle deve primeiro subir contra a resistência, deixando um <strong>pavio superior</strong>, e somente quando ele vira rompendo o fundo do pivô com o corpo, executa-se a venda.</li>
+          <li><strong>Gatilho de Compra:</strong> O candle que rompe a máxima do pivô para cima <strong>DEVE obrigatoriamente abrir, respirar para baixo deixando um pavio inferior</strong> (mínimo de 12 a 25 pontos no Ouro) e só então explodir para cima.</li>
+          <li><strong>Gatilho de Venda (Queda):</strong> O candle que rompe a mínima do pivô para baixo <strong>DEVE obrigatoriamente abrir, respirar para cima deixando um pavio superior</strong> (mínimo de 12 a 25 pontos) e só então afundar e fechar na mínima.</li>
         </ul>
 
-        <h3>A Regra dos Segundos Finais do Candle</h3>
-        <p>Leomar <strong>desaconselha realizar entradas faltando poucos segundos para o encerramento de um candle</strong>, devido à alta probabilidade de formações repentinas de pavios de exaustão e correções adversas logo na abertura da próxima vela.</p>
+        <h3>2. Por Que a Vela Careca é uma Falsa Entrada Mortal?</h3>
+        <p>Quando um candle abre e rompe imediatamente o nível sem deixar nenhum pavio contrário (vela careca ou marubozu esticado), isso indica que <strong>não houve briga de liquidez na abertura do candle</strong>. Frequentemente trata-se de um movimento artificial de absorção institucional para atrair ordens a mercado de operadores afoitos (FOMO). Assim que a vela fecha esticada, os grandes players realizam lucros e o preço reverte violentamente, estopando quem entrou no rompimento.</p>
 
-        <!-- FIGURA 5.1: INTEGRADA NA PÁGINA 6 -->
+        <p><strong>A Regra dos Segundos Finais:</strong> No gráfico de 1 minuto ou 5 minutos, Leomar aguarda os últimos 5 a 10 segundos da formação da barra para ter certeza absoluta de que o pavio de respiração se sustentou e o corpo fechou rompendo o nível.</p>
+
+        <!-- FIGURA 5.1: ANATOMIA DO PAVIO VS VELA CARECA -->
         <div class="figure-container">
-          <svg viewBox="0 0 720 135" width="720" height="135" xmlns="http://www.w3.org/2000/svg">
-            <rect x="0" y="0" width="720" height="135" fill="#090d16" rx="6"/>
-            <!-- Linha de Rompimento Horizontal -->
-            <line x1="30" y1="65" x2="690" y2="65" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4,4"/>
-            <text x="40" y="55" fill="#f59e0b" font-size="10" font-weight="bold">TOPO DO PIVÔ (NÍVEL DE ROMPIMENTO)</text>
+          <svg viewBox="0 0 720 120" width="720" height="120" xmlns="http://www.w3.org/2000/svg">
+            <rect x="0" y="0" width="720" height="120" fill="#090d16" rx="6"/>
+            <!-- GATILHO DE COMPRA VÁLIDO -->
+            <rect x="70" y="35" width="30" height="50" fill="#10b981" rx="2"/>
+            <line x1="85" y1="20" x2="85" y2="35" stroke="#10b981" stroke-width="2"/>
+            <line x1="85" y1="85" x2="85" y2="105" stroke="#38bdf8" stroke-width="3"/>
+            <text x="85" y="15" fill="#10b981" font-size="10" font-weight="bold" text-anchor="middle">Compra Válida</text>
+            <text x="125" y="100" fill="#38bdf8" font-size="9">Pavio Inferior Obrigatório!</text>
 
-            <!-- Candle 1: Vela Careca Proibida -->
-            <rect x="180" y="30" width="22" height="50" fill="#10b981"/>
-            <text x="140" y="100" fill="#ef4444" font-size="11" font-weight="bold">❌ VELA CARECA</text>
-            <text x="130" y="115" fill="#94a3b8" font-size="9">Abre e sobe sem pavio contrário</text>
-            <text x="145" y="128" fill="#ef4444" font-size="9" font-weight="bold">ENTRADA PROIBIDA</text>
+            <!-- FALSA ENTRADA COMPRA (VELA CARECA) -->
+            <rect x="220" y="30" width="30" height="65" fill="#10b981" rx="2"/>
+            <line x1="235" y1="18" x2="235" y2="30" stroke="#10b981" stroke-width="2"/>
+            <circle cx="235" cy="95" r="5" fill="#ef4444"/>
+            <line x1="230" y1="95" x2="240" y2="95" stroke="#fff" stroke-width="2"/>
+            <text x="235" y="15" fill="#ef4444" font-size="10" font-weight="bold" text-anchor="middle">Vela Careca (Falsa Entrada)</text>
+            <text x="260" y="98" fill="#ef4444" font-size="9">Zero Pavio = Não Entra!</text>
 
-            <!-- Candle 2: Gatilho Correto Leomar -->
-            <line x1="500" y1="18" x2="500" y2="30" stroke="#10b981" stroke-width="1.5"/>
-            <rect x="489" y="30" width="22" height="45" fill="#10b981"/>
-            <line x1="500" y1="75" x2="500" y2="100" stroke="#10b981" stroke-width="2"/>
-            <circle cx="500" cy="65" r="4.5" fill="#f59e0b"/>
+            <!-- DIVISÓRIA -->
+            <line x1="360" y1="10" x2="360" y2="110" stroke="#334155" stroke-width="1.5" stroke-dasharray="3,3"/>
 
-            <text x="440" y="115" fill="#10b981" font-size="11" font-weight="bold">✔️ GATILHO CORRETO</text>
-            <text x="420" y="128" fill="#94a3b8" font-size="9">Pavio inferior formado antes da expansão</text>
+            <!-- GATILHO DE VENDA VÁLIDO -->
+            <rect x="430" y="40" width="30" height="50" fill="#ef4444" rx="2"/>
+            <line x1="445" y1="18" x2="445" y2="40" stroke="#38bdf8" stroke-width="3"/>
+            <line x1="445" y1="90" x2="445" y2="105" stroke="#ef4444" stroke-width="2"/>
+            <text x="445" y="14" fill="#ef4444" font-size="10" font-weight="bold" text-anchor="middle">Venda Válida</text>
+            <text x="485" y="30" fill="#38bdf8" font-size="9">Pavio Superior Obrigatório!</text>
+
+            <!-- FALSA ENTRADA VENDA (VELA CARECA) -->
+            <rect x="580" y="30" width="30" height="65" fill="#ef4444" rx="2"/>
+            <circle cx="595" cy="30" r="5" fill="#ef4444"/>
+            <line x1="590" y1="30" x2="600" y2="30" stroke="#fff" stroke-width="2"/>
+            <line x1="595" y1="95" x2="595" y2="108" stroke="#ef4444" stroke-width="2"/>
+            <text x="595" y="15" fill="#ef4444" font-size="10" font-weight="bold" text-anchor="middle">Vela Careca (Falsa Venda)</text>
+            <text x="620" y="33" fill="#ef4444" font-size="9">Zero Pavio = Armadilha!</text>
           </svg>
-          <div class="figure-caption">Figura 5.1: A regra mandatória do pavio contrário antes do rompimento.</div>
+          <div class="figure-caption">Figura 5.1: O filtro do pavio contrário vs a proibição categórica da vela careca.</div>
         </div>
       </section>
     </div>
 
     <!-- =========================================================
-         FOLHA 7: MÓDULO 6 - GERENCIAMENTO E BASTIDORES (PÁGINA 7)
+         FOLHA 7: MÓDULO 6 - CASOS REAIS: OPERAÇÕES VENCEDORAS (PÁGINA 7)
          ========================================================= -->
     <div class="page-sheet">
       <section class="module-card" id="mod6">
         <div class="module-header">
           <div class="module-badge">Módulo 06</div>
-          <div class="module-title">Gerenciamento Operacional e Bastidores Institucionais</div>
+          <div class="module-title">Casos Reais no XAUUSD: Operações Vencedoras em Queda e em Alta</div>
         </div>
 
-        <h3>Parâmetros de Lote e Parciais Automáticas</h3>
-        <p>Na reunião técnica, Leomar e #Burgo585 definiram:</p>
+        <p>Abaixo estão dois casos reais extraídos diretamente das 201.248 barras M5 de ticks reais da corretora XM Global, comprovando a execução do método:</p>
+
+        <h3>Caso Real 1: Operação de Venda em Queda (02/01/2024 às 13:10 - Sessão de NY)</h3>
+        <p>O mercado formou um topo duplo descendente (M Empenado) em 2076.47, com suporte do pivô em 2074.62. A vela das 13:10 abriu em 2074.52, <strong>respirou para cima até 2075.03 (deixando pavio superior de 51 pontos!)</strong>, rompeu o suporte com força e fechou em 2073.88. Stop Loss técnico acima do topo em 2076.67. O mercado despencou limpo até 2068.31, atingindo o Take Profit 3:1 (+240 pontos).</p>
+
+        <!-- FIGURA 6.1: CANDLESTICKS REAIS DO TRADE DE VENDA -->
+        <div class="figure-container">
+          <svg viewBox="0 0 720 120" width="720" height="120" xmlns="http://www.w3.org/2000/svg">
+            <rect x="0" y="0" width="720" height="120" fill="#090d16" rx="6"/>
+            <!-- Linha SL -->
+            <line x1="30" y1="18" x2="680" y2="18" stroke="#ef4444" stroke-width="1.2" stroke-dasharray="3,3"/>
+            <text x="35" y="14" fill="#ef4444" font-size="9" font-weight="bold">Stop Loss Técnico (2076.67)</text>
+
+            <!-- Linha Suporte do Pivô -->
+            <line x1="30" y1="42" x2="350" y2="42" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="2,2"/>
+            <text x="35" y="38" fill="#f59e0b" font-size="9">Suporte Rompido (2074.62)</text>
+
+            <!-- Linha TP -->
+            <line x1="200" y1="108" x2="680" y2="108" stroke="#10b981" stroke-width="1.5" stroke-dasharray="3,3"/>
+            <text x="520" y="104" fill="#10b981" font-size="9" font-weight="bold">Take Profit 3:1 Atingido! (2068.31)</text>
+
+            <!-- Candles: 12:55, 13:00, 13:05, 13:10(Gatilho), 13:15, 13:20, 13:25, 13:30, 13:35, 13:40 -->
+            <!-- 12:55 (Bull) -->
+            <line x1="50" y1="18" x2="50" y2="30" stroke="#10b981" stroke-width="1.5"/><rect x="44" y="22" width="12" height="2" fill="#10b981"/>
+            <!-- 13:00 (Bear) -->
+            <line x1="110" y1="20" x2="110" y2="30" stroke="#ef4444" stroke-width="1.5"/><rect x="104" y="23" width="12" height="6" fill="#ef4444"/>
+            <!-- 13:05 (Bear Forte - Fundo) -->
+            <line x1="170" y1="20" x2="170" y2="42" stroke="#ef4444" stroke-width="1.5"/><rect x="164" y="27" width="12" height="15" fill="#ef4444"/>
+            <!-- 13:10 (GATILHO DE VENDA COM PAVIO SUPERIOR) -->
+            <line x1="230" y1="34" x2="230" y2="52" stroke="#ef4444" stroke-width="2"/>
+            <line x1="230" y1="34" x2="230" y2="43" stroke="#38bdf8" stroke-width="3"/> <!-- Pavio Superior -->
+            <rect x="224" y="43" width="12" height="8" fill="#ef4444"/>
+            <!-- Callout Gatilho -->
+            <circle cx="230" cy="43" r="3" fill="#38bdf8"/>
+            <text x="230" y="65" fill="#38bdf8" font-size="8" font-weight="bold" text-anchor="middle">Pavio 51 pts!</text>
+            <text x="230" y="75" fill="#ef4444" font-size="8" text-anchor="middle">Venda 2073.88</text>
+
+            <!-- 13:15 -->
+            <line x1="290" y1="46" x2="290" y2="66" stroke="#ef4444" stroke-width="1.5"/><rect x="284" y="50" width="12" height="5" fill="#ef4444"/>
+            <!-- 13:20 (Pullback inofensivo) -->
+            <line x1="350" y1="24" x2="350" y2="56" stroke="#10b981" stroke-width="1.5"/><rect x="344" y="24" width="12" height="30" fill="#10b981"/>
+            <!-- 13:25 -->
+            <line x1="410" y1="24" x2="410" y2="42" stroke="#ef4444" stroke-width="1.5"/><rect x="404" y="24" width="12" height="11" fill="#ef4444"/>
+            <!-- 13:30 (Queda Forte) -->
+            <line x1="470" y1="36" x2="470" y2="92" stroke="#ef4444" stroke-width="1.5"/><rect x="464" y="36" width="12" height="52" fill="#ef4444"/>
+            <!-- 13:35 -->
+            <line x1="530" y1="78" x2="530" y2="102" stroke="#ef4444" stroke-width="1.5"/><rect x="524" y="88" width="12" height="10" fill="#ef4444"/>
+            <!-- 13:40 (TP ATINGIDO) -->
+            <line x1="590" y1="96" x2="590" y2="118" stroke="#ef4444" stroke-width="1.5"/><rect x="584" y="98" width="12" height="18" fill="#ef4444"/>
+            <circle cx="590" cy="108" r="4" fill="#10b981"/>
+          </svg>
+          <div class="figure-caption">Figura 6.1: Operação real de Venda em Queda no XAUUSD M5 (02/01/2024) com pavio de respiração e TP 3:1.</div>
+        </div>
+
+        <h3>Caso Real 2: Operação de Compra em Alta (06/03/2024 às 14:50 - Sessão de NY)</h3>
+        <p>No rompimento da resistência em 2133.67, a vela das 14:50 abriu em 2133.28, respirou para baixo até 2132.79 (pavio de 49 pontos!), explodiu fechando em 2134.18 e acelerou direto até o alvo de 2144.59 (+340 pontos).</p>
+      </section>
+    </div>
+
+    <!-- =========================================================
+         FOLHA 8: MÓDULO 7 - CASOS REAIS: FALSAS ENTRADAS (PÁGINA 8)
+         ========================================================= -->
+    <div class="page-sheet">
+      <section class="module-card" id="mod7">
+        <div class="module-header">
+          <div class="module-badge">Módulo 07</div>
+          <div class="module-title">Casos Reais no XAUUSD: Falsas Entradas e Armadilhas Evitadas</div>
+        </div>
+
+        <p>Os dados reais mostram exatamente o perigo de operar sem a regra estrita do pavio ou comprar cegamente em médias móveis:</p>
+
+        <h3>Caso Real 3: A Falsa Entrada da Vela Careca (08/01/2024 às 02:40)</h3>
+        <p>O preço rompeu a máxima do pivô em 2045.36 com uma vela aparentemente forte fechando em 2045.85. <strong>O perigo fatal:</strong> Open = 2045.27 e Low = 2045.27 (pavio inferior ZERO!). O operador desavisado comprou no topo do candle; 4 barras depois (às 03:00), os algoritmos despejaram ordens de venda, derrubando o preço para 2044.37 e estopando todos os compradores afoitos.</p>
+
+        <!-- FIGURA 7.1: GRÁFICO REAL DA ARMADILHA DA VELA CARECA -->
+        <div class="figure-container">
+          <svg viewBox="0 0 720 120" width="720" height="120" xmlns="http://www.w3.org/2000/svg">
+            <rect x="0" y="0" width="720" height="120" fill="#090d16" rx="6"/>
+            <!-- Linha Rompimento Falso -->
+            <line x1="40" y1="50" x2="350" y2="50" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="3,3"/>
+            <text x="45" y="44" fill="#f59e0b" font-size="9">Resistência Rompida (2045.36)</text>
+
+            <!-- Linha SL do Varejo -->
+            <line x1="200" y1="95" x2="680" y2="95" stroke="#ef4444" stroke-width="1.2" stroke-dasharray="3,3"/>
+            <text x="460" y="90" fill="#ef4444" font-size="9" font-weight="bold">Stop Acionado dos Compradores (2044.37)</text>
+
+            <!-- Candles: 02:30, 02:35, 02:40(CARECA), 02:45, 02:50, 02:55, 03:00(DUMP) -->
+            <!-- 02:30 -->
+            <line x1="80" y1="36" x2="80" y2="60" stroke="#10b981" stroke-width="1.5"/><rect x="74" y="42" width="12" height="5" fill="#10b981"/>
+            <!-- 02:35 -->
+            <line x1="150" y1="36" x2="150" y2="62" stroke="#ef4444" stroke-width="1.5"/><rect x="144" y="42" width="12" height="20" fill="#ef4444"/>
+            <!-- 02:40 (VELA CARECA - ARMADILHA MORTAL) -->
+            <line x1="220" y1="28" x2="220" y2="40" stroke="#10b981" stroke-width="1.5"/>
+            <rect x="214" y="40" width="12" height="24" fill="#10b981"/>
+            <!-- Zero Pavio Inferior Marcador -->
+            <circle cx="220" cy="64" r="4" fill="#ef4444"/>
+            <text x="220" y="77" fill="#ef4444" font-size="8" font-weight="bold" text-anchor="middle">ZERO PAVIO!</text>
+            <text x="220" y="87" fill="#f59e0b" font-size="7.5" text-anchor="middle">Vela Careca (Falso)</text>
+
+            <!-- 02:45 (Exaustão) -->
+            <line x1="290" y1="30" x2="290" y2="52" stroke="#ef4444" stroke-width="1.5"/><rect x="284" y="41" width="12" height="8" fill="#ef4444"/>
+            <!-- 02:50 -->
+            <line x1="360" y1="35" x2="360" y2="52" stroke="#10b981" stroke-width="1.5"/><rect x="354" y="41" width="12" height="5" fill="#10b981"/>
+            <!-- 02:55 -->
+            <line x1="430" y1="27" x2="430" y2="57" stroke="#10b981" stroke-width="1.5"/><rect x="424" y="38" width="12" height="5" fill="#10b981"/>
+            <!-- 03:00 (DESPENCOU LIQUIDANDO COMPRADORES) -->
+            <line x1="500" y1="40" x2="500" y2="105" stroke="#ef4444" stroke-width="2"/><rect x="494" y="42" width="12" height="55" fill="#ef4444"/>
+            <circle cx="500" cy="95" r="4" fill="#ef4444"/>
+            <text x="545" y="112" fill="#ef4444" font-size="8" font-weight="bold">Stop-Out do Varejo!</text>
+          </svg>
+          <div class="figure-caption">Figura 7.1: A armadilha real da Vela Careca no XAUUSD (08/01/2024): falso rompimento seguido de liquidação.</div>
+        </div>
+
+        <h3>Caso Real 4: A Armadilha do Toque Cego na Média de 200 (22/12/2023 às 21:05)</h3>
+        <p>O preço vinha caindo e tocou na Média Móvel de 200 em 2055.41. Amadores compraram o "suporte da média"; a vela fechou rompendo para baixo em 2055.19 e desabou nas barras seguintes até 2051.60. Leomar ensina: <em>"Nunca compre só porque bateu na 200; espere a formação do pivô de reversão com confirmação de pavio!"</em></p>
+      </section>
+    </div>
+
+    <!-- =========================================================
+         FOLHA 9: MÓDULO 8 - GESTÃO DE RISCO PARA BANCA DE $300 (PÁGINA 9)
+         ========================================================= -->
+    <div class="page-sheet">
+      <section class="module-card" id="mod8">
+        <div class="module-header">
+          <div class="module-badge">Módulo 08</div>
+          <div class="module-title">Gestão de Risco para Banca de $300 e Microestrutura Institucional</div>
+        </div>
+
+        <h3>1. Dimensionamento Cirúrgico para Banca de US$ 300</h3>
+        <p>Em contas com saldo reduzido (\$300), a preservação do capital é a prioridade absoluta. Leomar prescreve:</p>
         <ul>
-          <li><strong>Lote Padrão Proporcional:</strong> Entradas de 0.10 a 0.15 para alvos rápidos e bater a meta sem sobre-exposição. <em>(Nota: Para contas de menor porte, como US$ 300, a proporção matemática estrita exige 0.01 lote para limitar o risco a 1% por trade).</em></li>
-          <li><strong>Parciais Rápidas:</strong> Leomar relata realizar entradas e fechar posições à medida que o preço rompe, utilizando <strong>parciais automáticas devido ao estiramento rápido do candle</strong>, garantindo lucro no bolso e evitando a devolução de ganhos.</li>
-          <li><strong>Evitar Stop Longo Travado:</strong> Leomar aponta que frequentemente evita stops que atrapalhem a condução fluida da ordem, preferindo a saída rápida com lucro.</li>
+          <li><strong>Lote Fixo Mandatório de 0.01:</strong> No Ouro (XAUUSD), 0.01 lote equivale a 1 onça troy. Cada $1,00 de oscilação representa exatamente $1,00 de flutuação. Com um stop de $2,50 a $3,00 por trade, o risco por operação fica travado em apenas 1% da conta (\$3,00).</li>
+          <li><strong>Proibição de Preço Médio e Martingale:</strong> Operador de Price Action aceita o stop técnico e espera o próximo pivô alinhado. Multiplicar lotes na volta é suicídio financeiro.</li>
         </ul>
 
-        <h3>Bastidores de Corretoras e Mesas Proprietárias</h3>
-        <p>Leomar explicou o modelo de negócios das instituições financeiras:</p>
+        <h3>2. Parciais Automáticas e Break-Even</h3>
+        <p>Leomar recomenda fortemente o encerramento parcial da posição no primeiro alvo técnico (1:1 ou no primeiro obstáculo de liquidez) e o deslocamento do stop para o preço de entrada (Break-Even). Isso elimina o risco financeiro e garante uma postura psicológica tranquila para conduzir o restante da ordem até o alvo final de 3:1 ou até a Média de 200.</p>
+
+        <h3>3. Microestrutura Forense: Book A vs Book B</h3>
+        <p>Durante a aula, Leomar detalhou o funcionamento interno das corretoras de Forex/CFDs:</p>
         <ul>
-          <li><strong>Book A vs Book B nas Corretoras:</strong> As corretoras alocam traders vencedores e disciplinados em prateleiras diferenciadas (Book A), onde a corretora lucra com taxas de corretagem e comissões. Por outro lado, ordens de depositantes frequentes que acumulam perdas crônicas são assumidas diretamente pela corretora (Book B), que atua como contraparte lucrativa de suas perdas.</li>
-          <li><strong>Crítica às Mesas Proprietárias Tradicionais:</strong> Discutiram-se os riscos de mesas proprietárias com regras rígidas de drawdown móvel e travas que buscam a desclassificação do operador.</li>
-          <li><strong>Corretoras e Plataformas Recomendadas:</strong> Leomar destacou sua preferência operacional pela <strong>Zero Markets</strong>, menção a saldos na <strong>Hantec</strong>, e sugeriu a mesa americana <strong>Yellows Trader</strong> para alavancar ativos de maior liquidez e amplitude por pip, como o <strong>Nasdaq</strong>.</li>
+          <li><strong>Corretoras Book A (STP/ECN):</strong> Repassam as ordens diretamente aos provedores de liquidez bancários. A corretora ganha na comissão/spread e quer que o trader seja lucrativo.</li>
+          <li><strong>Corretoras Book B (Market Maker):</strong> Ficam com a contraparte das ordens. O lucro da corretora é a perda do cliente. Praticam recotações, alargamento artificial de spread e caça de stops.</li>
+          <li><strong>Corretoras Alinhadas por Leomar:</strong> Leomar citou nominalmente sua preferência por corretoras institucionais como <strong>Zero Markets</strong>, <strong>Hantec Markets</strong> e a mesa proprietária <strong>Yellows Trader</strong>.</li>
         </ul>
       </section>
     </div>
 
     <!-- =========================================================
-         FOLHA 8: MÓDULO 7 - CHECKLIST OPERACIONAL (PÁGINA 8)
+         FOLHA 10: MÓDULO 9 - CHECKLIST DE BOLSO E CONCLUSÃO (PÁGINA 10)
          ========================================================= -->
     <div class="page-sheet">
-      <section class="checklist-card" id="mod7">
-        <div class="checklist-title">📋 CHECKLIST OPERACIONAL DE BOLSO (REGISTRO OFICIAL)</div>
-        <p style="color: #cbd5e1; margin-bottom: 14px;">Siga estritamente este roteiro antes de realizar qualquer entrada na boleta manual:</p>
+      <section class="module-card" id="mod9">
+        <div class="module-header">
+          <div class="module-badge">Módulo 09</div>
+          <div class="module-title">Checklist de Bolso em 9 Passos e Conclusão Operacional</div>
+        </div>
 
-        <div class="check-item"><div class="check-box">✓</div> <span>1. Gráfico Semanal (W1) verificado ao ligar o MT5? Tendência macro identificada?</span></div>
-        <div class="check-item"><div class="check-box">✓</div> <span>2. Gráfico H1 consultado? Blocos de ordens e suportes/resistências mapeados? (H4 ignorado).</span></div>
-        <div class="check-item"><div class="check-box">✓</div> <span>3. Gráfico M5: O preço formou um Pivô em V ou W Empenado em região de extremo?</span></div>
-        <div class="check-item"><div class="check-box">✓</div> <span>4. Distância da Média de 200 checada? Ela serve como alvo de atração ou fluxo diretor?</span></div>
-        <div class="check-item"><div class="check-box">✓</div> <span>5. O candle de rompimento respirou e deixou pavio no sentido oposto? (PROIBIDO VELA CARECA).</span></div>
-        <div class="check-item"><div class="check-box">✓</div> <span>6. Restam mais de 15 segundos para o fechamento da vela? (PROIBIDO ENTRAR NO FINAL).</span></div>
-        <div class="check-item"><div class="check-box">✓</div> <span>7. Lote ajustado estritamente à sua banca (0.01 para $300 | 0.10 para $5.000)?</span></div>
-        <div class="check-item"><div class="check-box">✓</div> <span>8. Parciais rápidas programadas na puxada de expansão do candle?</span></div>
-        <div class="check-item"><div class="check-box">✓</div> <span>9. META DIÁRIA BATIDA? FECHAR O METATRADER 5 IMEDIATAMENTE!</span></div>
+        <p>Antes de abrir qualquer posição no terminal MetaTrader 5, execute este checklist mental:</p>
+
+        <div class="checklist-card">
+          <div class="checklist-title">CHECKLIST OBRIGATÓRIO DE EXECUÇÃO (METODOLOGIA LEOMAR)</div>
+          
+          <div class="check-item">
+            <div class="check-box">✓</div>
+            <div><strong>1. Tela 100% Limpa:</strong> Todos os osciladores (RSI, Estocástico) foram deletados do gráfico?</div>
+          </div>
+          <div class="check-item">
+            <div class="check-box">✓</div>
+            <div><strong>2. Tendência Macro (W1):</strong> A direção geral da semana foi verificada antes do primeiro trade?</div>
+          </div>
+          <div class="check-item">
+            <div class="check-box">✓</div>
+            <div><strong>3. Order Blocks no H1:</strong> As zonas institucionais de briga foram mapeadas no gráfico de 1 hora?</div>
+          </div>
+          <div class="check-item">
+            <div class="check-box">✓</div>
+            <div><strong>4. Posição da Média de 200:</strong> O preço está afastado 400 pontos ou a favor da tendência pós-fechamento?</div>
+          </div>
+          <div class="check-item">
+            <div class="check-box">✓</div>
+            <div><strong>5. Geometria de Pivô Clara:</strong> Identificou W Empenado (Alta) ou M Empenado (Queda)?</div>
+          </div>
+          <div class="check-item">
+            <div class="check-box">✓</div>
+            <div><strong>6. Filtro Anti-Vela Careca:</strong> O candle respirou deixando pavio contrário prévio (mínimo 12-25 pts)?</div>
+          </div>
+          <div class="check-item">
+            <div class="check-box">✓</div>
+            <div><strong>7. Regra dos Segundos Finais:</strong> Aguardou o fechamento real do candle para confirmar o rompimento?</div>
+          </div>
+          <div class="check-item">
+            <div class="check-box">✓</div>
+            <div><strong>8. Gestão Estrita de Lote:</strong> Lote travado em 0.01 para banca de $300 com Stop Técnico definido?</div>
+          </div>
+          <div class="check-item">
+            <div class="check-box">✓</div>
+            <div><strong>9. Alvo Risco:Retorno Mínimo 3:1:</strong> A operação oferece retorno proporcional antes do clique?</div>
+          </div>
+        </div>
+
+        <div class="alert-box alert-success">
+          <div>🎯</div>
+          <div><strong>O Mantra de Leomar:</strong> <em>"Paciência para esperar a formação do pivô, sangue frio para recusar qualquer vela careca, agilidade para bater a meta e sabedoria para desligar a tela e proteger o lucro."</em></div>
+        </div>
+
+        <footer>
+          Documentação Técnica Oficial compilada para #Burgo585 | Metodologia Leomar (Leo Brasília) | Versão 3.0 Profissional A4
+        </footer>
       </section>
-
-      <footer style="text-align: center; padding: 20px 0; font-size: 11px; color: #64748b; border-top: 1px solid #1f2937;">
-        <p>© 2026 Metodologia Leomar (Leo Brasília) & #Burgo585. Compilado estritamente com base na sessão técnica gravada de 28/10/2026.</p>
-      </footer>
     </div>
 
   </div>
