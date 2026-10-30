@@ -5,8 +5,8 @@
 //+------------------------------------------------------------------+
 #property copyright "Senior MQL5 Developer"
 #property link      "https://www.mql5.com"
-#property version   "10.50"
-#property description "Boleta Scalping Pro v10.50: Painel de Alta Confianca, 4 Metricas HUD, Estado Persistente e Canais 40x40"
+#property version   "10.60"
+#property description "Boleta Scalping Pro v10.60: Risco $150 Desmarcado, Zerar Todas no Rodape, Parcial Compacta e 4 Metricas HUD"
 #property strict
 
 #include <Trade\Trade.mqh>
@@ -36,10 +36,9 @@
 #define COLOR_BUY_BTN         C'0,175,90'    // Compra Emerald Fluido
 #define COLOR_SELL_BTN        C'215,38,50'   // Venda Coral Crimson
 #define COLOR_INVERT_BTN      C'195,110,18'  // Inverter Ambar
-#define COLOR_CLOSE_ALL_BTN   C'235,238,245' // Zerar Todas Prata Platina
+#define COLOR_CLOSE_ALL_BTN   C'240,242,250' // Zerar Todas Prata Platina Destaque
 #define COLOR_CLOSE_PRF_BTN   C'25,125,65'   // Zerar Lucro Verde Escuro
 #define COLOR_CLOSE_LSS_BTN   C'145,35,42'   // Zerar Prejuizo Vermelho Escuro
-#define COLOR_CANCEL_BTN      C'52,58,72'    // Cancelar Ordens Grafite
 #define COLOR_PROFIT_GREEN    C'0,225,115'   // Verde Lucro
 #define COLOR_LOSS_RED        C'255,75,75'   // Vermelho Prejuizo
 #define COLOR_LOT_GOLD        C'255,200,50'  // Ambar Dourado Lote
@@ -60,8 +59,8 @@
 //--- Enumeradores
 enum ENUM_RISK_MODE
 {
-   RISK_MODE_MANUAL,   // Lote Fixo Manual (Padrao)
-   RISK_MODE_CASH,     // Risco por Valor Financeiro Fixo ($)
+   RISK_MODE_MANUAL,   // Lote Fixo Manual (Padrao Desmarcado)
+   RISK_MODE_CASH,     // Risco por Valor Financeiro Fixo ($150)
    RISK_MODE_PERCENT   // Risco por Porcentagem da Conta (%)
 };
 
@@ -74,10 +73,10 @@ input ulong           InpMagicNumber       = 123456;             // Magic Number
 input ulong           InpSlippage          = 20;                 // Desvio Maximo / Slippage (pontos)
 input bool            InpFilterSymbolOnly  = true;               // Filtrar Metricas apenas deste Ativo
 
-input group "=== GESTAO DE LOTE & RISCO (NATIVO 0.04) ==="
-input ENUM_RISK_MODE  InpDefaultRiskMode   = RISK_MODE_MANUAL;   // Modo de Risco Inicial (Manual)
+input group "=== GESTAO DE LOTE & RISCO ($150 DESMARCADO) ==="
+input ENUM_RISK_MODE  InpDefaultRiskMode   = RISK_MODE_MANUAL;   // Modo de Risco Inicial (Manual Desmarcado)
+input double          InpRiskCash          = 150.0;              // Risco Financeiro ($150 Nativo do Set)
 input double          InpDefaultLot        = 0.04;               // Lote Operacional Nativo do Set
-input double          InpRiskCash          = 10.0;               // Risco Financeiro Inicial ($) se ativado
 input double          InpRiskPercent       = 1.0;                // Risco Percentual Inicial (%) se ativado
 
 input group "=== ALVOS NATIVOS DO SET (SL 200 PTS / TP 300 PTS) ==="
@@ -91,7 +90,7 @@ input bool            InpTSActive          = false;              // Trailing Sto
 input int             InpDefaultTS         = 150;                // Trailing Stop Padrao (pontos)
 input int             InpDefaultTSStep     = 2;                  // Passo do Trailing Stop (pontos)
 
-input group "=== REALIZACAO PARCIAL (BOTAO DEDICADO) ==="
+input group "=== REALIZACAO PARCIAL ==="
 input bool            InpParcialActive     = false;              // Parcial Inicial (Desmarcado por Padrao)
 input bool            InpParcialIsCash     = false;              // Modo Alvo Parcial (false = Pontos, true = $)
 input int             InpParcialTargetPts  = 150;                // Alvo da Parcial Padrao (pontos)
@@ -108,8 +107,8 @@ input color           InpColorChannel      = C'220,50,50';       // Cor das Linh
 input color           InpColorChannelMid   = C'235,185,40';      // Cor das Linhas Medias (50%)
 
 input group "=== INCREMENTOS DOS BOTOES (+ / -) ==="
+input double          InpStepRiskCash      = 10.0;               // Passo do Risco Fixo ($)
 input double          InpStepRiskPct       = 0.5;                // Passo do Risco Percentual (%)
-input double          InpStepRiskCash      = 1.0;                // Passo do Risco Fixo ($)
 input int             InpStepPoints        = 20;                 // Passo de Pontos (SL, TP, BE, TS, Parcial)
 input double          InpStepParcialCash   = 5.0;                // Passo do Alvo Parcial ($)
 input double          InpStepParcialVol    = 10.0;               // Passo do Volume Parcial (%)
@@ -460,7 +459,6 @@ public:
    void              ExecuteCloseAll();
    void              ExecuteCloseProfit();
    void              ExecuteCloseLoss();
-   void              ExecuteCancelPendings();
    
    // Eventos
    void              OnChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam);
@@ -479,7 +477,7 @@ CBoletaMaster::CBoletaMaster()
      m_x(20),
      m_y(40),
      m_width(276),
-     m_height(540),
+     m_height(510),
      m_header_h(28),
      m_is_minimized(false),
      m_is_dragging(false),
@@ -505,7 +503,7 @@ CBoletaMaster::CBoletaMaster()
      m_parcial_is_cash(false),
      m_parcial_move_be(true),
      m_risk_percent(1.0),
-     m_risk_cash(10.0),
+     m_risk_cash(150.0),
      m_manual_lot(0.04),
      m_sl_points(200),
      m_tp_points(300),
@@ -648,8 +646,8 @@ bool CBoletaMaster::Init(const string symbol, ulong magic, ulong slippage, int x
    {
       m_x                   = x;
       m_y                   = y;
-      m_risk_mode           = InpDefaultRiskMode;
-      m_risk_cash           = InpRiskCash;
+      m_risk_mode           = InpDefaultRiskMode; // Manual Desmarcado
+      m_risk_cash           = InpRiskCash;        // 150.0 Nativo
       m_risk_percent        = InpRiskPercent;
       m_manual_lot          = InpDefaultLot;       // Nativo 0.04
       m_sl_active           = InpSLActive;         // false (desmarcado nativo)
@@ -867,7 +865,7 @@ void CBoletaMaster::Render()
    CreateLabel("Lbl_Mkt_Timer",  offset_x + 180, cur_y + 4, "[TF] --:--", clrCyan, 9, true);
    cur_y += 28;
    
-   // 3. Painel HUD de Confianca (4 Metricas Obrigatórias)
+   // 3. Painel HUD de Confianca (4 Metricas Obrigatorias)
    // Row 1: Capital Inicial | Lote Atual
    int card_w = (row_w - 6) / 2; // 127px
    CreateRectangleLabel("Card_Cap_BG", offset_x, cur_y, card_w, 26, COLOR_CARD_BG, COLOR_CARD_BORDER, ZORDER_PANEL_STRIP);
@@ -889,16 +887,15 @@ void CBoletaMaster::Render()
    CreateLabel("Lbl_Win_Val",   offset_x + card_w + 12, cur_y + 11, "0.0%", COLOR_CHECK_ACTIVE, 9, true);
    cur_y += 31;
    
-   // 4. Seção Gestão de Risco (% / $)
+   // 4. Secao Gestao de Risco (Risco $150 Desmarcado por Padrao)
    bool is_auto_risk = (m_risk_mode != RISK_MODE_MANUAL);
    CreateButton("Chk_Risk", offset_x, cur_y + 1, 18, 18, is_auto_risk ? "X" : "", is_auto_risk ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, clrWhite, 9, true);
-   string risk_toggle_text = (m_risk_mode == RISK_MODE_PERCENT) ? "Risco: %" : (m_risk_mode == RISK_MODE_CASH ? "Risco: $" : "Risco: Manual");
-   color risk_toggle_bg = (m_risk_mode == RISK_MODE_PERCENT) ? COLOR_TOGGLE_PCT : (m_risk_mode == RISK_MODE_CASH ? COLOR_TOGGLE_CASH : COLOR_EDIT_BG);
+   string risk_toggle_text = (m_risk_mode == RISK_MODE_PERCENT) ? "Risco: %" : "Risco: $";
+   color risk_toggle_bg    = (m_risk_mode == RISK_MODE_PERCENT) ? COLOR_TOGGLE_PCT : (is_auto_risk ? COLOR_TOGGLE_CASH : COLOR_EDIT_BG);
    CreateButton("Btn_Risk_Toggle", offset_x + 24, cur_y, 96, 20, risk_toggle_text, risk_toggle_bg, COLOR_TEXT_MAIN, 9, true);
    CreateButton("Btn_Risk_Dec", offset_x + 126, cur_y, 22, 20, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
    string init_risk_str = (m_risk_mode == RISK_MODE_PERCENT) ? DoubleToString(m_risk_percent, 1) : DoubleToString(m_risk_cash, 2);
-   if(m_risk_mode == RISK_MODE_MANUAL) init_risk_str = "--";
-   CreateEdit("Edit_Risk", offset_x + 150, cur_y, 64, 20, init_risk_str, COLOR_EDIT_BG, COLOR_TEXT_MAIN, (m_risk_mode == RISK_MODE_MANUAL), 9);
+   CreateEdit("Edit_Risk", offset_x + 150, cur_y, 64, 20, init_risk_str, COLOR_EDIT_BG, COLOR_TEXT_MAIN, false, 9);
    CreateButton("Btn_Risk_Inc", offset_x + 216, cur_y, 22, 20, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
    cur_y += 25;
    
@@ -942,15 +939,10 @@ void CBoletaMaster::Render()
    CreateButton("Btn_TS_Inc", offset_x + 216, cur_y, 22, 20, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
    cur_y += 27;
    
-   // 10. Botao Dedicado para Ativar e Desativar Parcial
-   string parcial_status_txt = m_parcial_active ? "[ PARCIAL: ATIVADA ]" : "[ PARCIAL: DESATIVADA ]";
-   color parcial_status_bg   = m_parcial_active ? COLOR_CHECK_ACTIVE : C'35,39,50';
-   CreateButton("Btn_Parcial_Toggle_Active", offset_x, cur_y, row_w, 24, parcial_status_txt, parcial_status_bg, COLOR_TEXT_MAIN, 9, true);
-   cur_y += 26;
-   
-   // Controles da Parcial (Alvo Pts / $ e Vol %)
-   CreateButton("Btn_Parcial_Toggle_Mode", offset_x, cur_y, 36, 20, m_parcial_is_cash ? "$" : "Pts", m_parcial_is_cash ? COLOR_TOGGLE_CASH : COLOR_TOGGLE_PCT, COLOR_TEXT_MAIN, 8, true);
-   CreateLabel("Lbl_Parcial_Target", offset_x + 40, cur_y + 3, "Alvo Parcial", COLOR_TEXT_MUTED, 8, false);
+   // 10. Secao Parcial (Compacta e Uniforme com Checkbox)
+   CreateButton("Chk_Parcial", offset_x, cur_y + 1, 18, 18, m_parcial_active ? "X" : "", m_parcial_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, clrWhite, 9, true);
+   CreateButton("Btn_Parcial_Toggle_Mode", offset_x + 24, cur_y, 36, 20, m_parcial_is_cash ? "$" : "Pts", m_parcial_is_cash ? COLOR_TOGGLE_CASH : COLOR_TOGGLE_PCT, COLOR_TEXT_MAIN, 8, true);
+   CreateLabel("Lbl_Parcial_Target", offset_x + 64, cur_y + 3, "Alvo Parcial", COLOR_TEXT_MAIN, 9, false);
    CreateButton("Btn_Parcial_Dec", offset_x + 126, cur_y, 22, 20, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
    string init_parcial_target = m_parcial_is_cash ? DoubleToString(m_parcial_target_cash, 2) : IntegerToString(m_parcial_target_pts);
    CreateEdit("Edit_Parcial_Target", offset_x + 150, cur_y, 64, 20, init_parcial_target, COLOR_EDIT_BG, COLOR_TEXT_MAIN, false, 9);
@@ -1011,22 +1003,18 @@ void CBoletaMaster::Render()
    CreateButton("Btn_Sell", offset_x + half_btn_w + 6, cur_y, half_btn_w, 36, "▼ VENDA", COLOR_SELL_BTN, COLOR_TEXT_MAIN, 11, true);
    cur_y += 40;
    
-   // Linha Inverter Posição
+   // Linha Inverter Posicao
    CreateButton("Btn_Invert", offset_x, cur_y, row_w, 26, "⇄ INVERTER POSICAO", COLOR_INVERT_BTN, COLOR_TEXT_MAIN, 9, true);
    cur_y += 29;
-   
-   // Botão Zerar Todas
-   CreateButton("Btn_CloseAll", offset_x, cur_y, row_w, 28, "ZERAR TODAS", COLOR_CLOSE_ALL_BTN, clrBlack, 10, true);
-   cur_y += 31;
    
    // Fechar Lucro e Fechar Prejuizo
    CreateButton("Btn_CloseProfit", offset_x, cur_y, half_btn_w, 26, "✔ Zerar Lucro", COLOR_CLOSE_PRF_BTN, COLOR_TEXT_MAIN, 9, true);
    CreateButton("Btn_CloseLoss", offset_x + half_btn_w + 6, cur_y, half_btn_w, 26, "✖ Zerar Prejuizo", COLOR_CLOSE_LSS_BTN, COLOR_TEXT_MAIN, 9, true);
-   cur_y += 29;
+   cur_y += 30;
    
-   // Cancelar Ordens Pendentes
-   CreateButton("Btn_CancelPendings", offset_x, cur_y, row_w, 24, "CANCELAR ORDENS PENDENTES", COLOR_CANCEL_BTN, COLOR_TEXT_MAIN, 8, true);
-   cur_y += 28;
+   // Botao ZERAR TODAS (No Rodape, Grande, Preto/Platina, Destaque Maximo para Scalper)
+   CreateButton("Btn_CloseAll", offset_x, cur_y, row_w, 36, "ZERAR TODAS AS ORDENS", COLOR_CLOSE_ALL_BTN, clrBlack, 11, true);
+   cur_y += 40;
    
    m_height = cur_y - m_y + 4;
    ObjectSetInteger(m_chart_id, PREFIX_GUI + "Panel_BG", OBJPROP_YSIZE, m_height);
@@ -1060,7 +1048,7 @@ void CBoletaMaster::UpdateLiveMetrics()
    
    CalculateDashboardStats();
    
-   // Atualiza os 4 Cartões de Confiança HUD
+   // Atualiza os 4 Cartoes de Confianca HUD
    ObjectSetString(m_chart_id, PREFIX_GUI + "Lbl_Cap_Val", OBJPROP_TEXT, StringFormat("$%.2f", m_starting_capital));
    ObjectSetString(m_chart_id, PREFIX_GUI + "Lbl_Lot_Val", OBJPROP_TEXT, DoubleToString(GetEffectiveLot(), 2));
    
@@ -1078,7 +1066,7 @@ void CBoletaMaster::UpdateLiveMetrics()
    }
    else
    {
-      ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_CloseAll", OBJPROP_TEXT, "ZERAR TODAS");
+      ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_CloseAll", OBJPROP_TEXT, "ZERAR TODAS AS ORDENS");
    }
    ChartRedraw(m_chart_id);
 }
@@ -1088,28 +1076,23 @@ void CBoletaMaster::UpdateFieldValues()
    if(m_is_minimized) return;
    int dec = GetLotDecimals(m_symbol);
    
-   // Risco
+   // Risco ($150 preenchido nativamente, mesmo desmarcado)
+   bool is_auto_risk = (m_risk_mode != RISK_MODE_MANUAL);
+   ObjectSetString(m_chart_id, PREFIX_GUI + "Chk_Risk", OBJPROP_TEXT, is_auto_risk ? "X" : "");
+   ObjectSetInteger(m_chart_id, PREFIX_GUI + "Chk_Risk", OBJPROP_BGCOLOR, is_auto_risk ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT);
+   
    if(m_risk_mode == RISK_MODE_PERCENT)
    {
       ObjectSetString(m_chart_id, PREFIX_GUI + "Edit_Risk", OBJPROP_TEXT, DoubleToString(m_risk_percent, 1));
       ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_Risk_Toggle", OBJPROP_TEXT, "Risco: %");
       ObjectSetInteger(m_chart_id, PREFIX_GUI + "Btn_Risk_Toggle", OBJPROP_BGCOLOR, COLOR_TOGGLE_PCT);
    }
-   else if(m_risk_mode == RISK_MODE_CASH)
+   else // RISK_MODE_CASH ou RISK_MODE_MANUAL (exibe sempre o valor configurado em dólares, ex: 150.00)
    {
       ObjectSetString(m_chart_id, PREFIX_GUI + "Edit_Risk", OBJPROP_TEXT, DoubleToString(m_risk_cash, 2));
       ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_Risk_Toggle", OBJPROP_TEXT, "Risco: $");
-      ObjectSetInteger(m_chart_id, PREFIX_GUI + "Btn_Risk_Toggle", OBJPROP_BGCOLOR, COLOR_TOGGLE_CASH);
+      ObjectSetInteger(m_chart_id, PREFIX_GUI + "Btn_Risk_Toggle", OBJPROP_BGCOLOR, is_auto_risk ? COLOR_TOGGLE_CASH : COLOR_EDIT_BG);
    }
-   else
-   {
-      ObjectSetString(m_chart_id, PREFIX_GUI + "Edit_Risk", OBJPROP_TEXT, "--");
-      ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_Risk_Toggle", OBJPROP_TEXT, "Risco: Manual");
-      ObjectSetInteger(m_chart_id, PREFIX_GUI + "Btn_Risk_Toggle", OBJPROP_BGCOLOR, COLOR_EDIT_BG);
-   }
-   bool is_auto_risk = (m_risk_mode != RISK_MODE_MANUAL);
-   ObjectSetString(m_chart_id, PREFIX_GUI + "Chk_Risk", OBJPROP_TEXT, is_auto_risk ? "X" : "");
-   ObjectSetInteger(m_chart_id, PREFIX_GUI + "Chk_Risk", OBJPROP_BGCOLOR, is_auto_risk ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT);
    
    // Lote
    ObjectSetString(m_chart_id, PREFIX_GUI + "Edit_Lot", OBJPROP_TEXT, DoubleToString(m_manual_lot, dec));
@@ -1138,11 +1121,9 @@ void CBoletaMaster::UpdateFieldValues()
    ObjectSetString(m_chart_id, PREFIX_GUI + "Chk_TS", OBJPROP_TEXT, m_ts_active ? "X" : "");
    ObjectSetInteger(m_chart_id, PREFIX_GUI + "Chk_TS", OBJPROP_BGCOLOR, m_ts_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT);
    
-   // Parcial
-   string parcial_btn_txt = m_parcial_active ? "[ PARCIAL: ATIVADA ]" : "[ PARCIAL: DESATIVADA ]";
-   color parcial_btn_bg   = m_parcial_active ? COLOR_CHECK_ACTIVE : C'35,39,50';
-   ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_Parcial_Toggle_Active", OBJPROP_TEXT, parcial_btn_txt);
-   ObjectSetInteger(m_chart_id, PREFIX_GUI + "Btn_Parcial_Toggle_Active", OBJPROP_BGCOLOR, parcial_btn_bg);
+   // Parcial (Checkbox unificado)
+   ObjectSetString(m_chart_id, PREFIX_GUI + "Chk_Parcial", OBJPROP_TEXT, m_parcial_active ? "X" : "");
+   ObjectSetInteger(m_chart_id, PREFIX_GUI + "Chk_Parcial", OBJPROP_BGCOLOR, m_parcial_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT);
    
    if(m_parcial_is_cash)
    {
@@ -1267,9 +1248,8 @@ void CBoletaMaster::AdjustRisk(double delta)
    }
    else
    {
-      m_risk_mode = RISK_MODE_CASH;
       m_risk_cash += delta;
-      if(m_risk_cash < 0.01) m_risk_cash = 0.01;
+      if(m_risk_cash < 1.0) m_risk_cash = 1.0;
       if(freeMargin > 0.0)
          m_risk_percent = (m_risk_cash / freeMargin) * 100.0;
    }
@@ -1797,18 +1777,6 @@ void CBoletaMaster::ExecuteCloseLoss()
    ChartRedraw(m_chart_id);
 }
 
-void CBoletaMaster::ExecuteCancelPendings()
-{
-   for(int i = OrdersTotal() - 1; i >= 0; i--)
-   {
-      ulong ticket = OrderGetTicket(i);
-      if(ticket > 0 && (!InpFilterSymbolOnly || OrderGetString(ORDER_SYMBOL) == m_symbol))
-         m_trade.OrderDelete(ticket);
-   }
-   UpdateLiveMetrics();
-   ChartRedraw(m_chart_id);
-}
-
 //+------------------------------------------------------------------+
 //| Gestao de Edicoes e Cliques                                      |
 //+------------------------------------------------------------------+
@@ -1828,7 +1796,7 @@ void CBoletaMaster::HandleEndEdit(const string &obj_name)
          if(r > 0.0) m_risk_percent = r;
          if(freeMargin > 0.0) m_risk_cash = freeMargin * (m_risk_percent / 100.0);
       }
-      else if(m_risk_mode == RISK_MODE_CASH)
+      else
       {
          if(r > 0.0) m_risk_cash = r;
          if(freeMargin > 0.0) m_risk_percent = (m_risk_cash / freeMargin) * 100.0;
@@ -1926,20 +1894,20 @@ void CBoletaMaster::HandleButtonClick(const string &obj_name)
    if(short_name == "Chk_BE")               { ToggleBE(); return; }
    if(short_name == "Chk_TS")               { ToggleTS(); return; }
    
-   // Parcial: Botao Dedicado e Toggles
-   if(short_name == "Btn_Parcial_Toggle_Active") { ToggleParcial(); return; }
-   if(short_name == "Btn_Parcial_Toggle_Mode")   { ToggleParcialMode(); return; }
-   if(short_name == "Chk_Parcial_BE")            { ToggleParcialBE(); return; }
+   // Parcial: Checkbox e Toggles
+   if(short_name == "Chk_Parcial")          { ToggleParcial(); return; }
+   if(short_name == "Btn_Parcial_Toggle_Mode") { ToggleParcialMode(); return; }
+   if(short_name == "Chk_Parcial_BE")       { ToggleParcialBE(); return; }
    
    // Steppers (+ / -)
    if(short_name == "Btn_Risk_Dec")
    {
-      AdjustRisk((m_risk_mode == RISK_MODE_CASH) ? -InpStepRiskCash : -InpStepRiskPct);
+      AdjustRisk((m_risk_mode == RISK_MODE_PERCENT) ? -InpStepRiskPct : -InpStepRiskCash);
       return;
    }
    if(short_name == "Btn_Risk_Inc")
    {
-      AdjustRisk((m_risk_mode == RISK_MODE_CASH) ? InpStepRiskCash : InpStepRiskPct);
+      AdjustRisk((m_risk_mode == RISK_MODE_PERCENT) ? InpStepRiskPct : InpStepRiskCash);
       return;
    }
    
@@ -1977,10 +1945,9 @@ void CBoletaMaster::HandleButtonClick(const string &obj_name)
    if(short_name == "Btn_Buy")              { ExecuteBuy(); return; }
    if(short_name == "Btn_Sell")             { ExecuteSell(); return; }
    if(short_name == "Btn_Invert")           { ExecuteInvert(); return; }
-   if(short_name == "Btn_CloseAll")         { ExecuteCloseAll(); return; }
    if(short_name == "Btn_CloseProfit")      { ExecuteCloseProfit(); return; }
    if(short_name == "Btn_CloseLoss")        { ExecuteCloseLoss(); return; }
-   if(short_name == "Btn_CancelPendings")   { ExecuteCancelPendings(); return; }
+   if(short_name == "Btn_CloseAll")         { ExecuteCloseAll(); return; }
 }
 
 void CBoletaMaster::OnChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam)
@@ -2078,7 +2045,6 @@ void CBoletaMaster::OnChartEvent(const int id, const long &lparam, const double 
    // Teclas de Atalho de Alta Produtividade
    if(id == CHARTEVENT_KEYDOWN)
    {
-      if(lparam == 67 || lparam == 99)  { ExecuteCancelPendings(); return; } // C -> Cancelar Pendentes
       if(lparam == 77 || lparam == 109) { ToggleMinimize(); return; }        // M -> Minimizar
       if(lparam == 73 || lparam == 105) { ExecuteInvert(); return; }         // I -> Inverter
    }

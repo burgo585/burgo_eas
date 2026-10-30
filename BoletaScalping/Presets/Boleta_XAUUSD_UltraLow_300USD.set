@@ -1,11 +1,11 @@
-; Preset Oficial: XAUUSD XM Ultra Low Standard - Banca $300 (Versao 10.50 Scalp Pro & Canais)
+; Preset Oficial: XAUUSD XM Ultra Low Standard - Banca $300 (Versao 10.60 Scalp Pro & Canais)
 InpSymbol=
 InpMagicNumber=123456
 InpSlippage=20
 InpFilterSymbolOnly=true
 InpDefaultRiskMode=0
 InpDefaultLot=0.04
-InpRiskCash=10.0
+InpRiskCash=150.0
 InpRiskPercent=1.0
 InpSLActive=false
 InpDefaultSL=200
@@ -26,8 +26,8 @@ InpProjUp=40
 InpProjDown=40
 InpCanalPushAlert=true
 InpCanalScreenAlert=true
+InpStepRiskCash=10.0
 InpStepRiskPct=0.5
-InpStepRiskCash=1.0
 InpStepPoints=20
 InpStepParcialCash=5.0
 InpStepParcialVol=10.0
