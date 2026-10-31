@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Tutorial do Usuário - Boleta Scalping Pro v10</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #151d30;
+      --card-hover: #1c2742;
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.25);
+      --green: #22c55e;
+      --green-glow: rgba(34, 197, 94, 0.25);
+      --red: #ef4444;
+      --red-glow: rgba(239, 68, 68, 0.25);
+      --gold: #f59e0b;
+      --gold-glow: rgba(245, 158, 11, 0.25);
+      --purple: #a855f7;
+      --text-main: #f8fafc;
+      --text-sub: #94a3b8;
+      --border: #22304d;
+      --border-bright: #3b82f6;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: var(--bg); color: var(--text-main); line-height: 1.6; padding: 24px; }
+    .container { max-width: 1100px; margin: 0 auto; }
+    
+    /* Header Principal */
+    .hero {
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px 28px;
+      margin-bottom: 28px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .hero-title { font-size: 28px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 12px; }
+    .hero-title span { background: linear-gradient(90deg, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .hero-badges { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    .badge { font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .badge-pro { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid #38bdf8; }
+    .badge-safe { background: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid #22c55e; }
+    .badge-fast { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid #f59e0b; }
+    
+    /* Navegacao por Abas */
+    .tabs { display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; }
+    .tab-btn {
+      background: var(--card-bg);
+      color: var(--text-sub);
+      border: 1px solid var(--border);
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .tab-btn:hover { background: var(--card-hover); color: #fff; }
+    .tab-btn.active {
+      background: #1e293b;
+      color: var(--accent);
+      border-color: var(--accent);
+      box-shadow: 0 0 15px var(--accent-glow);
+    }
+    
+    .tab-content { display: none; }
+    .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    
+    /* Grid de Cards */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+    @media (max-width: 880px) { .grid-2 { grid-template-columns: 1fr; } }
+    
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      position: relative;
+    }
+    .card-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    /* Callout e Destaques */
+    .callout {
+      background: rgba(56, 189, 248, 0.08);
+      border-left: 4px solid var(--accent);
+      padding: 14px 18px;
+      border-radius: 0 10px 10px 0;
+      margin: 16px 0;
+      font-size: 14px;
+      color: #e2e8f0;
+    }
+    .callout.green { background: rgba(34, 197, 94, 0.08); border-left-color: var(--green); }
+    .callout.gold { background: rgba(245, 158, 11, 0.08); border-left-color: var(--gold); }
+    .callout.red { background: rgba(239, 68, 68, 0.08); border-left-color: var(--red); }
+    
+    /* Passos numerados */
+    .step-list { list-style: none; counter-reset: step-counter; margin-top: 14px; }
+    .step-item {
+      position: relative;
+      padding-left: 44px;
+      margin-bottom: 18px;
+      font-size: 14px;
+      color: #cbd5e1;
+    }
+    .step-item::before {
+      content: counter(step-counter);
+      counter-increment: step-counter;
+      position: absolute;
+      left: 0;
+      top: -2px;
+      width: 30px;
+      height: 30px;
+      background: linear-gradient(135deg, #38bdf8, #2563eb);
+      color: #000;
+      font-weight: 800;
+      font-size: 14px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+    .step-title { font-weight: 700; color: #fff; font-size: 15px; margin-bottom: 4px; }
+    
+    /* Diagramas SVG e Mockups */
+    .svg-container {
+      background: #090d16;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 18px 0;
+      overflow-x: auto;
+    }
+    
+    /* Tabela de Parametros */
+    .param-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      font-size: 13px;
+    }
+    .param-table th {
+      background: #0f172a;
+      color: var(--accent);
+      text-align: left;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      font-weight: 700;
+    }
+    .param-table td {
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      color: #cbd5e1;
+    }
+    .param-table tr:nth-child(even) { background: rgba(255, 255, 255, 0.02); }
+    .param-name { font-weight: 700; color: #fff; font-family: monospace; }
+    .param-val { color: var(--gold); font-weight: 600; font-family: monospace; }
+    
+    /* Botoes Ilustrativos */
+    .demo-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 13px;
+      color: #fff;
+      cursor: default;
+      user-select: none;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    .demo-buy { background: #22c55e; color: #000; }
+    .demo-sell { background: #ef4444; color: #fff; }
+    .demo-invert { background: #6366f1; color: #fff; }
+    .demo-close-all { background: #f59e0b; color: #000; }
+    .demo-zoom { background: #1e293b; color: #f59e0b; border: 1px solid #334155; }
+    .demo-scope { background: #0d9488; color: #fff; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    
+    <!-- Hero Header -->
+    <div class="hero">
+      <div>
+        <div class="hero-title">⚡ <span>Boleta Scalping Pro v10</span></div>
+        <p style="color: var(--text-sub); margin-top: 6px; font-size: 15px;">
+          Manual Oficial do Usuário: Operações Rápidas, Linhas Vivas 24/7, Proporção Inteligente e Histórico Forense.
+        </p>
+        <div class="hero-badges">
+          <span class="badge badge-pro">Versão 10.0</span>
+          <span class="badge badge-safe">Protocolo Zero Leak</span>
+          <span class="badge badge-fast">Execução Submilissegundo</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navegacao por Abas -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab(0)">🗺️ Anatomia Visual</button>
+      <button class="tab-btn" onclick="switchTab(1)">⚡ Como Operar no Gráfico</button>
+      <button class="tab-btn" onclick="switchTab(2)">🎯 Linhas Vivas & ATR 24/7</button>
+      <button class="tab-btn" onclick="switchTab(3)">📊 Histórico & Assertividade</button>
+      <button class="tab-btn" onclick="switchTab(4)">📐 Canais de Frequência (40x40)</button>
+      <button class="tab-btn" onclick="switchTab(5)">⚙️ Parâmetros do Preset (.set)</button>
+    </div>
+
+    <!-- ABA 0: ANATOMIA VISUAL DA BOLETA -->
+    <div class="tab-content active" id="tab-0">
+      <div class="card">
+        <div class="card-title">🔍 Visão Geral dos Componentes da Boleta</div>
+        <p style="color: var(--text-sub); font-size: 14px; margin-bottom: 16px;">
+          A interface foi projetada com design Dark Mode moderno, alta legibilidade e arquitetura métrica proporcional. Nenhum texto ou botão transborda, mesmo em telas de alta resolução.
+        </p>
+
+        <!-- SVG Mockup Fiel da Boleta -->
+        <div class="svg-container">
+          <svg width="420" height="740" viewBox="0 0 420 740" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Painel Fundo -->
+            <rect x="20" y="20" width="380" height="700" rx="14" fill="#0f172a" stroke="#334155" stroke-width="2"/>
+            
+            <!-- 1. Cabecalho -->
+            <rect x="20" y="20" width="380" height="42" rx="14" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+            <text x="36" y="47" fill="#f8fafc" font-size="15" font-weight="bold">SCALP PRO v10</text>
+            <!-- Zoom Button -->
+            <rect x="250" y="28" width="46" height="26" rx="6" fill="#0f172a" stroke="#f59e0b" stroke-width="1"/>
+            <text x="273" y="45" fill="#f59e0b" font-size="11" font-weight="bold" text-anchor="middle">115%</text>
+            <!-- Min Button -->
+            <rect x="304" y="28" width="28" height="26" rx="6" fill="#334155"/>
+            <text x="318" y="46" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle">-</text>
+            <!-- Close Button -->
+            <rect x="340" y="28" width="46" height="26" rx="6" fill="#dc2626"/>
+            <text x="363" y="46" fill="#fff" font-size="12" font-weight="bold" text-anchor="middle">X</text>
+            
+            <!-- 2. Faixa de Mercado -->
+            <rect x="36" y="72" width="348" height="30" rx="6" fill="#15213b" stroke="#1e293b"/>
+            <text x="48" y="92" fill="#f59e0b" font-size="13" font-weight="bold">GOLD#</text>
+            <text x="180" y="92" fill="#f8fafc" font-size="12">Sp: 20</text>
+            <text x="280" y="92" fill="#38bdf8" font-size="12" font-weight="bold">[M15] 08:44</text>
+            
+            <!-- 3. Cartoes HUD (4 Metricas) -->
+            <!-- Cap Inicial -->
+            <rect x="36" y="112" width="170" height="38" rx="6" fill="#1e293b" stroke="#334155"/>
+            <text x="46" y="126" fill="#94a3b8" font-size="10">CAP. INICIAL</text>
+            <text x="46" y="142" fill="#f8fafc" font-size="14" font-weight="bold">$1,000.00</text>
+            <!-- Lote Atual -->
+            <rect x="214" y="112" width="170" height="38" rx="6" fill="#1e293b" stroke="#334155"/>
+            <text x="224" y="126" fill="#94a3b8" font-size="10">LOTE ATUAL</text>
+            <text x="224" y="142" fill="#f59e0b" font-size="14" font-weight="bold">0.04</text>
+            <!-- Lucro Hoje -->
+            <rect x="36" y="156" width="170" height="38" rx="6" fill="#1e293b" stroke="#334155"/>
+            <text x="46" y="170" fill="#94a3b8" font-size="10">LUCRO HOJE</text>
+            <text x="46" y="186" fill="#22c55e" font-size="14" font-weight="bold">+$148.50</text>
+            <!-- % Acertos -->
+            <rect x="214" y="156" width="170" height="38" rx="6" fill="#1e293b" stroke="#334155"/>
+            <text x="224" y="170" fill="#94a3b8" font-size="10">% ACERTOS (CONTA)</text>
+            <text x="224" y="186" fill="#38bdf8" font-size="13" font-weight="bold">56.1% (193/344)</text>
+
+            <!-- Barra de Selecao de Data & Escopo -->
+            <rect x="36" y="202" width="46" height="26" rx="5" fill="#38bdf8"/>
+            <text x="59" y="219" fill="#000" font-size="11" font-weight="bold" text-anchor="middle">Hoje</text>
+            <rect x="86" y="202" width="38" height="26" rx="5" fill="#334155"/>
+            <text x="105" y="219" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">7D</text>
+            <rect x="128" y="202" width="46" height="26" rx="5" fill="#334155"/>
+            <text x="151" y="219" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">Geral</text>
+            <rect x="178" y="202" width="54" height="26" rx="5" fill="#0d9488"/>
+            <text x="205" y="219" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">Conta</text>
+            <rect x="236" y="202" width="108" height="26" rx="5" fill="#0f172a" stroke="#334155"/>
+            <text x="290" y="219" fill="#f8fafc" font-size="11" text-anchor="middle">2026.10.01</text>
+            <rect x="348" y="202" width="36" height="26" rx="5" fill="#38bdf8"/>
+            <text x="366" y="219" fill="#000" font-size="11" font-weight="bold" text-anchor="middle">OK</text>
+
+            <!-- 4. Risco e Lote -->
+            <!-- Risco -->
+            <rect x="36" y="238" width="22" height="22" rx="4" fill="#334155"/>
+            <rect x="64" y="236" width="130" height="26" rx="5" fill="#1e293b" stroke="#334155"/>
+            <text x="74" y="253" fill="#cbd5e1" font-size="12" font-weight="bold">Risco: $</text>
+            <rect x="252" y="236" width="28" height="26" rx="5" fill="#334155"/>
+            <text x="266" y="254" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle">-</text>
+            <rect x="284" y="236" width="70" height="26" rx="5" fill="#0f172a" stroke="#334155"/>
+            <text x="319" y="254" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">150.00</text>
+            <rect x="356" y="236" width="28" height="26" rx="5" fill="#334155"/>
+            <text x="370" y="254" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle">+</text>
+
+            <!-- Lote -->
+            <text x="64" y="286" fill="#cbd5e1" font-size="12" font-weight="bold">Lote Operacional</text>
+            <rect x="252" y="268" width="28" height="26" rx="5" fill="#334155"/>
+            <text x="266" y="286" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle">-</text>
+            <rect x="284" y="268" width="70" height="26" rx="5" fill="#0f172a" stroke="#334155"/>
+            <text x="319" y="286" fill="#f59e0b" font-size="13" font-weight="bold" text-anchor="middle">0.04</text>
+            <rect x="356" y="268" width="28" height="26" rx="5" fill="#334155"/>
+            <text x="370" y="286" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle">+</text>
+
+            <!-- 5. Stop Loss e Take Profit -->
+            <!-- SL (200 pts) -->
+            <rect x="36" y="302" width="22" height="22" rx="4" fill="#38bdf8"/>
+            <text x="47" y="318" fill="#000" font-size="12" font-weight="bold" text-anchor="middle">X</text>
+            <text x="64" y="318" fill="#ef4444" font-size="12" font-weight="bold">Stop Loss (pts)</text>
+            <rect x="252" y="300" width="28" height="26" rx="5" fill="#334155"/>
+            <text x="266" y="318" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle">-</text>
+            <rect x="284" y="300" width="70" height="26" rx="5" fill="#0f172a" stroke="#334155"/>
+            <text x="319" y="318" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">200</text>
+            <rect x="356" y="300" width="28" height="26" rx="5" fill="#334155"/>
+            <text x="370" y="318" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle">+</text>
+
+            <!-- TP (300 pts) -->
+            <rect x="36" y="334" width="22" height="22" rx="4" fill="#38bdf8"/>
+            <text x="47" y="350" fill="#000" font-size="12" font-weight="bold" text-anchor="middle">X</text>
+            <text x="64" y="350" fill="#22c55e" font-size="12" font-weight="bold">Take Profit (pts)</text>
+            <rect x="252" y="332" width="28" height="26" rx="5" fill="#334155"/>
+            <text x="266" y="350" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle">-</text>
+            <rect x="284" y="332" width="70" height="26" rx="5" fill="#0f172a" stroke="#334155"/>
+            <text x="319" y="350" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">300</text>
+            <rect x="356" y="332" width="28" height="26" rx="5" fill="#334155"/>
+            <text x="370" y="350" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle">+</text>
+
+            <!-- BE e TS -->
+            <rect x="36" y="366" width="22" height="22" rx="4" fill="#334155"/>
+            <text x="64" y="382" fill="#cbd5e1" font-size="12">Break Even (pts)</text>
+            <rect x="252" y="364" width="28" height="26" rx="5" fill="#334155"/>
+            <text x="266" y="382" fill="#fff" font-size="14" text-anchor="middle">-</text>
+            <rect x="284" y="364" width="70" height="26" rx="5" fill="#0f172a" stroke="#334155"/>
+            <text x="319" y="382" fill="#f8fafc" font-size="12" text-anchor="middle">60</text>
+            <rect x="356" y="364" width="28" height="26" rx="5" fill="#334155"/>
+            <text x="370" y="382" fill="#fff" font-size="14" text-anchor="middle">+</text>
+
+            <!-- Realizacao Parcial -->
+            <rect x="36" y="398" width="22" height="22" rx="4" fill="#334155"/>
+            <rect x="64" y="396" width="46" height="26" rx="5" fill="#1e293b"/>
+            <text x="87" y="413" fill="#cbd5e1" font-size="11" font-weight="bold" text-anchor="middle">Pts</text>
+            <text x="116" y="414" fill="#cbd5e1" font-size="12">Alvo Parcial</text>
+            <rect x="252" y="396" width="28" height="26" rx="5" fill="#334155"/>
+            <text x="266" y="414" fill="#fff" font-size="14" text-anchor="middle">-</text>
+            <rect x="284" y="396" width="70" height="26" rx="5" fill="#0f172a" stroke="#334155"/>
+            <text x="319" y="414" fill="#f8fafc" font-size="12" text-anchor="middle">150</text>
+            <rect x="356" y="396" width="28" height="26" rx="5" fill="#334155"/>
+            <text x="370" y="414" fill="#fff" font-size="14" text-anchor="middle">+</text>
+
+            <!-- Canais Expansivel -->
+            <rect x="36" y="432" width="348" height="28" rx="6" fill="#1e293b" stroke="#f59e0b" stroke-dasharray="2 2"/>
+            <text x="210" y="451" fill="#f59e0b" font-size="12" font-weight="bold" text-anchor="middle">CANAIS DE FREQUENCIA (40x40)  [+]</text>
+
+            <!-- 6. Botoes de Acao -->
+            <!-- Compra e Venda -->
+            <rect x="36" y="470" width="170" height="48" rx="8" fill="#15803d" stroke="#22c55e" stroke-width="2"/>
+            <text x="121" y="500" fill="#ffffff" font-size="16" font-weight="bold" text-anchor="middle">[+] COMPRA</text>
+
+            <rect x="214" y="470" width="170" height="48" rx="8" fill="#b91c1c" stroke="#ef4444" stroke-width="2"/>
+            <text x="299" y="500" fill="#ffffff" font-size="16" font-weight="bold" text-anchor="middle">[-] VENDA</text>
+
+            <!-- Inverter Posicao -->
+            <rect x="36" y="526" width="348" height="34" rx="7" fill="#4338ca"/>
+            <text x="210" y="548" fill="#ffffff" font-size="13" font-weight="bold" text-anchor="middle">INVERTER POSICAO</text>
+
+            <!-- Zerar Lucro / Prejuizo -->
+            <rect x="36" y="568" width="170" height="34" rx="7" fill="#166534"/>
+            <text x="121" y="590" fill="#ffffff" font-size="13" font-weight="bold" text-anchor="middle">Zerar Lucro</text>
+
+            <rect x="214" y="568" width="170" height="34" rx="7" fill="#991b1b"/>
+            <text x="299" y="590" fill="#ffffff" font-size="13" font-weight="bold" text-anchor="middle">Zerar Prejuizo</text>
+
+            <!-- Zerar Todas as Ordens (Rodape) -->
+            <rect x="36" y="612" width="348" height="48" rx="8" fill="#f59e0b"/>
+            <text x="210" y="642" fill="#000000" font-size="16" font-weight="900" text-anchor="middle">ZERAR TODAS AS ORDENS</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA 1: COMO OPERAR NO GRAFICO -->
+    <div class="tab-content" id="tab-1">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">🚀 1. Execução de Ordens em 1 Clique</div>
+          <p style="font-size: 14px; color: var(--text-sub); margin-bottom: 12px;">
+            A boleta envia ordens imediatamente a mercado com o lote ativo e já preenche automaticamente o Stop Loss e Take Profit configurados.
+          </p>
+          <ul class="step-list">
+            <li class="step-item">
+              <div class="step-title">Compra a Mercado</div>
+              Clique no botão verde <span class="demo-btn demo-buy">[+] COMPRA</span>. A ordem entra instantaneamente no preço Ask com o SL de 200 pts e TP de 300 pts nativos.
+            </li>
+            <li class="step-item">
+              <div class="step-title">Venda a Mercado</div>
+              Clique no botão vermelho <span class="demo-btn demo-sell">[-] VENDA</span>. A ordem entra no preço Bid. As linhas no gráfico são invertidas para monitorar o lucro na descida.
+            </li>
+            <li class="step-item">
+              <div class="step-title">Inverter Posição</div>
+              Se você comprou e o mercado virou contra, basta clicar em <span class="demo-btn demo-invert">INVERTER POSICAO</span>. Ele fecha a posição atual e abre uma oposta com o mesmo lote.
+            </li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🛑 2. Fechamento e Proteção de Saldo</div>
+          <p style="font-size: 14px; color: var(--text-sub); margin-bottom: 12px;">
+            Controle total sobre posições abertas com botões seletivos de emergência.
+          </p>
+          <ul class="step-list">
+            <li class="step-item">
+              <div class="step-title">Zerar Lucro</div>
+              Fecha instantaneamente apenas as operações que estão com lucro positivo no momento, mantendo as demais abertas.
+            </li>
+            <li class="step-item">
+              <div class="step-title">Zerar Prejuízo</div>
+              Fecha imediatamente apenas as ordens no vermelho para estancar perdas sem mexer nas posições vencedoras.
+            </li>
+            <li class="step-item">
+              <div class="step-title">Zerar Todas as Ordens (Pânico/Proteção)</div>
+              O grande botão amarelo <span class="demo-btn demo-close-all">ZERAR TODAS AS ORDENS</span> encerra instantaneamente todas as posições e remove qualquer ordem pendente com segurança.
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🔍 Como Usar o Botão de Zoom (Proporção)</div>
+        <p style="font-size: 14px; color: var(--text-sub); margin-bottom: 12px;">
+          Se as letras parecerem pequenas no seu monitor ou se você usa uma tela 2K/4K, não precisa alterar a resolução do Windows:
+        </p>
+        <div class="callout gold">
+          <strong>Clique no botão de Zoom no topo da Boleta:</strong><br>
+          Ele exibe a escala atual (ex: <span class="demo-btn demo-zoom">115%</span>). A cada clique, a boleta altera instantaneamente entre:
+          <strong>100% (Compacta) ➔ 115% (Confortável) ➔ 130% (Grande) ➔ 150% (Extra Grande) ➔ 100%</strong>.
+          Tudo se redimensiona proporcionalmente, mantendo cada letra e botão perfeitamente enquadrados sem vazamento.
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA 2: LINHAS VIVAS & ATR 24/7 -->
+    <div class="tab-content" id="tab-2">
+      <div class="card">
+        <div class="card-title">📈 Linhas Dinâmicas de SL e TP no Gráfico (24/7)</div>
+        <p style="font-size: 14px; color: var(--text-sub); margin-bottom: 16px;">
+          Diferente das boletas tradicionais que só mostram linhas estáticas depois que a ordem é aberta, a Boleta Scalping Pro v10 desenha as linhas no gráfico <strong>o tempo todo</strong>, acompanhando cada oscilação do preço em tempo real.
+        </p>
+
+        <!-- Diagrama SVG das Linhas no Grafico -->
+        <div class="svg-container">
+          <svg width="680" height="260" viewBox="0 0 680 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="680" height="260" fill="#090d16" rx="8"/>
+            <!-- Grid linhas de preco -->
+            <line x1="40" y1="50" x2="640" y2="50" stroke="#1e293b" stroke-width="1"/>
+            <line x1="40" y1="130" x2="640" y2="130" stroke="#1e293b" stroke-width="1"/>
+            <line x1="40" y1="210" x2="640" y2="210" stroke="#1e293b" stroke-width="1"/>
+
+            <!-- Linha Take Profit (Verde) -->
+            <line x1="40" y1="60" x2="640" y2="60" stroke="#22c55e" stroke-width="2" stroke-dasharray="6 4"/>
+            <rect x="520" y="46" width="120" height="24" rx="4" fill="#22c55e"/>
+            <text x="580" y="62" fill="#000" font-size="11" font-weight="bold" text-anchor="middle">TP [300 pts]: +$12.00</text>
+
+            <!-- Velas Candlesticks -->
+            <!-- Vela 1 Alta -->
+            <line x1="120" y1="100" x2="120" y2="170" stroke="#22c55e" stroke-width="2"/>
+            <rect x="110" y="115" width="20" height="40" fill="#22c55e"/>
+            <!-- Vela 2 Baixa -->
+            <line x1="180" y1="110" x2="180" y2="180" stroke="#ef4444" stroke-width="2"/>
+            <rect x="170" y="125" width="20" height="45" fill="#ef4444"/>
+            <!-- Vela 3 Alta -->
+            <line x1="240" y1="95" x2="240" y2="160" stroke="#22c55e" stroke-width="2"/>
+            <rect x="230" y="110" width="20" height="35" fill="#22c55e"/>
+            <!-- Vela Atual com Preco Atual -->
+            <line x1="300" y1="105" x2="300" y2="165" stroke="#22c55e" stroke-width="2"/>
+            <rect x="290" y="120" width="20" height="30" fill="#22c55e"/>
+
+            <!-- Linha de Preco Atual (Amarelo) -->
+            <line x1="40" y1="135" x2="640" y2="135" stroke="#f59e0b" stroke-width="1" stroke-dasharray="2 2"/>
+            <rect x="40" y="123" width="90" height="22" rx="4" fill="#f59e0b"/>
+            <text x="85" y="138" fill="#000" font-size="11" font-weight="bold" text-anchor="middle">PREÇO ATUAL</text>
+
+            <!-- Linha Stop Loss (Vermelho) -->
+            <line x1="40" y1="195" x2="640" y2="195" stroke="#ef4444" stroke-width="2" stroke-dasharray="6 4"/>
+            <rect x="520" y="181" width="120" height="24" rx="4" fill="#ef4444"/>
+            <text x="580" y="197" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">SL [200 pts]: -$8.00</text>
+          </svg>
+        </div>
+
+        <div class="callout green">
+          <strong>Vantagem Operacional do Bracket Móvel Simultâneo:</strong><br>
+          Você sempre sabe exatamente onde seu Stop Loss e Take Profit vão cair <strong>antes</strong> de clicar no botão. As etiquetas na lateral mostram a pontuação e o valor em dólar correspondente ao seu lote atual.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">⚡ Sugestão Volátil de Alvos com ATR (Média da Volatilidade)</div>
+        <p style="font-size: 14px; color: var(--text-sub); margin-bottom: 12px;">
+          Se você não quer usar alvos fixos de 200/300 pontos, pode ligar a sugestão por <strong>ATR (Average True Range)</strong> nas configurações:
+        </p>
+        <div class="callout gold">
+          <strong>Como Funciona o Badge ATR:</strong><br>
+          A boleta calcula o ATR da vela anterior fechada (zero lookahead). Um botão azul escuro surge no painel exibindo por exemplo:
+          <br><br>
+          <code style="background: #0f172a; padding: 4px 8px; border-radius: 4px; color: #f59e0b;">ATR: 142 pts | Sug: SL 213 / TP 284 [Aplicar]</code>
+          <br><br>
+          Ao clicar no botão, os alvos de Stop Loss e Take Profit são imediatamente ajustados para os valores da volatilidade atual do mercado!
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA 3: HISTORICO & ASSERTIVIDADE -->
+    <div class="tab-content" id="tab-3">
+      <div class="card">
+        <div class="card-title">📊 Leitura Forense do Histórico da Conta e % de Acerto</div>
+        <p style="font-size: 14px; color: var(--text-sub); margin-bottom: 14px;">
+          A boleta possui um motor analítico que audita seu histórico de negociações em tempo real sem distorções de fins de semana ou ordens fantasmas.
+        </p>
+
+        <div class="grid-2">
+          <div style="background: #0f172a; padding: 18px; border-radius: 10px; border: 1px solid var(--border);">
+            <div style="font-size: 12px; color: var(--text-sub); font-weight: bold; margin-bottom: 6px;">MODO CONTA VS ATIVO</div>
+            <p style="font-size: 13px; color: #cbd5e1; margin-bottom: 12px;">
+              Clique no botão <span class="demo-btn demo-scope">Conta</span> na barra de datas:
+            </p>
+            <ul style="font-size: 13px; color: #94a3b8; padding-left: 18px;">
+              <li><strong style="color: #fff;">Modo Conta:</strong> Mostra o Win Rate e lucro somando todos os ativos que você operou (Ouro, Bitcoin, Moedas).</li>
+              <li><strong style="color: #fff;">Modo Ativo:</strong> Filtra somente o histórico do ativo em que a boleta está inserida.</li>
+            </ul>
+          </div>
+
+          <div style="background: #0f172a; padding: 18px; border-radius: 10px; border: 1px solid var(--border);">
+            <div style="font-size: 12px; color: var(--text-sub); font-weight: bold; margin-bottom: 6px;">FILTROS TEMPORAIS RÁPIDOS</div>
+            <p style="font-size: 13px; color: #cbd5e1; margin-bottom: 12px;">
+              Alterne os períodos com apenas 1 clique:
+            </p>
+            <ul style="font-size: 13px; color: #94a3b8; padding-left: 18px;">
+              <li><strong style="color: #38bdf8;">[Hoje]:</strong> Do início do dia até o segundo atual.</li>
+              <li><strong style="color: #fff;">[7D]:</strong> Dos últimos 7 dias corridos.</li>
+              <li><strong style="color: #fff;">[Geral]:</strong> Todo o histórico da conta desde o primeiro depósito.</li>
+              <li><strong style="color: #f59e0b;">[Data Específica]:</strong> Digite uma data na caixa (ex: <code>2026.10.01</code>) e clique em <strong>OK</strong> para ver sua assertividade daquele dia em diante!</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="callout green" style="margin-top: 20px;">
+          <strong>Exemplo Real na sua Conta:</strong><br>
+          Se você operou Bitcoin no sábado e Ouro na sexta-feira, o botão <strong>[Conta]</strong> exibe todos os seus <strong>344 trades</strong> (56.1% de assertividade geral), sem travar quando o pregão do ouro estiver fechado!
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA 4: CANAIS DE FREQUENCIA 40x40 -->
+    <div class="tab-content" id="tab-4">
+      <div class="card">
+        <div class="card-title">📐 Gaveta de Canais de Frequência Manuais (40x40)</div>
+        <p style="font-size: 14px; color: var(--text-sub); margin-bottom: 16px;">
+          O sistema de projeção de frequência matemática permite marcar um canal de referência no gráfico e projetar até 40 níveis de suporte e resistência simétricos para cima e para baixo.
+        </p>
+
+        <!-- Diagrama SVG de Canais -->
+        <div class="svg-container">
+          <svg width="680" height="240" viewBox="0 0 680 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="680" height="240" fill="#090d16" rx="8"/>
+            <!-- Linhas Projetadas Cima -->
+            <line x1="40" y1="30" x2="640" y2="30" stroke="#38bdf8" stroke-width="1" stroke-dasharray="4 4"/>
+            <text x="610" y="24" fill="#38bdf8" font-size="10">Canal +2</text>
+            <line x1="40" y1="70" x2="640" y2="70" stroke="#38bdf8" stroke-width="1" stroke-dasharray="4 4"/>
+            <text x="610" y="64" fill="#38bdf8" font-size="10">Canal +1</text>
+
+            <!-- 2 Linhas de Referencia Marcadas (Solidas Douradas) -->
+            <line x1="40" y1="110" x2="640" y2="110" stroke="#f59e0b" stroke-width="2"/>
+            <rect x="50" y="100" width="130" height="20" rx="4" fill="#f59e0b"/>
+            <text x="115" y="114" fill="#000" font-size="10" font-weight="bold" text-anchor="middle">LINHA BASE 1 (TOPO)</text>
+
+            <line x1="40" y1="150" x2="640" y2="150" stroke="#f59e0b" stroke-width="2"/>
+            <rect x="50" y="140" width="130" height="20" rx="4" fill="#f59e0b"/>
+            <text x="115" y="154" fill="#000" font-size="10" font-weight="bold" text-anchor="middle">LINHA BASE 2 (FUNDO)</text>
+
+            <!-- Linhas Projetadas Baixo -->
+            <line x1="40" y1="190" x2="640" y2="190" stroke="#818cf8" stroke-width="1" stroke-dasharray="4 4"/>
+            <text x="610" y="184" fill="#818cf8" font-size="10">Canal -1</text>
+            <line x1="40" y1="230" x2="640" y2="230" stroke="#818cf8" stroke-width="1" stroke-dasharray="4 4"/>
+            <text x="610" y="224" fill="#818cf8" font-size="10">Canal -2</text>
+
+            <text x="340" y="134" fill="#ffffff" font-size="12" font-weight="bold" text-anchor="middle">← Amplitude do Canal Base (X pontos) →</text>
+          </svg>
+        </div>
+
+        <ul class="step-list">
+          <li class="step-item">
+            <div class="step-title">Passo 1: Clique em "1. Marcar 2 Linhas"</div>
+            Aparecerão duas linhas no gráfico. Arraste a linha superior para o topo mais importante e a linha inferior para o fundo de referência.
+          </li>
+          <li class="step-item">
+            <div class="step-title">Passo 2: Clique em "2. Projetar 40 Canais"</div>
+            O robô calcula a amplitude em pontos entre as duas linhas e projeta automaticamente 40 canais matemáticos idênticos acima e 40 abaixo.
+          </li>
+          <li class="step-item">
+            <div class="step-title">Ocultar ou Limpar</div>
+            Use o botão <strong>Ocultar Linhas</strong> para deixar o gráfico limpo durante o trade sem perder os níveis salvos, ou <strong>Limpar Canais</strong> para reiniciar a marcação.
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ABA 5: PARAMETROS DO PRESET (.SET) -->
+    <div class="tab-content" id="tab-5">
+      <div class="card">
+        <div class="card-title">⚙️ Tabela Completa de Parâmetros e Configuração Nativa</div>
+        <p style="font-size: 14px; color: var(--text-sub); margin-bottom: 14px;">
+          Estes são os valores nativos já pré-configurados no robô para você começar a operar sem precisar alterar nada:
+        </p>
+
+        <table class="param-table">
+          <thead>
+            <tr>
+              <th>Parâmetro</th>
+              <th>Valor Padrão</th>
+              <th>Descrição e Comportamento</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="param-name">InpGuiScale</td>
+              <td class="param-val">GUI_SCALE_115</td>
+              <td>Tamanho da Boleta: 100% (Compacta), 115% (Médio Confortável), 130% (Grande) ou 150% (Extra Grande).</td>
+            </tr>
+            <tr>
+              <td class="param-name">InpDefaultLot</td>
+              <td class="param-val">0.04</td>
+              <td>Lote fixo inicial que já vem preenchido na boleta.</td>
+            </tr>
+            <tr>
+              <td class="param-name">InpSLActive / InpDefaultSL</td>
+              <td class="param-val">true / 200 pts</td>
+              <td>Stop Loss ativado de fábrica com 200 pontos de distância da entrada.</td>
+            </tr>
+            <tr>
+              <td class="param-name">InpTPActive / InpDefaultTP</td>
+              <td class="param-val">true / 300 pts</td>
+              <td>Take Profit ativado de fábrica com 300 pontos de distância da entrada.</td>
+            </tr>
+            <tr>
+              <td class="param-name">InpRiskCash</td>
+              <td class="param-val">150.0</td>
+              <td>Valor financeiro de risco pré-setado em $150, iniciando <strong>desmarcado</strong> para uso de lote fixo.</td>
+            </tr>
+            <tr>
+              <td class="param-name">InpLiveSLTPLines</td>
+              <td class="param-val">true</td>
+              <td>Exibe linhas dinâmicas de SL e TP no gráfico 24 horas por dia.</td>
+            </tr>
+            <tr>
+              <td class="param-name">InpSimultaneousTrailing</td>
+              <td class="param-val">true</td>
+              <td>Move simultaneamente o TP e o SL acompanhando o preço em tempo real.</td>
+            </tr>
+            <tr>
+              <td class="param-name">InpFilterSymbolOnly</td>
+              <td class="param-val">false</td>
+              <td>Leitura geral de toda a conta por padrão (false) para calcular o histórico completo de trades.</td>
+            </tr>
+            <tr>
+              <td class="param-name">InpColorLiveTP / SL</td>
+              <td class="param-val">Verde / Vermelho</td>
+              <td>Cores personalizáveis das linhas visuais de Take Profit e Stop Loss no gráfico.</td>
+            </tr>
+            <tr>
+              <td class="param-name">InpEnableATRAlvos</td>
+              <td class="param-val">false</td>
+              <td>Cálculo e sugestão volátil de alvos por ATR (inicia desligado).</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function switchTab(index) {
+      const tabs = document.querySelectorAll('.tab-btn');
+      const contents = document.querySelectorAll('.tab-content');
+      tabs.forEach((t, i) => {
+        if(i === index) t.classList.add('active');
+        else t.classList.remove('active');
+      });
+      contents.forEach((c, i) => {
+        if(i === index) c.classList.add('active');
+        else c.classList.remove('active');
+      });
+    }
+  </script>
+</body>
+</html>
