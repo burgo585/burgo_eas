@@ -51,10 +51,10 @@
 #define PREFIX_CANAL_TEMP  "BSCALP_CTEMP_"
 
 //--- Camadas Z-Order
-#define ZORDER_PANEL_BG      999990
-#define ZORDER_PANEL_STRIP   999995
-#define ZORDER_PANEL_CTRL    999998
-#define ZORDER_PANEL_TXT     999999
+#define ZORDER_PANEL_BG      1000000
+#define ZORDER_PANEL_STRIP   1000010
+#define ZORDER_PANEL_CTRL    1000020
+#define ZORDER_PANEL_TXT     1000030
 
 //--- Enumeradores
 enum ENUM_RISK_MODE
@@ -428,6 +428,7 @@ public:
    void              Render();
    void              BringToFront();
    void              CheckForegroundState();
+   void              EnforceAbsoluteForeground();
    void              UpdateLiveMetrics();
    void              UpdateLiveSLTPLines();
    void              UpdateFieldValues();
@@ -781,6 +782,7 @@ void CBoletaMaster::CheckForegroundState()
    {
       ChartSetInteger(m_chart_id, CHART_EVENT_MOUSE_MOVE, true);
    }
+   EnforceAbsoluteForeground();
 }
 
 void CBoletaMaster::BringToFront()
@@ -793,7 +795,56 @@ void CBoletaMaster::BringToFront()
    Render();
    UpdateFieldValues();
    UpdateLiveMetrics();
+   EnforceAbsoluteForeground();
    ChartRedraw(m_chart_id);
+}
+
+void CBoletaMaster::EnforceAbsoluteForeground()
+{
+   if(ChartGetInteger(m_chart_id, CHART_FOREGROUND) != 0)
+      ChartSetInteger(m_chart_id, CHART_FOREGROUND, false);
+      
+   int total = ObjectsTotal(m_chart_id, 0);
+   for(int i = 0; i < total; i++)
+   {
+      string name = ObjectName(m_chart_id, i, 0);
+      if(StringFind(name, PREFIX_GUI) == 0)
+      {
+         if(name == PREFIX_GUI + "Line_Live_TP" || name == PREFIX_GUI + "Line_Live_SL")
+         {
+            ObjectSetInteger(m_chart_id, name, OBJPROP_BACK, true);
+            ObjectSetInteger(m_chart_id, name, OBJPROP_ZORDER, 0);
+         }
+         else
+         {
+            ObjectSetInteger(m_chart_id, name, OBJPROP_BACK, false);
+            if(name == PREFIX_GUI + "Panel_BG")
+               ObjectSetInteger(m_chart_id, name, OBJPROP_ZORDER, ZORDER_PANEL_BG);
+            else if(StringFind(name, "_BG") > 0 || StringFind(name, "Strip_") == (int)StringLen(PREFIX_GUI))
+               ObjectSetInteger(m_chart_id, name, OBJPROP_ZORDER, ZORDER_PANEL_STRIP);
+            else if(StringFind(name, "Lbl_") == (int)StringLen(PREFIX_GUI) || name == PREFIX_GUI + "Header_Title")
+               ObjectSetInteger(m_chart_id, name, OBJPROP_ZORDER, ZORDER_PANEL_TXT);
+            else
+               ObjectSetInteger(m_chart_id, name, OBJPROP_ZORDER, ZORDER_PANEL_CTRL);
+         }
+      }
+      else if(StringFind(name, PREFIX_CANAL_TEMP) == 0 || StringFind(name, PREFIX_CANAL_LINES) == 0)
+      {
+         ObjectSetInteger(m_chart_id, name, OBJPROP_BACK, true);
+         ObjectSetInteger(m_chart_id, name, OBJPROP_ZORDER, 0);
+      }
+      else
+      {
+         ENUM_OBJECT otype = (ENUM_OBJECT)ObjectGetInteger(m_chart_id, name, OBJPROP_TYPE);
+         if(otype == OBJ_HLINE || otype == OBJ_VLINE || otype == OBJ_TREND || otype == OBJ_CHANNEL || otype == OBJ_RECTANGLE)
+         {
+            if((bool)ObjectGetInteger(m_chart_id, name, OBJPROP_BACK) == false)
+               ObjectSetInteger(m_chart_id, name, OBJPROP_BACK, true);
+            if(ObjectGetInteger(m_chart_id, name, OBJPROP_ZORDER) >= ZORDER_PANEL_BG)
+               ObjectSetInteger(m_chart_id, name, OBJPROP_ZORDER, 0);
+         }
+      }
+   }
 }
 
 void CBoletaMaster::CreateRectangleLabel(const string name, int x, int y, int w, int h, color bg_color, color border_color, int zorder=ZORDER_PANEL_BG)
@@ -949,8 +1000,9 @@ void CBoletaMaster::Render()
    int row_w    = m_width - 16; // 260px
    int offset_x = m_x + 8;
    
-   // 1. Cabecalho Minimalista e Seguro
-   CreateRectangleLabel("Panel_BG", m_x, m_y, m_width, m_header_h, COLOR_PANEL_BG, COLOR_BORDER, ZORDER_PANEL_BG);
+   // 1. Cabecalho Minimalista e Seguro (com fundo opaco solido total imediato)
+   int initial_h = m_is_minimized ? m_header_h : (m_height > m_header_h ? m_height : 600);
+   CreateRectangleLabel("Panel_BG", m_x, m_y, m_width, initial_h, COLOR_PANEL_BG, COLOR_BORDER, ZORDER_PANEL_BG);
    CreateRectangleLabel("Header_BG", m_x, m_y, m_width, m_header_h, COLOR_HEADER_BG, COLOR_BORDER, ZORDER_PANEL_STRIP);
    CreateLabel("Header_Title", m_x + 10, m_y + 6, "SCALP PRO v10", COLOR_TEXT_MAIN, 10, true);
    CreateButton("Btn_Min", m_x + 224, m_y + 4, 20, 20, m_is_minimized ? "+" : "-", COLOR_EDIT_BG, COLOR_TEXT_MAIN, 9, true);
@@ -1304,13 +1356,14 @@ void CBoletaMaster::UpdateLiveSLTPLines()
       if(ObjectFind(m_chart_id, line_tp) < 0)
       {
          ObjectCreate(m_chart_id, line_tp, OBJ_HLINE, 0, 0, tp_price);
-         ObjectSetInteger(m_chart_id, line_tp, OBJPROP_BACK, false);
          ObjectSetInteger(m_chart_id, line_tp, OBJPROP_SELECTABLE, false);
       }
       else
       {
          ObjectMove(m_chart_id, line_tp, 0, 0, tp_price);
       }
+      ObjectSetInteger(m_chart_id, line_tp, OBJPROP_BACK, true);
+      ObjectSetInteger(m_chart_id, line_tp, OBJPROP_ZORDER, 0);
       ObjectSetInteger(m_chart_id, line_tp, OBJPROP_COLOR, InpColorLiveTP);
       ObjectSetInteger(m_chart_id, line_tp, OBJPROP_STYLE, InpStyleLiveTP);
       ObjectSetInteger(m_chart_id, line_tp, OBJPROP_WIDTH, InpWidthLiveTP);
@@ -1329,13 +1382,14 @@ void CBoletaMaster::UpdateLiveSLTPLines()
       if(ObjectFind(m_chart_id, line_sl) < 0)
       {
          ObjectCreate(m_chart_id, line_sl, OBJ_HLINE, 0, 0, sl_price);
-         ObjectSetInteger(m_chart_id, line_sl, OBJPROP_BACK, false);
          ObjectSetInteger(m_chart_id, line_sl, OBJPROP_SELECTABLE, false);
       }
       else
       {
          ObjectMove(m_chart_id, line_sl, 0, 0, sl_price);
       }
+      ObjectSetInteger(m_chart_id, line_sl, OBJPROP_BACK, true);
+      ObjectSetInteger(m_chart_id, line_sl, OBJPROP_ZORDER, 0);
       ObjectSetInteger(m_chart_id, line_sl, OBJPROP_COLOR, InpColorLiveSL);
       ObjectSetInteger(m_chart_id, line_sl, OBJPROP_STYLE, InpStyleLiveSL);
       ObjectSetInteger(m_chart_id, line_sl, OBJPROP_WIDTH, InpWidthLiveSL);
@@ -1443,6 +1497,9 @@ void CBoletaMaster::MovePanel(int new_x, int new_y)
       string name = ObjectName(m_chart_id, i, 0);
       if(StringFind(name, PREFIX_GUI) == 0)
       {
+         if(name == PREFIX_GUI + "Line_Live_TP" || name == PREFIX_GUI + "Line_Live_SL")
+            continue;
+            
          int obj_x = (int)ObjectGetInteger(m_chart_id, name, OBJPROP_XDISTANCE);
          int obj_y = (int)ObjectGetInteger(m_chart_id, name, OBJPROP_YDISTANCE);
          ObjectSetInteger(m_chart_id, name, OBJPROP_XDISTANCE, obj_x + dx);
@@ -1691,8 +1748,8 @@ void CBoletaMaster::CriarLinhaTemporaria(const string nome, double price)
    ObjectSetInteger(m_chart_id, nome, OBJPROP_STYLE, STYLE_SOLID);
    ObjectSetInteger(m_chart_id, nome, OBJPROP_SELECTABLE, true);
    ObjectSetInteger(m_chart_id, nome, OBJPROP_SELECTED, true);
-   ObjectSetInteger(m_chart_id, nome, OBJPROP_BACK, false);
-   ObjectSetInteger(m_chart_id, nome, OBJPROP_ZORDER, 100);
+   ObjectSetInteger(m_chart_id, nome, OBJPROP_BACK, true);
+   ObjectSetInteger(m_chart_id, nome, OBJPROP_ZORDER, 0);
    ObjectSetInteger(m_chart_id, nome, OBJPROP_TIMEFRAMES, OBJ_ALL_PERIODS);
 }
 
@@ -2615,7 +2672,7 @@ int OnInit()
       return INIT_FAILED;
    }
    
-   EventSetTimer(1);
+   EventSetMillisecondTimer(200);
    return INIT_SUCCEEDED;
 }
 
