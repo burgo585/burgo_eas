@@ -57,6 +57,14 @@
 #define ZORDER_PANEL_TXT     1000030
 
 //--- Enumeradores
+enum ENUM_GUI_SCALE
+{
+   GUI_SCALE_100,      // 100% (Compacta - 276px)
+   GUI_SCALE_115,      // 115% (Médio Confortável - 318px - Recomendado)
+   GUI_SCALE_130,      // 130% (Grande - 360px)
+   GUI_SCALE_150       // 150% (Extra Grande / 4K - 414px)
+};
+
 enum ENUM_STATS_PERIOD
 {
    STATS_PERIOD_TODAY,     // Apenas Hoje (Desde 00:00 de Hoje ate o Momento)
@@ -80,7 +88,7 @@ input group "=== CONFIGURACAO DO ATIVO & ROTEAMENTO ==="
 input string          InpSymbol            = "";                 // Ativo Operado (Vazio = Grafico Atual)
 input ulong           InpMagicNumber       = 123456;             // Magic Number das Ordens
 input ulong           InpSlippage          = 20;                 // Desvio Maximo / Slippage (pontos)
-input bool            InpFilterSymbolOnly  = true;               // Filtrar Metricas apenas deste Ativo
+input bool            InpFilterSymbolOnly  = false;              // Filtrar Metricas apenas deste Ativo (false = Toda a Conta)
 
 input group "=== GESTAO DE LOTE & RISCO ($150 DESMARCADO) ==="
 input ENUM_RISK_MODE  InpDefaultRiskMode   = RISK_MODE_MANUAL;   // Modo de Risco Inicial (Manual Desmarcado)
@@ -137,6 +145,9 @@ input group "=== APURACAO DE % ACERTOS E METRICAS ==="
 input ENUM_STATS_PERIOD InpStatsPeriod        = STATS_PERIOD_TODAY;       // Periodo de Apuracao (% Acertos: Hoje, Data Escolhida ou Geral)
 input datetime          InpStatsCustomDate   = D'2026.10.01 00:00';      // Data Inicial de Apuracao (Ano.Mes.Dia)
 input bool              InpShowStatsDateBar  = true;                     // Exibir Barra de Selecao de Data no Painel
+input group "=== ESCALA VISUAL & ZOOM (TAMANHO DA BOLETA E FONTES) ==="
+input ENUM_GUI_SCALE    InpGuiScale          = GUI_SCALE_115;            // Escala Visual da Boleta (Zoom / Proporcao)
+
 
 input group "=== REALIZACAO PARCIAL ==="
 input bool            InpParcialActive     = false;              // Parcial Inicial (Desmarcado por Padrao)
@@ -359,6 +370,10 @@ private:
    int               m_width;
    int               m_height;
    int               m_header_h;
+   // Escala Visual Proporcional e Filtro de Conta
+   double            m_gui_scale;
+   bool              m_filter_symbol_only;
+
    
    bool              m_is_minimized;
    bool              m_is_dragging;
@@ -485,6 +500,17 @@ public:
    
    void              RecalculateRiskLot();
    void              CalculateDashboardStats();
+   int               Scale(int val) const { return (int)MathRound((double)val * m_gui_scale); }
+   int               ScaleFont(int base_sz) const
+   {
+      if(m_gui_scale <= 1.05) return base_sz;
+      if(m_gui_scale <= 1.20) return base_sz + 1;
+      if(m_gui_scale <= 1.35) return base_sz + 2;
+      return base_sz + 3;
+   }
+   void              CycleScale();
+   void              ToggleStatsScope();
+
    
    // Toggles
    void              ToggleMinimize();
@@ -547,6 +573,8 @@ CBoletaMaster::CBoletaMaster()
      m_width(276),
      m_height(510),
      m_header_h(28),
+     m_gui_scale(1.15),
+     m_filter_symbol_only(false),
      m_is_minimized(false),
      m_is_dragging(false),
      m_drag_offset_x(0),
@@ -637,6 +665,8 @@ void CBoletaMaster::SaveState()
    GlobalVariableSet(p + "minimized", m_is_minimized ? 1.0 : 0.0);
    GlobalVariableSet(p + "stats_period", (double)m_stats_period);
    GlobalVariableSet(p + "stats_date", (double)m_stats_custom_date);
+   GlobalVariableSet(p + "gui_scale", m_gui_scale);
+   GlobalVariableSet(p + "filter_sym", m_filter_symbol_only ? 1.0 : 0.0);
 }
 
 bool CBoletaMaster::LoadState()
@@ -672,6 +702,10 @@ bool CBoletaMaster::LoadState()
    if(GlobalVariableCheck(p + "stats_period"))    m_stats_period        = (ENUM_STATS_PERIOD)(int)GlobalVariableGet(p + "stats_period");
    if(GlobalVariableCheck(p + "stats_date"))      m_stats_custom_date   = (datetime)GlobalVariableGet(p + "stats_date");
    m_stats_date_str = TimeToString(m_stats_custom_date, TIME_DATE);
+   if(GlobalVariableCheck(p + "gui_scale"))       m_gui_scale           = GlobalVariableGet(p + "gui_scale");
+   if(GlobalVariableCheck(p + "filter_sym"))      m_filter_symbol_only  = (GlobalVariableGet(p + "filter_sym") > 0.5);
+   m_width    = Scale(276);
+   m_header_h = Scale(28);
    
    return true;
 }
@@ -707,6 +741,8 @@ void CBoletaMaster::ClearState()
    GlobalVariableDel(p + "minimized");
    GlobalVariableDel(p + "stats_period");
    GlobalVariableDel(p + "stats_date");
+   GlobalVariableDel(p + "gui_scale");
+   GlobalVariableDel(p + "filter_sym");
 }
 
 //+------------------------------------------------------------------+
@@ -718,13 +754,16 @@ bool CBoletaMaster::Init(const string symbol, ulong magic, ulong slippage, int x
    m_symbol     = (symbol != "") ? symbol : _Symbol;
    m_magic      = magic;
    m_slippage   = slippage;
-   m_width      = 276;
-   m_header_h   = 28;
-   
    if(!LoadState())
    {
       m_x                   = x;
       m_y                   = y;
+      if(InpGuiScale == GUI_SCALE_100)      m_gui_scale = 1.0;
+      else if(InpGuiScale == GUI_SCALE_115) m_gui_scale = 1.15;
+      else if(InpGuiScale == GUI_SCALE_130) m_gui_scale = 1.30;
+      else if(InpGuiScale == GUI_SCALE_150) m_gui_scale = 1.50;
+      else                                  m_gui_scale = 1.15;
+      m_filter_symbol_only  = InpFilterSymbolOnly;
       m_risk_mode           = InpDefaultRiskMode; // Manual Desmarcado
       m_risk_cash           = InpRiskCash;        // 150.0 Nativo
       m_risk_percent        = InpRiskPercent;
@@ -753,6 +792,8 @@ bool CBoletaMaster::Init(const string symbol, ulong magic, ulong slippage, int x
       m_stats_custom_date   = InpStatsCustomDate;
       m_stats_date_str      = TimeToString(m_stats_custom_date, TIME_DATE);
    }
+   m_width    = Scale(276);
+   m_header_h = Scale(28);
    
    m_trade.SetExpertMagicNumber(m_magic);
    m_trade.SetDeviationInPoints(m_slippage);
@@ -978,17 +1019,17 @@ void CBoletaMaster::CreateRectangleLabel(const string name, int x, int y, int w,
 
 void CBoletaMaster::CreateButton(const string name, int x, int y, int w, int h, const string text, color bg_color, color txt_color, int font_size=9, bool bold=true)
 {
-   GUI_CreateButton(m_chart_id, PREFIX_GUI + name, x, y, w, h, text, bg_color, txt_color, font_size, bold, ZORDER_PANEL_CTRL);
+   GUI_CreateButton(m_chart_id, PREFIX_GUI + name, x, y, w, h, text, bg_color, txt_color, ScaleFont(font_size), bold, ZORDER_PANEL_CTRL);
 }
 
 void CBoletaMaster::CreateEdit(const string name, int x, int y, int w, int h, const string text, color bg_color, color txt_color, bool read_only=false, int font_size=9)
 {
-   GUI_CreateEdit(m_chart_id, PREFIX_GUI + name, x, y, w, h, text, bg_color, txt_color, read_only, font_size, ZORDER_PANEL_CTRL);
+   GUI_CreateEdit(m_chart_id, PREFIX_GUI + name, x, y, w, h, text, bg_color, txt_color, read_only, ScaleFont(font_size), ZORDER_PANEL_CTRL);
 }
 
 void CBoletaMaster::CreateLabel(const string name, int x, int y, const string text, color txt_color, int font_size=9, bool bold=false)
 {
-   GUI_CreateLabel(m_chart_id, PREFIX_GUI + name, x, y, text, txt_color, font_size, bold, ZORDER_PANEL_TXT);
+   GUI_CreateLabel(m_chart_id, PREFIX_GUI + name, x, y, text, txt_color, ScaleFont(font_size), bold, ZORDER_PANEL_TXT);
 }
 
 //+------------------------------------------------------------------+
@@ -1003,13 +1044,16 @@ void CBoletaMaster::CalculateDashboardStats()
    m_today_total_closed  = 0;
    m_floating_pnl        = 0.0;
    
-   datetime cur_time = TimeCurrent();
+   datetime cur_time   = TimeCurrent();
+   datetime local_time = TimeLocal();
+   datetime ref_time   = MathMax(cur_time, local_time);
+   datetime to_time    = D'2099.12.31 23:59:59';
    datetime start_time = 0;
    
    if(m_stats_period == STATS_PERIOD_TODAY)
    {
       MqlDateTime dt;
-      TimeToStruct(cur_time, dt);
+      TimeToStruct(ref_time, dt);
       dt.hour = 0; dt.min = 0; dt.sec = 0;
       start_time = StructToTime(dt);
    }
@@ -1019,18 +1063,18 @@ void CBoletaMaster::CalculateDashboardStats()
    }
    else if(m_stats_period == STATS_PERIOD_7D)
    {
-      start_time = cur_time - (7 * 86400);
+      start_time = ref_time - (7 * 86400);
    }
    else if(m_stats_period == STATS_PERIOD_30D)
    {
-      start_time = cur_time - (30 * 86400);
+      start_time = ref_time - (30 * 86400);
    }
    else // STATS_PERIOD_ALL
    {
       start_time = 0;
    }
    
-   if(HistorySelect(start_time, cur_time))
+   if(HistorySelect(start_time, to_time))
    {
       int deals = HistoryDealsTotal();
       for(int i = 0; i < deals; i++)
@@ -1038,14 +1082,17 @@ void CBoletaMaster::CalculateDashboardStats()
          ulong ticket = HistoryDealGetTicket(i);
          if(ticket <= 0) continue;
          
-         if(InpFilterSymbolOnly)
+         if(m_filter_symbol_only)
          {
             string deal_sym = HistoryDealGetString(ticket, DEAL_SYMBOL);
             if(deal_sym != m_symbol && m_symbol != "") continue;
          }
          
+         ENUM_DEAL_TYPE deal_type = (ENUM_DEAL_TYPE)HistoryDealGetInteger(ticket, DEAL_TYPE);
+         if(deal_type != DEAL_TYPE_BUY && deal_type != DEAL_TYPE_SELL) continue;
+         
          ENUM_DEAL_ENTRY entry = (ENUM_DEAL_ENTRY)HistoryDealGetInteger(ticket, DEAL_ENTRY);
-         if(entry != DEAL_ENTRY_OUT && entry != DEAL_ENTRY_OUT_BY) continue;
+         if(entry != DEAL_ENTRY_OUT && entry != DEAL_ENTRY_OUT_BY && entry != DEAL_ENTRY_INOUT) continue;
          
          double pnl  = HistoryDealGetDouble(ticket, DEAL_PROFIT);
          double comm = HistoryDealGetDouble(ticket, DEAL_COMMISSION);
@@ -1081,12 +1128,38 @@ void CBoletaMaster::CalculateDashboardStats()
    {
       if(pos.SelectByIndex(i))
       {
-         if(!InpFilterSymbolOnly || pos.Symbol() == m_symbol || m_symbol == "")
+         if(!m_filter_symbol_only || pos.Symbol() == m_symbol || m_symbol == "")
          {
             m_floating_pnl += pos.Profit() + pos.Commission() + pos.Swap();
          }
       }
    }
+}
+
+void CBoletaMaster::CycleScale()
+{
+   if(m_gui_scale < 1.10)       m_gui_scale = 1.15;
+   else if(m_gui_scale < 1.25)  m_gui_scale = 1.30;
+   else if(m_gui_scale < 1.40)  m_gui_scale = 1.50;
+   else                         m_gui_scale = 1.00;
+   
+   m_width    = Scale(276);
+   m_header_h = Scale(28);
+   SaveState();
+   Render();
+   UpdateFieldValues();
+   UpdateLiveMetrics();
+   ChartRedraw(m_chart_id);
+}
+
+void CBoletaMaster::ToggleStatsScope()
+{
+   m_filter_symbol_only = !m_filter_symbol_only;
+   SaveState();
+   Render();
+   UpdateFieldValues();
+   UpdateLiveMetrics();
+   ChartRedraw(m_chart_id);
 }
 
 //+------------------------------------------------------------------+
@@ -1140,16 +1213,28 @@ void CBoletaMaster::Render()
    ChartSetInteger(m_chart_id, CHART_FOREGROUND, false);
    ObjectsDeleteAll(m_chart_id, PREFIX_GUI);
    
-   int row_w    = m_width - 16; // 260px
-   int offset_x = m_x + 8;
+   int pad_x    = Scale(8);
+   int offset_x = m_x + pad_x;
+   int row_w    = m_width - (pad_x * 2);
    
    // 1. Cabecalho Minimalista e Seguro (com fundo opaco solido total imediato)
-   int initial_h = m_is_minimized ? m_header_h : (m_height > m_header_h ? m_height : 600);
+   int initial_h = m_is_minimized ? m_header_h : (m_height > m_header_h ? m_height : Scale(600));
    CreateRectangleLabel("Panel_BG", m_x, m_y, m_width, initial_h, COLOR_PANEL_BG, COLOR_BORDER, ZORDER_PANEL_BG);
    CreateRectangleLabel("Header_BG", m_x, m_y, m_width, m_header_h, COLOR_HEADER_BG, COLOR_BORDER, ZORDER_PANEL_STRIP);
-   CreateLabel("Header_Title", m_x + 10, m_y + 6, "SCALP PRO v10", COLOR_TEXT_MAIN, 10, true);
-   CreateButton("Btn_Min", m_x + 224, m_y + 4, 20, 20, m_is_minimized ? "+" : "-", COLOR_EDIT_BG, COLOR_TEXT_MAIN, 9, true);
-   CreateButton("Btn_Close", m_x + 248, m_y + 4, 20, 20, "X", COLOR_SELL_BTN, COLOR_TEXT_MAIN, 9, true);
+   CreateLabel("Header_Title", m_x + Scale(10), m_y + Scale(6), "SCALP PRO v10", COLOR_TEXT_MAIN, 10, true);
+   
+   int btn_h  = Scale(20);
+   int gap_h  = Scale(4);
+   int zoom_w = Scale(38);
+   
+   int close_x = m_x + m_width - pad_x - btn_h;
+   int min_x   = close_x - gap_h - btn_h;
+   int zoom_x  = min_x - gap_h - zoom_w;
+   
+   string zoom_txt = StringFormat("%.0f%%", m_gui_scale * 100.0);
+   CreateButton("Btn_Zoom", zoom_x, m_y + Scale(4), zoom_w, btn_h, zoom_txt, COLOR_EDIT_BG, COLOR_LOT_GOLD, 8, true);
+   CreateButton("Btn_Min",  min_x,  m_y + Scale(4), btn_h,  btn_h, m_is_minimized ? "+" : "-", COLOR_EDIT_BG, COLOR_TEXT_MAIN, 9, true);
+   CreateButton("Btn_Close",close_x,m_y + Scale(4), btn_h,  btn_h, "X", COLOR_SELL_BTN, COLOR_TEXT_MAIN, 9, true);
    
    if(m_is_minimized)
    {
@@ -1157,70 +1242,113 @@ void CBoletaMaster::Render()
       return;
    }
    
-   int cur_y = m_y + m_header_h + 4;
+   int cur_y = m_y + m_header_h + Scale(4);
    
    // 2. Faixa de Mercado (Ativo / Spread / Relogio Candle)
    if(InpShowMarketStrip)
    {
-      CreateRectangleLabel("Strip_Market_BG", offset_x, cur_y, row_w, 24, COLOR_MARKET_BG, COLOR_BORDER, ZORDER_PANEL_STRIP);
-      CreateLabel("Lbl_Mkt_Symbol", offset_x + 8, cur_y + 4, m_symbol, clrGold, 9, true);
-      CreateLabel("Lbl_Mkt_Spread", offset_x + 115, cur_y + 4, "Sp: --", clrWhite, 9, false);
-      CreateLabel("Lbl_Mkt_Timer",  offset_x + 180, cur_y + 4, "[TF] --:--", clrCyan, 9, true);
-      cur_y += 28;
+      int strip_h = Scale(24);
+      CreateRectangleLabel("Strip_Market_BG", offset_x, cur_y, row_w, strip_h, COLOR_MARKET_BG, COLOR_BORDER, ZORDER_PANEL_STRIP);
+      CreateLabel("Lbl_Mkt_Symbol", offset_x + Scale(8), cur_y + Scale(4), m_symbol, clrGold, 9, true);
+      CreateLabel("Lbl_Mkt_Spread", offset_x + (int)(row_w * 0.42), cur_y + Scale(4), "Sp: --", clrWhite, 9, false);
+      CreateLabel("Lbl_Mkt_Timer",  offset_x + (int)(row_w * 0.68), cur_y + Scale(4), "[TF] --:--", clrCyan, 9, true);
+      cur_y += strip_h + Scale(4);
    }
    
    // 3. Painel HUD de Confianca (4 Metricas Obrigatorias)
    if(InpShowHUDStats)
    {
-      int card_w = (row_w - 6) / 2; // 127px
-      CreateRectangleLabel("Card_Cap_BG", offset_x, cur_y, card_w, 26, COLOR_CARD_BG, COLOR_CARD_BORDER, ZORDER_PANEL_STRIP);
-      CreateLabel("Lbl_Cap_Title", offset_x + 6, cur_y + 1, "CAP. INICIAL", COLOR_TEXT_MUTED, 7, false);
-      CreateLabel("Lbl_Cap_Val",   offset_x + 6, cur_y + 11, "$0.00", clrWhite, 9, true);
+      int card_gap = Scale(6);
+      int card_w   = (row_w - card_gap) / 2;
+      int card_h   = Scale(26);
       
-      CreateRectangleLabel("Card_Lot_BG", offset_x + card_w + 6, cur_y, card_w, 26, COLOR_CARD_BG, COLOR_CARD_BORDER, ZORDER_PANEL_STRIP);
-      CreateLabel("Lbl_Lot_Title", offset_x + card_w + 12, cur_y + 1, "LOTE ATUAL", COLOR_TEXT_MUTED, 7, false);
-      CreateLabel("Lbl_Lot_Val",   offset_x + card_w + 12, cur_y + 11, DoubleToString(m_manual_lot, 2), COLOR_LOT_GOLD, 9, true);
-      cur_y += 29;
+      CreateRectangleLabel("Card_Cap_BG", offset_x, cur_y, card_w, card_h, COLOR_CARD_BG, COLOR_CARD_BORDER, ZORDER_PANEL_STRIP);
+      CreateLabel("Lbl_Cap_Title", offset_x + Scale(6), cur_y + Scale(1), "CAP. INICIAL", COLOR_TEXT_MUTED, 7, false);
+      CreateLabel("Lbl_Cap_Val",   offset_x + Scale(6), cur_y + Scale(11), "$0.00", clrWhite, 9, true);
       
-      CreateRectangleLabel("Card_Pnl_BG", offset_x, cur_y, card_w, 26, COLOR_CARD_BG, COLOR_CARD_BORDER, ZORDER_PANEL_STRIP);
-      CreateLabel("Lbl_Pnl_Title", offset_x + 6, cur_y + 1, "LUCRO HOJE", COLOR_TEXT_MUTED, 7, false);
-      CreateLabel("Lbl_Pnl_Val",   offset_x + 6, cur_y + 11, "$0.00", COLOR_PROFIT_GREEN, 9, true);
+      CreateRectangleLabel("Card_Lot_BG", offset_x + card_w + card_gap, cur_y, card_w, card_h, COLOR_CARD_BG, COLOR_CARD_BORDER, ZORDER_PANEL_STRIP);
+      CreateLabel("Lbl_Lot_Title", offset_x + card_w + card_gap + Scale(6), cur_y + Scale(1), "LOTE ATUAL", COLOR_TEXT_MUTED, 7, false);
+      CreateLabel("Lbl_Lot_Val",   offset_x + card_w + card_gap + Scale(6), cur_y + Scale(11), DoubleToString(m_manual_lot, 2), COLOR_LOT_GOLD, 9, true);
+      cur_y += card_h + Scale(3);
       
-      CreateRectangleLabel("Card_Win_BG", offset_x + card_w + 6, cur_y, card_w, 26, COLOR_CARD_BG, COLOR_CARD_BORDER, ZORDER_PANEL_STRIP);
-      CreateLabel("Lbl_Win_Title", offset_x + card_w + 12, cur_y + 1, "% ACERTOS", COLOR_TEXT_MUTED, 7, false);
-      CreateLabel("Lbl_Win_Val",   offset_x + card_w + 12, cur_y + 11, "0.0%", COLOR_CHECK_ACTIVE, 9, true);
-      cur_y += 31;
+      CreateRectangleLabel("Card_Pnl_BG", offset_x, cur_y, card_w, card_h, COLOR_CARD_BG, COLOR_CARD_BORDER, ZORDER_PANEL_STRIP);
+      CreateLabel("Lbl_Pnl_Title", offset_x + Scale(6), cur_y + Scale(1), "LUCRO HOJE", COLOR_TEXT_MUTED, 7, false);
+      CreateLabel("Lbl_Pnl_Val",   offset_x + Scale(6), cur_y + Scale(11), "$0.00", COLOR_PROFIT_GREEN, 9, true);
+      
+      CreateRectangleLabel("Card_Win_BG", offset_x + card_w + card_gap, cur_y, card_w, card_h, COLOR_CARD_BG, COLOR_CARD_BORDER, ZORDER_PANEL_STRIP);
+      CreateLabel("Lbl_Win_Title", offset_x + card_w + card_gap + Scale(6), cur_y + Scale(1), "% ACERTOS", COLOR_TEXT_MUTED, 7, false);
+      CreateLabel("Lbl_Win_Val",   offset_x + card_w + card_gap + Scale(6), cur_y + Scale(11), "0.0%", COLOR_CHECK_ACTIVE, 8, true);
+      cur_y += card_h + Scale(4);
       
       // Barra de Selecao de Data / Periodo da % de Acertos
       if(InpShowStatsDateBar)
       {
          color c_today = (m_stats_period == STATS_PERIOD_TODAY)  ? COLOR_CHECK_ACTIVE : COLOR_STEP_BTN;
-         color c_cust  = (m_stats_period == STATS_PERIOD_CUSTOM) ? COLOR_CHECK_ACTIVE : COLOR_STEP_BTN;
          color c_7d    = (m_stats_period == STATS_PERIOD_7D)     ? COLOR_CHECK_ACTIVE : COLOR_STEP_BTN;
          color c_all   = (m_stats_period == STATS_PERIOD_ALL)    ? COLOR_CHECK_ACTIVE : COLOR_STEP_BTN;
+         color c_cust  = (m_stats_period == STATS_PERIOD_CUSTOM) ? COLOR_CHECK_ACTIVE : COLOR_STEP_BTN;
+         color c_scope = (!m_filter_symbol_only)                 ? clrTeal : COLOR_STEP_BTN;
          
-         CreateButton("Btn_Stats_Today", offset_x, cur_y, 44, 20, "Hoje", c_today, (m_stats_period == STATS_PERIOD_TODAY) ? clrBlack : clrWhite, 8, true);
-         CreateButton("Btn_Stats_7D",    offset_x + 46, cur_y, 36, 20, "7D", c_7d, (m_stats_period == STATS_PERIOD_7D) ? clrBlack : clrWhite, 8, true);
-         CreateButton("Btn_Stats_All",   offset_x + 84, cur_y, 44, 20, "Geral", c_all, (m_stats_period == STATS_PERIOD_ALL) ? clrBlack : clrWhite, 8, true);
-         CreateEdit("Edit_Stats_Date",   offset_x + 130, cur_y, 96, 20, m_stats_date_str, COLOR_EDIT_BG, (m_stats_period == STATS_PERIOD_CUSTOM) ? clrGold : COLOR_TEXT_MAIN, false, 8);
-         CreateButton("Btn_Stats_Apply", offset_x + 228, cur_y, 32, 20, "OK", c_cust, (m_stats_period == STATS_PERIOD_CUSTOM) ? clrBlack : clrWhite, 8, true);
-         cur_y += 24;
+         int b_h       = Scale(20);
+         int b_today_w = Scale(36);
+         int b_7d_w    = Scale(28);
+         int b_all_w   = Scale(36);
+         int b_scope_w = Scale(42);
+         int b_ok_w    = Scale(28);
+         int gap_b     = Scale(3);
+         
+         int x_cur = offset_x;
+         CreateButton("Btn_Stats_Today", x_cur, cur_y, b_today_w, b_h, "Hoje", c_today, (m_stats_period == STATS_PERIOD_TODAY) ? clrBlack : clrWhite, 7, true);
+         x_cur += b_today_w + gap_b;
+         
+         CreateButton("Btn_Stats_7D",    x_cur, cur_y, b_7d_w, b_h, "7D", c_7d, (m_stats_period == STATS_PERIOD_7D) ? clrBlack : clrWhite, 7, true);
+         x_cur += b_7d_w + gap_b;
+         
+         CreateButton("Btn_Stats_All",   x_cur, cur_y, b_all_w, b_h, "Geral", c_all, (m_stats_period == STATS_PERIOD_ALL) ? clrBlack : clrWhite, 7, true);
+         x_cur += b_all_w + gap_b;
+         
+         string scope_txt = (!m_filter_symbol_only) ? "Conta" : "Ativo";
+         CreateButton("Btn_Stats_Scope", x_cur, cur_y, b_scope_w, b_h, scope_txt, c_scope, clrWhite, 7, true);
+         x_cur += b_scope_w + gap_b;
+         
+         int right_edge = offset_x + row_w;
+         int ok_x = right_edge - b_ok_w;
+         int edit_w = ok_x - x_cur - gap_b;
+         if(edit_w < Scale(46)) edit_w = Scale(46);
+         
+         CreateEdit("Edit_Stats_Date",   x_cur, cur_y, edit_w, b_h, m_stats_date_str, COLOR_EDIT_BG, (m_stats_period == STATS_PERIOD_CUSTOM) ? clrGold : COLOR_TEXT_MAIN, false, 8);
+         CreateButton("Btn_Stats_Apply", ok_x,  cur_y, b_ok_w,  b_h, "OK", c_cust, (m_stats_period == STATS_PERIOD_CUSTOM) ? clrBlack : clrWhite, 7, true);
+         cur_y += b_h + Scale(4);
       }
    }
+   
+   // Metricas de Controles Bounded e Responsivos (Zero Vazamento)
+   int row_h      = Scale(24);
+   int row_gap    = Scale(4);
+   int chk_sz     = Scale(18);
+   int step_btn_w = Scale(22);
+   int edit_box_w = Scale(62);
+   int btn_gap    = Scale(2);
+   int controls_w = step_btn_w + btn_gap + edit_box_w + btn_gap + step_btn_w;
+   int controls_x = offset_x + row_w - controls_w;
    
    // 4. Secao Gestao de Risco (Risco $150 Desmarcado por Padrao)
    if(InpShowRiskSection)
    {
       bool is_auto_risk = (m_risk_mode != RISK_MODE_MANUAL);
-      CreateButton("Chk_Risk", offset_x, cur_y + 1, 18, 18, is_auto_risk ? "X" : "", is_auto_risk ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, clrWhite, 9, true);
+      CreateButton("Chk_Risk", offset_x, cur_y + Scale(1), chk_sz, chk_sz, is_auto_risk ? "X" : "", is_auto_risk ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, clrWhite, 9, true);
+      
+      int toggle_x = offset_x + chk_sz + Scale(4);
+      int toggle_w = controls_x - Scale(4) - toggle_x;
       string risk_toggle_text = (m_risk_mode == RISK_MODE_PERCENT) ? "Risco: %" : "Risco: $";
       color risk_toggle_bg    = (m_risk_mode == RISK_MODE_PERCENT) ? COLOR_TOGGLE_PCT : (is_auto_risk ? COLOR_TOGGLE_CASH : COLOR_EDIT_BG);
-      CreateButton("Btn_Risk_Toggle", offset_x + 24, cur_y, 96, 20, risk_toggle_text, risk_toggle_bg, COLOR_TEXT_MAIN, 9, true);
-      CreateButton("Btn_Risk_Dec", offset_x + 126, cur_y, 22, 20, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      CreateButton("Btn_Risk_Toggle", toggle_x, cur_y, toggle_w, row_h, risk_toggle_text, risk_toggle_bg, COLOR_TEXT_MAIN, 9, true);
+      
+      CreateButton("Btn_Risk_Dec", controls_x, cur_y, step_btn_w, row_h, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
       string init_risk_str = (m_risk_mode == RISK_MODE_PERCENT) ? DoubleToString(m_risk_percent, 1) : DoubleToString(m_risk_cash, 2);
-      CreateEdit("Edit_Risk", offset_x + 150, cur_y, 64, 20, init_risk_str, COLOR_EDIT_BG, COLOR_TEXT_MAIN, false, 9);
-      CreateButton("Btn_Risk_Inc", offset_x + 216, cur_y, 22, 20, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
-      cur_y += 25;
+      CreateEdit("Edit_Risk", controls_x + step_btn_w + btn_gap, cur_y, edit_box_w, row_h, init_risk_str, COLOR_EDIT_BG, COLOR_TEXT_MAIN, false, 9);
+      CreateButton("Btn_Risk_Inc", controls_x + step_btn_w + btn_gap + edit_box_w + btn_gap, cur_y, step_btn_w, row_h, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      cur_y += row_h + row_gap;
    }
    
    // 5. Linha de Lote Operacional (Nativo 0.04)
@@ -1228,11 +1356,11 @@ void CBoletaMaster::Render()
    {
       bool is_auto_risk = (m_risk_mode != RISK_MODE_MANUAL);
       int dec = GetLotDecimals(m_symbol);
-      CreateLabel("Lbl_Lot", offset_x + 24, cur_y + 3, "Lote Operacional", COLOR_TEXT_MAIN, 9, true);
-      CreateButton("Btn_Lot_Dec", offset_x + 126, cur_y, 22, 20, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
-      CreateEdit("Edit_Lot", offset_x + 150, cur_y, 64, 20, DoubleToString(m_manual_lot, dec), is_auto_risk ? COLOR_EDIT_RO_BG : COLOR_EDIT_BG, is_auto_risk ? COLOR_LOT_GOLD : COLOR_TEXT_MAIN, is_auto_risk, 9);
-      CreateButton("Btn_Lot_Inc", offset_x + 216, cur_y, 22, 20, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
-      cur_y += 25;
+      CreateLabel("Lbl_Lot", offset_x + chk_sz + Scale(4), cur_y + Scale(3), "Lote Operacional", COLOR_TEXT_MAIN, 9, true);
+      CreateButton("Btn_Lot_Dec", controls_x, cur_y, step_btn_w, row_h, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      CreateEdit("Edit_Lot", controls_x + step_btn_w + btn_gap, cur_y, edit_box_w, row_h, DoubleToString(m_manual_lot, dec), is_auto_risk ? COLOR_EDIT_RO_BG : COLOR_EDIT_BG, is_auto_risk ? COLOR_LOT_GOLD : COLOR_TEXT_MAIN, is_auto_risk, 9);
+      CreateButton("Btn_Lot_Inc", controls_x + step_btn_w + btn_gap + edit_box_w + btn_gap, cur_y, step_btn_w, row_h, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      cur_y += row_h + row_gap;
    }
    
    // 6. Badge Interativo de Sugestao ATR (se ativado nas configuracoes)
@@ -1242,147 +1370,150 @@ void CBoletaMaster::Render()
       string atr_txt = "ATR: Calculando...";
       if(GetATRTargets(atr_p, sug_sl, sug_tp))
          atr_txt = StringFormat("ATR: %d pts | Sug: SL %d / TP %d [Aplicar]", atr_p, sug_sl, sug_tp);
-      CreateButton("Btn_ATR_Info", offset_x, cur_y, row_w, 20, atr_txt, C'24,32,45', clrGold, 8, true);
-      cur_y += 24;
+      CreateButton("Btn_ATR_Info", offset_x, cur_y, row_w, Scale(20), atr_txt, C'24,32,45', clrGold, 8, true);
+      cur_y += Scale(20) + row_gap;
    }
    
    // 7. Stop Loss (pts)
    if(InpShowSLSection)
    {
-      CreateButton("Chk_SL", offset_x, cur_y + 1, 18, 18, m_sl_active ? "X" : "", m_sl_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, clrWhite, 9, true);
-      CreateLabel("Lbl_SL", offset_x + 24, cur_y + 3, "Stop Loss (pts)", COLOR_TEXT_MAIN, 9, false);
-      CreateButton("Btn_SL_Dec", offset_x + 126, cur_y, 22, 20, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
-      CreateEdit("Edit_SL", offset_x + 150, cur_y, 64, 20, IntegerToString(m_sl_points), COLOR_EDIT_BG, COLOR_TEXT_MAIN, false, 9);
-      CreateButton("Btn_SL_Inc", offset_x + 216, cur_y, 22, 20, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
-      cur_y += 25;
+      CreateButton("Chk_SL", offset_x, cur_y + Scale(1), chk_sz, chk_sz, m_sl_active ? "X" : "", m_sl_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, clrWhite, 9, true);
+      CreateLabel("Lbl_SL", offset_x + chk_sz + Scale(4), cur_y + Scale(3), "Stop Loss (pts)", COLOR_TEXT_MAIN, 9, false);
+      CreateButton("Btn_SL_Dec", controls_x, cur_y, step_btn_w, row_h, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      CreateEdit("Edit_SL", controls_x + step_btn_w + btn_gap, cur_y, edit_box_w, row_h, IntegerToString(m_sl_points), COLOR_EDIT_BG, COLOR_TEXT_MAIN, false, 9);
+      CreateButton("Btn_SL_Inc", controls_x + step_btn_w + btn_gap + edit_box_w + btn_gap, cur_y, step_btn_w, row_h, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      cur_y += row_h + row_gap;
    }
    
    // 8. Take Profit (pts)
    if(InpShowTPSection)
    {
-      CreateButton("Chk_TP", offset_x, cur_y + 1, 18, 18, m_tp_active ? "X" : "", m_tp_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, clrWhite, 9, true);
-      CreateLabel("Lbl_TP", offset_x + 24, cur_y + 3, "Take Profit (pts)", COLOR_TEXT_MAIN, 9, false);
-      CreateButton("Btn_TP_Dec", offset_x + 126, cur_y, 22, 20, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
-      CreateEdit("Edit_TP", offset_x + 150, cur_y, 64, 20, IntegerToString(m_tp_points), COLOR_EDIT_BG, COLOR_TEXT_MAIN, false, 9);
-      CreateButton("Btn_TP_Inc", offset_x + 216, cur_y, 22, 20, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
-      cur_y += 25;
+      CreateButton("Chk_TP", offset_x, cur_y + Scale(1), chk_sz, chk_sz, m_tp_active ? "X" : "", m_tp_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, clrWhite, 9, true);
+      CreateLabel("Lbl_TP", offset_x + chk_sz + Scale(4), cur_y + Scale(3), "Take Profit (pts)", COLOR_TEXT_MAIN, 9, false);
+      CreateButton("Btn_TP_Dec", controls_x, cur_y, step_btn_w, row_h, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      CreateEdit("Edit_TP", controls_x + step_btn_w + btn_gap, cur_y, edit_box_w, row_h, IntegerToString(m_tp_points), COLOR_EDIT_BG, COLOR_TEXT_MAIN, false, 9);
+      CreateButton("Btn_TP_Inc", controls_x + step_btn_w + btn_gap + edit_box_w + btn_gap, cur_y, step_btn_w, row_h, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      cur_y += row_h + row_gap;
    }
    
    // 9. Break Even (pts)
    if(InpShowBESection)
    {
-      CreateButton("Chk_BE", offset_x, cur_y + 1, 18, 18, m_be_active ? "X" : "", m_be_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, clrWhite, 9, true);
-      CreateLabel("Lbl_BE", offset_x + 24, cur_y + 3, "Break Even (pts)", COLOR_TEXT_MAIN, 9, false);
-      CreateButton("Btn_BE_Dec", offset_x + 126, cur_y, 22, 20, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
-      CreateEdit("Edit_BE", offset_x + 150, cur_y, 64, 20, IntegerToString(m_be_points), COLOR_EDIT_BG, COLOR_TEXT_MAIN, false, 9);
-      CreateButton("Btn_BE_Inc", offset_x + 216, cur_y, 22, 20, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
-      cur_y += 25;
+      CreateButton("Chk_BE", offset_x, cur_y + Scale(1), chk_sz, chk_sz, m_be_active ? "X" : "", m_be_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, clrWhite, 9, true);
+      CreateLabel("Lbl_BE", offset_x + chk_sz + Scale(4), cur_y + Scale(3), "Break Even (pts)", COLOR_TEXT_MAIN, 9, false);
+      CreateButton("Btn_BE_Dec", controls_x, cur_y, step_btn_w, row_h, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      CreateEdit("Edit_BE", controls_x + step_btn_w + btn_gap, cur_y, edit_box_w, row_h, IntegerToString(m_be_points), COLOR_EDIT_BG, COLOR_TEXT_MAIN, false, 9);
+      CreateButton("Btn_BE_Inc", controls_x + step_btn_w + btn_gap + edit_box_w + btn_gap, cur_y, step_btn_w, row_h, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      cur_y += row_h + row_gap;
    }
    
    // 10. Trailing Stop (pts)
    if(InpShowTSSection)
    {
-      CreateButton("Chk_TS", offset_x, cur_y + 1, 18, 18, m_ts_active ? "X" : "", m_ts_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, clrWhite, 9, true);
-      CreateLabel("Lbl_TS", offset_x + 24, cur_y + 3, "Trailing Stop (pts)", COLOR_TEXT_MAIN, 9, false);
-      CreateButton("Btn_TS_Dec", offset_x + 126, cur_y, 22, 20, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
-      CreateEdit("Edit_TS", offset_x + 150, cur_y, 64, 20, IntegerToString(m_ts_points), COLOR_EDIT_BG, COLOR_TEXT_MAIN, false, 9);
-      CreateButton("Btn_TS_Inc", offset_x + 216, cur_y, 22, 20, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
-      cur_y += 27;
+      CreateButton("Chk_TS", offset_x, cur_y + Scale(1), chk_sz, chk_sz, m_ts_active ? "X" : "", m_ts_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, clrWhite, 9, true);
+      CreateLabel("Lbl_TS", offset_x + chk_sz + Scale(4), cur_y + Scale(3), "Trailing Stop (pts)", COLOR_TEXT_MAIN, 9, false);
+      CreateButton("Btn_TS_Dec", controls_x, cur_y, step_btn_w, row_h, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      CreateEdit("Edit_TS", controls_x + step_btn_w + btn_gap, cur_y, edit_box_w, row_h, IntegerToString(m_ts_points), COLOR_EDIT_BG, COLOR_TEXT_MAIN, false, 9);
+      CreateButton("Btn_TS_Inc", controls_x + step_btn_w + btn_gap + edit_box_w + btn_gap, cur_y, step_btn_w, row_h, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      cur_y += row_h + row_gap + Scale(2);
    }
    
    // 11. Secao Parcial (Compacta e Uniforme com Checkbox)
    if(InpShowParcialSection)
    {
-      CreateButton("Chk_Parcial", offset_x, cur_y + 1, 18, 18, m_parcial_active ? "X" : "", m_parcial_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, clrWhite, 9, true);
-      CreateButton("Btn_Parcial_Toggle_Mode", offset_x + 24, cur_y, 36, 20, m_parcial_is_cash ? "$" : "Pts", m_parcial_is_cash ? COLOR_TOGGLE_CASH : COLOR_TOGGLE_PCT, COLOR_TEXT_MAIN, 8, true);
-      CreateLabel("Lbl_Parcial_Target", offset_x + 64, cur_y + 3, "Alvo Parcial", COLOR_TEXT_MAIN, 9, false);
-      CreateButton("Btn_Parcial_Dec", offset_x + 126, cur_y, 22, 20, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      int mode_btn_w = Scale(36);
+      CreateButton("Chk_Parcial", offset_x, cur_y + Scale(1), chk_sz, chk_sz, m_parcial_active ? "X" : "", m_parcial_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, clrWhite, 9, true);
+      CreateButton("Btn_Parcial_Toggle_Mode", offset_x + chk_sz + Scale(4), cur_y, mode_btn_w, row_h, m_parcial_is_cash ? "$" : "Pts", m_parcial_is_cash ? COLOR_TOGGLE_CASH : COLOR_TOGGLE_PCT, COLOR_TEXT_MAIN, 8, true);
+      CreateLabel("Lbl_Parcial_Target", offset_x + chk_sz + Scale(4) + mode_btn_w + Scale(4), cur_y + Scale(3), "Alvo Parcial", COLOR_TEXT_MAIN, 9, false);
+      CreateButton("Btn_Parcial_Dec", controls_x, cur_y, step_btn_w, row_h, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
       string init_parcial_target = m_parcial_is_cash ? DoubleToString(m_parcial_target_cash, 2) : IntegerToString(m_parcial_target_pts);
-      CreateEdit("Edit_Parcial_Target", offset_x + 150, cur_y, 64, 20, init_parcial_target, COLOR_EDIT_BG, COLOR_TEXT_MAIN, false, 9);
-      CreateButton("Btn_Parcial_Inc", offset_x + 216, cur_y, 22, 20, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
-      cur_y += 24;
+      CreateEdit("Edit_Parcial_Target", controls_x + step_btn_w + btn_gap, cur_y, edit_box_w, row_h, init_parcial_target, COLOR_EDIT_BG, COLOR_TEXT_MAIN, false, 9);
+      CreateButton("Btn_Parcial_Inc", controls_x + step_btn_w + btn_gap + edit_box_w + btn_gap, cur_y, step_btn_w, row_h, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      cur_y += row_h + row_gap;
       
-      CreateLabel("Lbl_Parcial_Vol", offset_x + 24, cur_y + 3, "Vol. Parcial (%)", COLOR_TEXT_MUTED, 8, false);
-      CreateButton("Btn_Parcial_Vol_Dec", offset_x + 126, cur_y, 22, 20, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
-      CreateEdit("Edit_Parcial_Vol", offset_x + 150, cur_y, 64, 20, StringFormat("%.0f%%", m_parcial_vol_pct), COLOR_EDIT_BG, COLOR_TEXT_MAIN, false, 9);
-      CreateButton("Btn_Parcial_Vol_Inc", offset_x + 216, cur_y, 22, 20, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
-      cur_y += 24;
+      CreateLabel("Lbl_Parcial_Vol", offset_x + chk_sz + Scale(4), cur_y + Scale(3), "Vol. Parcial (%)", COLOR_TEXT_MUTED, 8, false);
+      CreateButton("Btn_Parcial_Vol_Dec", controls_x, cur_y, step_btn_w, row_h, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      CreateEdit("Edit_Parcial_Vol", controls_x + step_btn_w + btn_gap, cur_y, edit_box_w, row_h, StringFormat("%.0f%%", m_parcial_vol_pct), COLOR_EDIT_BG, COLOR_TEXT_MAIN, false, 9);
+      CreateButton("Btn_Parcial_Vol_Inc", controls_x + step_btn_w + btn_gap + edit_box_w + btn_gap, cur_y, step_btn_w, row_h, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      cur_y += row_h + row_gap;
       
-      CreateButton("Chk_Parcial_BE", offset_x, cur_y + 1, 16, 16, m_parcial_move_be ? "X" : "", m_parcial_move_be ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, clrWhite, 8, true);
-      CreateLabel("Lbl_Parcial_BE", offset_x + 22, cur_y + 3, "Mover SL p/ Zero a Zero pos Parcial", COLOR_TEXT_MUTED, 8, false);
-      cur_y += 25;
+      CreateButton("Chk_Parcial_BE", offset_x, cur_y + Scale(1), chk_sz, chk_sz, m_parcial_move_be ? "X" : "", m_parcial_move_be ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, clrWhite, 8, true);
+      CreateLabel("Lbl_Parcial_BE", offset_x + chk_sz + Scale(4), cur_y + Scale(3), "Mover SL p/ Zero a Zero pos Parcial", COLOR_TEXT_MUTED, 8, false);
+      cur_y += row_h + row_gap;
    }
    
    // 12. Gaveta de Canais de Frequencia (Estritamente Manual)
    if(InpShowChannelsSection)
    {
       string drawer_txt = m_channels_expanded ? "CANAIS DE FREQUENCIA (40x40)  [-]" : "CANAIS DE FREQUENCIA (40x40)  [+]";
-      CreateButton("Btn_Channels_Toggle", offset_x, cur_y, row_w, 22, drawer_txt, COLOR_DRAWER_BTN, clrGold, 8, true);
-      cur_y += 24;
+      CreateButton("Btn_Channels_Toggle", offset_x, cur_y, row_w, Scale(22), drawer_txt, COLOR_DRAWER_BTN, clrGold, 8, true);
+      cur_y += Scale(22) + Scale(2);
       
       if(m_channels_expanded)
       {
-         CreateRectangleLabel("Chan_Drawer_BG", offset_x, cur_y, row_w, 94, COLOR_SECTION_BG, COLOR_BORDER, ZORDER_PANEL_STRIP);
+         int chan_h = Scale(94);
+         CreateRectangleLabel("Chan_Drawer_BG", offset_x, cur_y, row_w, chan_h, COLOR_SECTION_BG, COLOR_BORDER, ZORDER_PANEL_STRIP);
          
-         CreateButton("Btn_Chan_Start", offset_x + 5, cur_y + 4, 122, 22, "1. Marcar 2 Linhas", COLOR_CHAN_START, clrWhite, 8, true);
-         CreateButton("Btn_Chan_Project", offset_x + 133, cur_y + 4, 122, 22, "2. Projetar 40 Canais", COLOR_CHAN_PROJ, clrWhite, 8, true);
+         int half_chan_w = (row_w - Scale(6)) / 2;
+         CreateButton("Btn_Chan_Start",   offset_x + Scale(3), cur_y + Scale(4), half_chan_w, Scale(22), "1. Marcar 2 Linhas", COLOR_CHAN_START, clrWhite, 8, true);
+         CreateButton("Btn_Chan_Project", offset_x + Scale(3) + half_chan_w + Scale(4), cur_y + Scale(4), half_chan_w, Scale(22), "2. Projetar 40 Canais", COLOR_CHAN_PROJ, clrWhite, 8, true);
          
-         int y_sub = cur_y + 28;
-         CreateLabel("Lbl_Chan_Up", offset_x + 6, y_sub + 2, "Cima:", clrWhite, 8, true);
-         CreateButton("Btn_Chan_Up_Dec", offset_x + 40, y_sub, 18, 18, "-", COLOR_STEP_BTN, clrWhite, 7, true);
-         CreateEdit("Edit_Chan_Up", offset_x + 60, y_sub, 36, 18, IntegerToString(m_proj_up), COLOR_EDIT_BG, clrWhite, false, 8);
-         CreateButton("Btn_Chan_Up_Inc", offset_x + 98, y_sub, 18, 18, "+", COLOR_STEP_BTN, clrWhite, 7, true);
+         int y_sub = cur_y + Scale(28);
+         CreateLabel("Lbl_Chan_Up", offset_x + Scale(4), y_sub + Scale(2), "Cima:", clrWhite, 8, true);
+         CreateButton("Btn_Chan_Up_Dec", offset_x + Scale(36), y_sub, Scale(18), Scale(18), "-", COLOR_STEP_BTN, clrWhite, 7, true);
+         CreateEdit("Edit_Chan_Up", offset_x + Scale(56), y_sub, Scale(36), Scale(18), IntegerToString(m_proj_up), COLOR_EDIT_BG, clrWhite, false, 8);
+         CreateButton("Btn_Chan_Up_Inc", offset_x + Scale(94), y_sub, Scale(18), Scale(18), "+", COLOR_STEP_BTN, clrWhite, 7, true);
          
-         CreateLabel("Lbl_Chan_Dn", offset_x + 130, y_sub + 2, "Baixo:", clrWhite, 8, true);
-         CreateButton("Btn_Chan_Dn_Dec", offset_x + 168, y_sub, 18, 18, "-", COLOR_STEP_BTN, clrWhite, 7, true);
-         CreateEdit("Edit_Chan_Dn", offset_x + 188, y_sub, 36, 18, IntegerToString(m_proj_down), COLOR_EDIT_BG, clrWhite, false, 8);
-         CreateButton("Btn_Chan_Dn_Inc", offset_x + 226, y_sub, 18, 18, "+", COLOR_STEP_BTN, clrWhite, 7, true);
+         CreateLabel("Lbl_Chan_Dn", offset_x + half_chan_w + Scale(4), y_sub + Scale(2), "Baixo:", clrWhite, 8, true);
+         CreateButton("Btn_Chan_Dn_Dec", offset_x + half_chan_w + Scale(38), y_sub, Scale(18), Scale(18), "-", COLOR_STEP_BTN, clrWhite, 7, true);
+         CreateEdit("Edit_Chan_Dn", offset_x + half_chan_w + Scale(58), y_sub, Scale(36), Scale(18), IntegerToString(m_proj_down), COLOR_EDIT_BG, clrWhite, false, 8);
+         CreateButton("Btn_Chan_Dn_Inc", offset_x + half_chan_w + Scale(96), y_sub, Scale(18), Scale(18), "+", COLOR_STEP_BTN, clrWhite, 7, true);
          
-         y_sub += 22;
-         CreateButton("Btn_Chan_HideShow", offset_x + 5, y_sub, 122, 20, m_chan_visible ? "Ocultar Linhas" : "Mostrar Linhas", C'45,48,60', clrWhite, 7, true);
-         CreateButton("Btn_Chan_Clear", offset_x + 133, y_sub, 122, 20, "Limpar Canais", COLOR_CLOSE_LSS_BTN, clrWhite, 7, true);
+         y_sub += Scale(22);
+         CreateButton("Btn_Chan_HideShow", offset_x + Scale(3), y_sub, half_chan_w, Scale(20), m_chan_visible ? "Ocultar Linhas" : "Mostrar Linhas", C'45,48,60', clrWhite, 7, true);
+         CreateButton("Btn_Chan_Clear", offset_x + Scale(3) + half_chan_w + Scale(4), y_sub, half_chan_w, Scale(20), "Limpar Canais", COLOR_CLOSE_LSS_BTN, clrWhite, 7, true);
          
-         y_sub += 22;
-         CreateLabel("Lbl_Chan_Status", offset_x + 8, y_sub, "Status: Pronto (40 canais manuais)", clrLimeGreen, 8, true);
+         y_sub += Scale(22);
+         CreateLabel("Lbl_Chan_Status", offset_x + Scale(6), y_sub, "Status: Pronto (40 canais manuais)", clrLimeGreen, 8, true);
          
-         cur_y += 98;
+         cur_y += chan_h + Scale(4);
       }
    }
    
    // 13. Botoes Operacionais (COMPRA e VENDA)
    if(InpShowTradeButtons)
    {
-      cur_y += 4;
-      int half_btn_w = (row_w - 6) / 2; // 127px
-      CreateButton("Btn_Buy", offset_x, cur_y, half_btn_w, 36, "[+] COMPRA", COLOR_BUY_BTN, COLOR_TEXT_MAIN, 11, true);
-      CreateButton("Btn_Sell", offset_x + half_btn_w + 6, cur_y, half_btn_w, 36, "[-] VENDA", COLOR_SELL_BTN, COLOR_TEXT_MAIN, 11, true);
-      cur_y += 40;
+      cur_y += Scale(4);
+      int half_btn_w = (row_w - Scale(6)) / 2;
+      CreateButton("Btn_Buy",  offset_x, cur_y, half_btn_w, Scale(36), "[+] COMPRA", COLOR_BUY_BTN, COLOR_TEXT_MAIN, 11, true);
+      CreateButton("Btn_Sell", offset_x + half_btn_w + Scale(6), cur_y, half_btn_w, Scale(36), "[-] VENDA", COLOR_SELL_BTN, COLOR_TEXT_MAIN, 11, true);
+      cur_y += Scale(40);
    }
    
    // 14. Botao Inverter Posicao
    if(InpShowInvertButton)
    {
-      CreateButton("Btn_Invert", offset_x, cur_y, row_w, 26, "INVERTER POSICAO", COLOR_INVERT_BTN, COLOR_TEXT_MAIN, 9, true);
-      cur_y += 29;
+      CreateButton("Btn_Invert", offset_x, cur_y, row_w, Scale(26), "INVERTER POSICAO", COLOR_INVERT_BTN, COLOR_TEXT_MAIN, 9, true);
+      cur_y += Scale(30);
    }
    
    // 15. Botoes Zerar Lucro e Zerar Prejuizo
    if(InpShowCloseButtons)
    {
-      int half_btn_w = (row_w - 6) / 2; // 127px
-      CreateButton("Btn_CloseProfit", offset_x, cur_y, half_btn_w, 26, "Zerar Lucro", COLOR_CLOSE_PRF_BTN, COLOR_TEXT_MAIN, 9, true);
-      CreateButton("Btn_CloseLoss", offset_x + half_btn_w + 6, cur_y, half_btn_w, 26, "Zerar Prejuizo", COLOR_CLOSE_LSS_BTN, COLOR_TEXT_MAIN, 9, true);
-      cur_y += 30;
+      int half_btn_w = (row_w - Scale(6)) / 2;
+      CreateButton("Btn_CloseProfit", offset_x, cur_y, half_btn_w, Scale(26), "Zerar Lucro", COLOR_CLOSE_PRF_BTN, COLOR_TEXT_MAIN, 9, true);
+      CreateButton("Btn_CloseLoss",   offset_x + half_btn_w + Scale(6), cur_y, half_btn_w, Scale(26), "Zerar Prejuizo", COLOR_CLOSE_LSS_BTN, COLOR_TEXT_MAIN, 9, true);
+      cur_y += Scale(30);
    }
    
    // 16. Botao ZERAR TODAS (No Rodape)
    if(InpShowCloseAll)
    {
-      CreateButton("Btn_CloseAll", offset_x, cur_y, row_w, 36, "ZERAR TODAS AS ORDENS", COLOR_CLOSE_ALL_BTN, clrBlack, 11, true);
-      cur_y += 40;
+      CreateButton("Btn_CloseAll", offset_x, cur_y, row_w, Scale(36), "ZERAR TODAS AS ORDENS", COLOR_CLOSE_ALL_BTN, clrBlack, 11, true);
+      cur_y += Scale(40);
    }
    
-   m_height = cur_y - m_y + 4;
+   m_height = cur_y - m_y + Scale(6);
    ObjectSetInteger(m_chart_id, PREFIX_GUI + "Panel_BG", OBJPROP_YSIZE, m_height);
    ChartRedraw(m_chart_id);
 }
@@ -1499,7 +1630,7 @@ void CBoletaMaster::UpdateLiveSLTPLines()
    bool has_sell = false;
    for(int i = PositionsTotal() - 1; i >= 0; i--)
    {
-      if(pos.SelectByIndex(i) && (!InpFilterSymbolOnly || pos.Symbol() == m_symbol))
+      if(pos.SelectByIndex(i) && (!m_filter_symbol_only || pos.Symbol() == m_symbol))
       {
          if(pos.PositionType() == POSITION_TYPE_SELL)
          {
@@ -2251,7 +2382,7 @@ void CBoletaMaster::ExecuteInvert()
    CPositionInfo pos;
    for(int i = PositionsTotal() - 1; i >= 0; i--)
    {
-      if(pos.SelectByIndex(i) && (!InpFilterSymbolOnly || pos.Symbol() == m_symbol))
+      if(pos.SelectByIndex(i) && (!m_filter_symbol_only || pos.Symbol() == m_symbol))
       {
          ENUM_POSITION_TYPE p_type = pos.PositionType();
          double p_vol = pos.Volume();
@@ -2283,13 +2414,13 @@ void CBoletaMaster::ExecuteCloseAll()
    for(int i = PositionsTotal() - 1; i >= 0; i--)
    {
       ulong ticket = PositionGetTicket(i);
-      if(ticket > 0 && (!InpFilterSymbolOnly || PositionGetString(POSITION_SYMBOL) == m_symbol))
+      if(ticket > 0 && (!m_filter_symbol_only || PositionGetString(POSITION_SYMBOL) == m_symbol))
          m_trade.PositionClose(ticket);
    }
    for(int i = OrdersTotal() - 1; i >= 0; i--)
    {
       ulong ticket = OrderGetTicket(i);
-      if(ticket > 0 && (!InpFilterSymbolOnly || OrderGetString(ORDER_SYMBOL) == m_symbol))
+      if(ticket > 0 && (!m_filter_symbol_only || OrderGetString(ORDER_SYMBOL) == m_symbol))
          m_trade.OrderDelete(ticket);
    }
    UpdateLiveMetrics();
@@ -2301,7 +2432,7 @@ void CBoletaMaster::ExecuteCloseProfit()
    CPositionInfo pos;
    for(int i = PositionsTotal() - 1; i >= 0; i--)
    {
-      if(pos.SelectByIndex(i) && (!InpFilterSymbolOnly || pos.Symbol() == m_symbol))
+      if(pos.SelectByIndex(i) && (!m_filter_symbol_only || pos.Symbol() == m_symbol))
       {
          if(pos.Profit() > 0.0)
             m_trade.PositionClose(pos.Ticket());
@@ -2316,7 +2447,7 @@ void CBoletaMaster::ExecuteCloseLoss()
    CPositionInfo pos;
    for(int i = PositionsTotal() - 1; i >= 0; i--)
    {
-      if(pos.SelectByIndex(i) && (!InpFilterSymbolOnly || pos.Symbol() == m_symbol))
+      if(pos.SelectByIndex(i) && (!m_filter_symbol_only || pos.Symbol() == m_symbol))
       {
          if(pos.Profit() < 0.0)
             m_trade.PositionClose(pos.Ticket());
@@ -2435,6 +2566,8 @@ void CBoletaMaster::HandleButtonClick(const string &obj_name)
    StringReplace(short_name, PREFIX_GUI, "");
    ObjectSetInteger(m_chart_id, obj_name, OBJPROP_STATE, false);
    
+   if(short_name == "Btn_Zoom")             { CycleScale(); return; }
+   if(short_name == "Btn_Stats_Scope")      { ToggleStatsScope(); return; }
    if(short_name == "Btn_Min")              { ToggleMinimize(); return; }
    if(short_name == "Btn_Stats_Today")      { SetStatsPeriod(STATS_PERIOD_TODAY); return; }
    if(short_name == "Btn_Stats_7D")         { SetStatsPeriod(STATS_PERIOD_7D); return; }
@@ -2556,7 +2689,7 @@ void CBoletaMaster::OnChartEvent(const int id, const long &lparam, const double 
                mouse_y >= m_y && mouse_y <= m_y + drag_h)
             {
                // Nao arrastar se o clique foi nos botoes de minimizar ou fechar
-               if(mouse_y <= m_y + m_header_h && mouse_x >= m_x + m_width - 55)
+               if(mouse_y <= m_y + m_header_h && mouse_x >= m_x + m_width - Scale(96))
                   return;
                
                m_is_dragging   = true;
