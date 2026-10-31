@@ -92,6 +92,38 @@ input bool            InpTSActive          = false;              // Trailing Sto
 input int             InpDefaultTS         = 150;                // Trailing Stop Padrao (pontos)
 input int             InpDefaultTSStep     = 2;                  // Passo do Trailing Stop (pontos)
 
+input group "=== ESTILIZACAO DAS LINHAS VISUAIS SL/TP ==="
+input color           InpColorLiveTP       = C'34,197,94';       // Cor da Linha Take Profit (Verde Platina)
+input ENUM_LINE_STYLE InpStyleLiveTP       = STYLE_DASH;         // Estilo da Linha Take Profit
+input int             InpWidthLiveTP       = 1;                  // Espessura da Linha Take Profit (1 a 5)
+input color           InpColorLiveSL       = C'239,68,68';       // Cor da Linha Stop Loss (Vermelho Vibrante)
+input ENUM_LINE_STYLE InpStyleLiveSL       = STYLE_DASH;         // Estilo da Linha Stop Loss
+input int             InpWidthLiveSL       = 1;                  // Espessura da Linha Stop Loss (1 a 5)
+
+input group "=== SUGESTAO DE ALVOS VIA ATR (DESLIGADO POR PADRAO) ==="
+input bool            InpEnableATRAlvos    = false;              // Ativar Calculo de Alvos via ATR (Desligado por Padrao)
+input ENUM_TIMEFRAMES InpATRTimeframe      = PERIOD_CURRENT;     // Tempo Grafico do ATR
+input int             InpATRPeriod         = 14;                 // Periodo do ATR (Barras Fechadas)
+input double          InpATRMulSL          = 1.5;                // Multiplicador ATR para Stop Loss
+input double          InpATRMulTP          = 2.0;                // Multiplicador ATR para Take Profit
+input bool            InpAutoApplyATR      = false;              // Aplicar Automaticamente ATR nos Alvos
+
+input group "=== MODULARIDADE DA BOLETA (ESCOLHA O QUE EXIBIR NO SET) ==="
+input bool            InpShowMarketStrip   = true;               // Exibir Faixa de Mercado (Ativo, Spread, Timer)
+input bool            InpShowHUDStats      = true;               // Exibir 4 Cartoes HUD (Capital, Lote, Lucro, Win%)
+input bool            InpShowRiskSection   = true;               // Exibir Linha de Gestao de Risco ($ / %)
+input bool            InpShowLotSection    = true;               // Exibir Linha de Lote Operacional
+input bool            InpShowSLSection     = true;               // Exibir Linha de Stop Loss (pts)
+input bool            InpShowTPSection     = true;               // Exibir Linha de Take Profit (pts)
+input bool            InpShowBESection     = true;               // Exibir Linha de Break Even (pts)
+input bool            InpShowTSSection     = true;               // Exibir Linha de Trailing Stop (pts)
+input bool            InpShowParcialSection= true;               // Exibir Secao de Realizacao Parcial
+input bool            InpShowChannelsSection= true;              // Exibir Gaveta de Canais Manuais (40x40)
+input bool            InpShowTradeButtons  = true;               // Exibir Botoes Operacionais (COMPRA e VENDA)
+input bool            InpShowInvertButton  = true;               // Exibir Botao Inverter Posicao
+input bool            InpShowCloseButtons  = true;               // Exibir Botoes Zerar Lucro / Zerar Prejuizo
+input bool            InpShowCloseAll      = true;               // Exibir Botao Zerar Todas as Ordens (Rodape)
+
 input group "=== REALIZACAO PARCIAL ==="
 input bool            InpParcialActive     = false;              // Parcial Inicial (Desmarcado por Padrao)
 input bool            InpParcialIsCash     = false;              // Modo Alvo Parcial (false = Pontos, true = $)
@@ -353,6 +385,7 @@ private:
    int               m_be_points;
    int               m_ts_points;
    int               m_ts_step_pts;
+   int               m_atr_handle;
    int               m_parcial_target_pts;
    double            m_parcial_target_cash;
    double            m_parcial_vol_pct;
@@ -412,6 +445,10 @@ public:
    bool              IsParcialMoveBE()        const { return m_parcial_move_be; }
    int               GetSLPoints()            const { return m_sl_points; }
    int               GetTPPoints()            const { return m_tp_points; }
+   void              SetSLPoints(int pts)     { m_sl_points = pts; }
+   void              SetTPPoints(int pts)     { m_tp_points = pts; }
+   bool              GetATRTargets(int &out_atr_pts, int &out_sug_sl, int &out_sug_tp);
+   void              ApplyATRTargets();
    int               GetBEPoints()            const { return m_be_points; }
    int               GetTSPoints()            const { return m_ts_points; }
    int               GetTSStepPoints()        const { return m_ts_step_pts; }
@@ -525,7 +562,8 @@ CBoletaMaster::CBoletaMaster()
      m_win_rate(0.0),
      m_today_wins(0),
      m_today_total_closed(0),
-     m_floating_pnl(0.0)
+     m_floating_pnl(0.0),
+     m_atr_handle(INVALID_HANDLE)
 {
    m_temp_line1 = PREFIX_CANAL_TEMP + "1";
    m_temp_line2 = PREFIX_CANAL_TEMP + "2";
@@ -682,6 +720,13 @@ bool CBoletaMaster::Init(const string symbol, ulong magic, ulong slippage, int x
    m_trade.SetMarginMode();
    SetBestFillingMode(m_trade, m_symbol);
    
+   if(InpEnableATRAlvos)
+   {
+      m_atr_handle = iATR(m_symbol, InpATRTimeframe, InpATRPeriod);
+      if(m_atr_handle == INVALID_HANDLE)
+         Print("[ATR Engine] Falha ao inicializar o handle do ATR!");
+   }
+   
    SymbolSelect(m_symbol, true);
    ChartSetInteger(m_chart_id, CHART_FOREGROUND, false);
    ChartSetInteger(m_chart_id, CHART_EVENT_MOUSE_MOVE, true);
@@ -700,6 +745,12 @@ void CBoletaMaster::Destroy(const int reason)
    ObjectsDeleteAll(m_chart_id, PREFIX_GUI);
    ObjectDelete(m_chart_id, m_temp_line1);
    ObjectDelete(m_chart_id, m_temp_line2);
+   
+   if(m_atr_handle != INVALID_HANDLE)
+   {
+      IndicatorRelease(m_atr_handle);
+      m_atr_handle = INVALID_HANDLE;
+   }
    
    if(reason == REASON_CHARTCHANGE || reason == REASON_RECOMPILE || reason == REASON_PARAMETERS)
    {
@@ -847,6 +898,49 @@ void CBoletaMaster::CalculateDashboardStats()
 //+------------------------------------------------------------------+
 //| Renderizacao Procedural Dark Mode Moderna e Fluida               |
 //+------------------------------------------------------------------+
+
+//+------------------------------------------------------------------+
+//| Motor Causal de Dimensionamento por ATR (Protocolo Sunrise)       |
+//+------------------------------------------------------------------+
+bool CBoletaMaster::GetATRTargets(int &out_atr_pts, int &out_sug_sl, int &out_sug_tp)
+{
+   if(!InpEnableATRAlvos) return false;
+   if(m_atr_handle == INVALID_HANDLE)
+   {
+      m_atr_handle = iATR(m_symbol, InpATRTimeframe, InpATRPeriod);
+      if(m_atr_handle == INVALID_HANDLE) return false;
+   }
+   
+   double atr_buf[1];
+   // Protocolo Sunrise: estritamente barra fechada shift(1) sem lookahead
+   if(CopyBuffer(m_atr_handle, 0, 1, 1, atr_buf) <= 0) return false;
+   if(atr_buf[0] <= 0.0) return false;
+   
+   double point = SymbolInfoDouble(m_symbol, SYMBOL_POINT);
+   if(point <= 0.0) return false;
+   
+   out_atr_pts = (int)MathRound(atr_buf[0] / point);
+   out_sug_sl  = (int)MathRound((atr_buf[0] * InpATRMulSL) / point);
+   out_sug_tp  = (int)MathRound((atr_buf[0] * InpATRMulTP) / point);
+   if(out_sug_sl < 10) out_sug_sl = 10;
+   if(out_sug_tp < 10) out_sug_tp = 10;
+   return true;
+}
+
+void CBoletaMaster::ApplyATRTargets()
+{
+   int atr_p = 0, sug_sl = 0, sug_tp = 0;
+   if(GetATRTargets(atr_p, sug_sl, sug_tp))
+   {
+      m_sl_points = sug_sl;
+      m_tp_points = sug_tp;
+      UpdateFieldValues();
+      UpdateLiveSLTPLines();
+      SaveState();
+      PrintFormat("[ATR Target Engine] Alvos Volateis Aplicados: SL = %d pts | TP = %d pts (ATR = %d pts)", sug_sl, sug_tp, atr_p);
+   }
+}
+
 void CBoletaMaster::Render()
 {
    ChartSetInteger(m_chart_id, CHART_FOREGROUND, false);
@@ -871,162 +965,211 @@ void CBoletaMaster::Render()
    int cur_y = m_y + m_header_h + 4;
    
    // 2. Faixa de Mercado (Ativo / Spread / Relogio Candle)
-   CreateRectangleLabel("Strip_Market_BG", offset_x, cur_y, row_w, 24, COLOR_MARKET_BG, COLOR_BORDER, ZORDER_PANEL_STRIP);
-   CreateLabel("Lbl_Mkt_Symbol", offset_x + 8, cur_y + 4, m_symbol, clrGold, 9, true);
-   CreateLabel("Lbl_Mkt_Spread", offset_x + 115, cur_y + 4, "Sp: --", clrWhite, 9, false);
-   CreateLabel("Lbl_Mkt_Timer",  offset_x + 180, cur_y + 4, "[TF] --:--", clrCyan, 9, true);
-   cur_y += 28;
-   
-   // 3. Painel HUD de Confianca (4 Metricas Obrigatorias)
-   // Row 1: Capital Inicial | Lote Atual
-   int card_w = (row_w - 6) / 2; // 127px
-   CreateRectangleLabel("Card_Cap_BG", offset_x, cur_y, card_w, 26, COLOR_CARD_BG, COLOR_CARD_BORDER, ZORDER_PANEL_STRIP);
-   CreateLabel("Lbl_Cap_Title", offset_x + 6, cur_y + 1, "CAP. INICIAL", COLOR_TEXT_MUTED, 7, false);
-   CreateLabel("Lbl_Cap_Val",   offset_x + 6, cur_y + 11, "$0.00", clrWhite, 9, true);
-   
-   CreateRectangleLabel("Card_Lot_BG", offset_x + card_w + 6, cur_y, card_w, 26, COLOR_CARD_BG, COLOR_CARD_BORDER, ZORDER_PANEL_STRIP);
-   CreateLabel("Lbl_Lot_Title", offset_x + card_w + 12, cur_y + 1, "LOTE ATUAL", COLOR_TEXT_MUTED, 7, false);
-   CreateLabel("Lbl_Lot_Val",   offset_x + card_w + 12, cur_y + 11, DoubleToString(m_manual_lot, 2), COLOR_LOT_GOLD, 9, true);
-   cur_y += 29;
-   
-   // Row 2: Lucro do Dia | Porcentagem de Acertos
-   CreateRectangleLabel("Card_Pnl_BG", offset_x, cur_y, card_w, 26, COLOR_CARD_BG, COLOR_CARD_BORDER, ZORDER_PANEL_STRIP);
-   CreateLabel("Lbl_Pnl_Title", offset_x + 6, cur_y + 1, "LUCRO HOJE", COLOR_TEXT_MUTED, 7, false);
-   CreateLabel("Lbl_Pnl_Val",   offset_x + 6, cur_y + 11, "$0.00", COLOR_PROFIT_GREEN, 9, true);
-   
-   CreateRectangleLabel("Card_Win_BG", offset_x + card_w + 6, cur_y, card_w, 26, COLOR_CARD_BG, COLOR_CARD_BORDER, ZORDER_PANEL_STRIP);
-   CreateLabel("Lbl_Win_Title", offset_x + card_w + 12, cur_y + 1, "% ACERTOS", COLOR_TEXT_MUTED, 7, false);
-   CreateLabel("Lbl_Win_Val",   offset_x + card_w + 12, cur_y + 11, "0.0%", COLOR_CHECK_ACTIVE, 9, true);
-   cur_y += 31;
-   
-   // 4. Secao Gestao de Risco (Risco $150 Desmarcado por Padrao)
-   bool is_auto_risk = (m_risk_mode != RISK_MODE_MANUAL);
-   CreateButton("Chk_Risk", offset_x, cur_y + 1, 18, 18, is_auto_risk ? "X" : "", is_auto_risk ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, clrWhite, 9, true);
-   string risk_toggle_text = (m_risk_mode == RISK_MODE_PERCENT) ? "Risco: %" : "Risco: $";
-   color risk_toggle_bg    = (m_risk_mode == RISK_MODE_PERCENT) ? COLOR_TOGGLE_PCT : (is_auto_risk ? COLOR_TOGGLE_CASH : COLOR_EDIT_BG);
-   CreateButton("Btn_Risk_Toggle", offset_x + 24, cur_y, 96, 20, risk_toggle_text, risk_toggle_bg, COLOR_TEXT_MAIN, 9, true);
-   CreateButton("Btn_Risk_Dec", offset_x + 126, cur_y, 22, 20, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
-   string init_risk_str = (m_risk_mode == RISK_MODE_PERCENT) ? DoubleToString(m_risk_percent, 1) : DoubleToString(m_risk_cash, 2);
-   CreateEdit("Edit_Risk", offset_x + 150, cur_y, 64, 20, init_risk_str, COLOR_EDIT_BG, COLOR_TEXT_MAIN, false, 9);
-   CreateButton("Btn_Risk_Inc", offset_x + 216, cur_y, 22, 20, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
-   cur_y += 25;
-   
-   // 5. Linha de Lote Operacional (Nativo 0.04)
-   int dec = GetLotDecimals(m_symbol);
-   CreateLabel("Lbl_Lot", offset_x + 24, cur_y + 3, "Lote Operacional", COLOR_TEXT_MAIN, 9, true);
-   CreateButton("Btn_Lot_Dec", offset_x + 126, cur_y, 22, 20, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
-   CreateEdit("Edit_Lot", offset_x + 150, cur_y, 64, 20, DoubleToString(m_manual_lot, dec), is_auto_risk ? COLOR_EDIT_RO_BG : COLOR_EDIT_BG, is_auto_risk ? COLOR_LOT_GOLD : COLOR_TEXT_MAIN, is_auto_risk, 9);
-   CreateButton("Btn_Lot_Inc", offset_x + 216, cur_y, 22, 20, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
-   cur_y += 25;
-   
-   // 6. Stop Loss (pts) - Nativo 200 pts (Desmarcado por Padrao)
-   CreateButton("Chk_SL", offset_x, cur_y + 1, 18, 18, m_sl_active ? "X" : "", m_sl_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, clrWhite, 9, true);
-   CreateLabel("Lbl_SL", offset_x + 24, cur_y + 3, "Stop Loss (pts)", COLOR_TEXT_MAIN, 9, false);
-   CreateButton("Btn_SL_Dec", offset_x + 126, cur_y, 22, 20, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
-   CreateEdit("Edit_SL", offset_x + 150, cur_y, 64, 20, IntegerToString(m_sl_points), COLOR_EDIT_BG, COLOR_TEXT_MAIN, false, 9);
-   CreateButton("Btn_SL_Inc", offset_x + 216, cur_y, 22, 20, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
-   cur_y += 25;
-   
-   // 7. Take Profit (pts) - Nativo 300 pts (Desmarcado por Padrao)
-   CreateButton("Chk_TP", offset_x, cur_y + 1, 18, 18, m_tp_active ? "X" : "", m_tp_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, clrWhite, 9, true);
-   CreateLabel("Lbl_TP", offset_x + 24, cur_y + 3, "Take Profit (pts)", COLOR_TEXT_MAIN, 9, false);
-   CreateButton("Btn_TP_Dec", offset_x + 126, cur_y, 22, 20, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
-   CreateEdit("Edit_TP", offset_x + 150, cur_y, 64, 20, IntegerToString(m_tp_points), COLOR_EDIT_BG, COLOR_TEXT_MAIN, false, 9);
-   CreateButton("Btn_TP_Inc", offset_x + 216, cur_y, 22, 20, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
-   cur_y += 25;
-   
-   // 8. Break Even (pts) - Nativo 60 pts (Desmarcado por Padrao)
-   CreateButton("Chk_BE", offset_x, cur_y + 1, 18, 18, m_be_active ? "X" : "", m_be_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, clrWhite, 9, true);
-   CreateLabel("Lbl_BE", offset_x + 24, cur_y + 3, "Break Even (pts)", COLOR_TEXT_MAIN, 9, false);
-   CreateButton("Btn_BE_Dec", offset_x + 126, cur_y, 22, 20, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
-   CreateEdit("Edit_BE", offset_x + 150, cur_y, 64, 20, IntegerToString(m_be_points), COLOR_EDIT_BG, COLOR_TEXT_MAIN, false, 9);
-   CreateButton("Btn_BE_Inc", offset_x + 216, cur_y, 22, 20, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
-   cur_y += 25;
-   
-   // 9. Trailing Stop (pts) - Nativo 150 pts (Desmarcado por Padrao)
-   CreateButton("Chk_TS", offset_x, cur_y + 1, 18, 18, m_ts_active ? "X" : "", m_ts_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, clrWhite, 9, true);
-   CreateLabel("Lbl_TS", offset_x + 24, cur_y + 3, "Trailing Stop (pts)", COLOR_TEXT_MAIN, 9, false);
-   CreateButton("Btn_TS_Dec", offset_x + 126, cur_y, 22, 20, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
-   CreateEdit("Edit_TS", offset_x + 150, cur_y, 64, 20, IntegerToString(m_ts_points), COLOR_EDIT_BG, COLOR_TEXT_MAIN, false, 9);
-   CreateButton("Btn_TS_Inc", offset_x + 216, cur_y, 22, 20, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
-   cur_y += 27;
-   
-   // 10. Secao Parcial (Compacta e Uniforme com Checkbox)
-   CreateButton("Chk_Parcial", offset_x, cur_y + 1, 18, 18, m_parcial_active ? "X" : "", m_parcial_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, clrWhite, 9, true);
-   CreateButton("Btn_Parcial_Toggle_Mode", offset_x + 24, cur_y, 36, 20, m_parcial_is_cash ? "$" : "Pts", m_parcial_is_cash ? COLOR_TOGGLE_CASH : COLOR_TOGGLE_PCT, COLOR_TEXT_MAIN, 8, true);
-   CreateLabel("Lbl_Parcial_Target", offset_x + 64, cur_y + 3, "Alvo Parcial", COLOR_TEXT_MAIN, 9, false);
-   CreateButton("Btn_Parcial_Dec", offset_x + 126, cur_y, 22, 20, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
-   string init_parcial_target = m_parcial_is_cash ? DoubleToString(m_parcial_target_cash, 2) : IntegerToString(m_parcial_target_pts);
-   CreateEdit("Edit_Parcial_Target", offset_x + 150, cur_y, 64, 20, init_parcial_target, COLOR_EDIT_BG, COLOR_TEXT_MAIN, false, 9);
-   CreateButton("Btn_Parcial_Inc", offset_x + 216, cur_y, 22, 20, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
-   cur_y += 24;
-   
-   CreateLabel("Lbl_Parcial_Vol", offset_x + 24, cur_y + 3, "Vol. Parcial (%)", COLOR_TEXT_MUTED, 8, false);
-   CreateButton("Btn_Parcial_Vol_Dec", offset_x + 126, cur_y, 22, 20, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
-   CreateEdit("Edit_Parcial_Vol", offset_x + 150, cur_y, 64, 20, StringFormat("%.0f%%", m_parcial_vol_pct), COLOR_EDIT_BG, COLOR_TEXT_MAIN, false, 9);
-   CreateButton("Btn_Parcial_Vol_Inc", offset_x + 216, cur_y, 22, 20, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
-   cur_y += 24;
-   
-   CreateButton("Chk_Parcial_BE", offset_x, cur_y + 1, 16, 16, m_parcial_move_be ? "X" : "", m_parcial_move_be ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, clrWhite, 8, true);
-   CreateLabel("Lbl_Parcial_BE", offset_x + 22, cur_y + 3, "Mover SL p/ Zero a Zero pos Parcial", COLOR_TEXT_MUTED, 8, false);
-   cur_y += 25;
-   
-   // 11. Gaveta de Canais de Frequencia (Estritamente Manual)
-   string drawer_txt = m_channels_expanded ? "CANAIS DE FREQUENCIA (40x40)  [-]" : "CANAIS DE FREQUENCIA (40x40)  [+]";
-   CreateButton("Btn_Channels_Toggle", offset_x, cur_y, row_w, 22, drawer_txt, COLOR_DRAWER_BTN, clrGold, 8, true);
-   cur_y += 24;
-   
-   if(m_channels_expanded)
+   if(InpShowMarketStrip)
    {
-      CreateRectangleLabel("Chan_Drawer_BG", offset_x, cur_y, row_w, 94, COLOR_SECTION_BG, COLOR_BORDER, ZORDER_PANEL_STRIP);
-      
-      // Linha 1: Marcacao Manual
-      CreateButton("Btn_Chan_Start", offset_x + 5, cur_y + 4, 122, 22, "1. Marcar 2 Linhas", COLOR_CHAN_START, clrWhite, 8, true);
-      CreateButton("Btn_Chan_Project", offset_x + 133, cur_y + 4, 122, 22, "2. Projetar 40 Canais", COLOR_CHAN_PROJ, clrWhite, 8, true);
-      
-      // Linha 2: Steppers Cima (40) e Baixo (40)
-      int y_sub = cur_y + 28;
-      CreateLabel("Lbl_Chan_Up", offset_x + 6, y_sub + 2, "Cima:", clrWhite, 8, true);
-      CreateButton("Btn_Chan_Up_Dec", offset_x + 40, y_sub, 18, 18, "-", COLOR_STEP_BTN, clrWhite, 7, true);
-      CreateEdit("Edit_Chan_Up", offset_x + 60, y_sub, 36, 18, IntegerToString(m_proj_up), COLOR_EDIT_BG, clrWhite, false, 8);
-      CreateButton("Btn_Chan_Up_Inc", offset_x + 98, y_sub, 18, 18, "+", COLOR_STEP_BTN, clrWhite, 7, true);
-      
-      CreateLabel("Lbl_Chan_Dn", offset_x + 130, y_sub + 2, "Baixo:", clrWhite, 8, true);
-      CreateButton("Btn_Chan_Dn_Dec", offset_x + 168, y_sub, 18, 18, "-", COLOR_STEP_BTN, clrWhite, 7, true);
-      CreateEdit("Edit_Chan_Dn", offset_x + 188, y_sub, 36, 18, IntegerToString(m_proj_down), COLOR_EDIT_BG, clrWhite, false, 8);
-      CreateButton("Btn_Chan_Dn_Inc", offset_x + 226, y_sub, 18, 18, "+", COLOR_STEP_BTN, clrWhite, 7, true);
-      
-      // Linha 3: Ocultar/Mostrar e Limpar
-      y_sub += 22;
-      CreateButton("Btn_Chan_HideShow", offset_x + 5, y_sub, 122, 20, m_chan_visible ? "Ocultar Linhas" : "Mostrar Linhas", C'45,48,60', clrWhite, 7, true);
-      CreateButton("Btn_Chan_Clear", offset_x + 133, y_sub, 122, 20, "Limpar Canais", COLOR_CLOSE_LSS_BTN, clrWhite, 7, true);
-      
-      // Linha 4: Status
-      y_sub += 22;
-      CreateLabel("Lbl_Chan_Status", offset_x + 8, y_sub, "Status: Pronto (40 canais manuais)", clrLimeGreen, 8, true);
-      
-      cur_y += 98;
+      CreateRectangleLabel("Strip_Market_BG", offset_x, cur_y, row_w, 24, COLOR_MARKET_BG, COLOR_BORDER, ZORDER_PANEL_STRIP);
+      CreateLabel("Lbl_Mkt_Symbol", offset_x + 8, cur_y + 4, m_symbol, clrGold, 9, true);
+      CreateLabel("Lbl_Mkt_Spread", offset_x + 115, cur_y + 4, "Sp: --", clrWhite, 9, false);
+      CreateLabel("Lbl_Mkt_Timer",  offset_x + 180, cur_y + 4, "[TF] --:--", clrCyan, 9, true);
+      cur_y += 28;
    }
    
-   // 12. Botoes Operacionais de Alta Velocidade e Assertividade
-   cur_y += 4;
-   int half_btn_w = (row_w - 6) / 2; // 127px
-   CreateButton("Btn_Buy", offset_x, cur_y, half_btn_w, 36, "▲ COMPRA", COLOR_BUY_BTN, COLOR_TEXT_MAIN, 11, true);
-   CreateButton("Btn_Sell", offset_x + half_btn_w + 6, cur_y, half_btn_w, 36, "▼ VENDA", COLOR_SELL_BTN, COLOR_TEXT_MAIN, 11, true);
-   cur_y += 40;
+   // 3. Painel HUD de Confianca (4 Metricas Obrigatorias)
+   if(InpShowHUDStats)
+   {
+      int card_w = (row_w - 6) / 2; // 127px
+      CreateRectangleLabel("Card_Cap_BG", offset_x, cur_y, card_w, 26, COLOR_CARD_BG, COLOR_CARD_BORDER, ZORDER_PANEL_STRIP);
+      CreateLabel("Lbl_Cap_Title", offset_x + 6, cur_y + 1, "CAP. INICIAL", COLOR_TEXT_MUTED, 7, false);
+      CreateLabel("Lbl_Cap_Val",   offset_x + 6, cur_y + 11, "$0.00", clrWhite, 9, true);
+      
+      CreateRectangleLabel("Card_Lot_BG", offset_x + card_w + 6, cur_y, card_w, 26, COLOR_CARD_BG, COLOR_CARD_BORDER, ZORDER_PANEL_STRIP);
+      CreateLabel("Lbl_Lot_Title", offset_x + card_w + 12, cur_y + 1, "LOTE ATUAL", COLOR_TEXT_MUTED, 7, false);
+      CreateLabel("Lbl_Lot_Val",   offset_x + card_w + 12, cur_y + 11, DoubleToString(m_manual_lot, 2), COLOR_LOT_GOLD, 9, true);
+      cur_y += 29;
+      
+      CreateRectangleLabel("Card_Pnl_BG", offset_x, cur_y, card_w, 26, COLOR_CARD_BG, COLOR_CARD_BORDER, ZORDER_PANEL_STRIP);
+      CreateLabel("Lbl_Pnl_Title", offset_x + 6, cur_y + 1, "LUCRO HOJE", COLOR_TEXT_MUTED, 7, false);
+      CreateLabel("Lbl_Pnl_Val",   offset_x + 6, cur_y + 11, "$0.00", COLOR_PROFIT_GREEN, 9, true);
+      
+      CreateRectangleLabel("Card_Win_BG", offset_x + card_w + 6, cur_y, card_w, 26, COLOR_CARD_BG, COLOR_CARD_BORDER, ZORDER_PANEL_STRIP);
+      CreateLabel("Lbl_Win_Title", offset_x + card_w + 12, cur_y + 1, "% ACERTOS", COLOR_TEXT_MUTED, 7, false);
+      CreateLabel("Lbl_Win_Val",   offset_x + card_w + 12, cur_y + 11, "0.0%", COLOR_CHECK_ACTIVE, 9, true);
+      cur_y += 31;
+   }
    
-   // Linha Inverter Posicao
-   CreateButton("Btn_Invert", offset_x, cur_y, row_w, 26, "⇄ INVERTER POSICAO", COLOR_INVERT_BTN, COLOR_TEXT_MAIN, 9, true);
-   cur_y += 29;
+   // 4. Secao Gestao de Risco (Risco $150 Desmarcado por Padrao)
+   if(InpShowRiskSection)
+   {
+      bool is_auto_risk = (m_risk_mode != RISK_MODE_MANUAL);
+      CreateButton("Chk_Risk", offset_x, cur_y + 1, 18, 18, is_auto_risk ? "X" : "", is_auto_risk ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, clrWhite, 9, true);
+      string risk_toggle_text = (m_risk_mode == RISK_MODE_PERCENT) ? "Risco: %" : "Risco: $";
+      color risk_toggle_bg    = (m_risk_mode == RISK_MODE_PERCENT) ? COLOR_TOGGLE_PCT : (is_auto_risk ? COLOR_TOGGLE_CASH : COLOR_EDIT_BG);
+      CreateButton("Btn_Risk_Toggle", offset_x + 24, cur_y, 96, 20, risk_toggle_text, risk_toggle_bg, COLOR_TEXT_MAIN, 9, true);
+      CreateButton("Btn_Risk_Dec", offset_x + 126, cur_y, 22, 20, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      string init_risk_str = (m_risk_mode == RISK_MODE_PERCENT) ? DoubleToString(m_risk_percent, 1) : DoubleToString(m_risk_cash, 2);
+      CreateEdit("Edit_Risk", offset_x + 150, cur_y, 64, 20, init_risk_str, COLOR_EDIT_BG, COLOR_TEXT_MAIN, false, 9);
+      CreateButton("Btn_Risk_Inc", offset_x + 216, cur_y, 22, 20, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      cur_y += 25;
+   }
    
-   // Fechar Lucro e Fechar Prejuizo
-   CreateButton("Btn_CloseProfit", offset_x, cur_y, half_btn_w, 26, "✔ Zerar Lucro", COLOR_CLOSE_PRF_BTN, COLOR_TEXT_MAIN, 9, true);
-   CreateButton("Btn_CloseLoss", offset_x + half_btn_w + 6, cur_y, half_btn_w, 26, "✖ Zerar Prejuizo", COLOR_CLOSE_LSS_BTN, COLOR_TEXT_MAIN, 9, true);
-   cur_y += 30;
+   // 5. Linha de Lote Operacional (Nativo 0.04)
+   if(InpShowLotSection)
+   {
+      bool is_auto_risk = (m_risk_mode != RISK_MODE_MANUAL);
+      int dec = GetLotDecimals(m_symbol);
+      CreateLabel("Lbl_Lot", offset_x + 24, cur_y + 3, "Lote Operacional", COLOR_TEXT_MAIN, 9, true);
+      CreateButton("Btn_Lot_Dec", offset_x + 126, cur_y, 22, 20, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      CreateEdit("Edit_Lot", offset_x + 150, cur_y, 64, 20, DoubleToString(m_manual_lot, dec), is_auto_risk ? COLOR_EDIT_RO_BG : COLOR_EDIT_BG, is_auto_risk ? COLOR_LOT_GOLD : COLOR_TEXT_MAIN, is_auto_risk, 9);
+      CreateButton("Btn_Lot_Inc", offset_x + 216, cur_y, 22, 20, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      cur_y += 25;
+   }
    
-   // Botao ZERAR TODAS (No Rodape, Grande, Preto/Platina, Destaque Maximo para Scalper)
-   CreateButton("Btn_CloseAll", offset_x, cur_y, row_w, 36, "ZERAR TODAS AS ORDENS", COLOR_CLOSE_ALL_BTN, clrBlack, 11, true);
-   cur_y += 40;
+   // 6. Badge Interativo de Sugestao ATR (se ativado nas configuracoes)
+   if(InpEnableATRAlvos)
+   {
+      int atr_p = 0, sug_sl = 0, sug_tp = 0;
+      string atr_txt = "ATR: Calculando...";
+      if(GetATRTargets(atr_p, sug_sl, sug_tp))
+         atr_txt = StringFormat("ATR: %d pts | Sug: SL %d / TP %d [Aplicar]", atr_p, sug_sl, sug_tp);
+      CreateButton("Btn_ATR_Info", offset_x, cur_y, row_w, 20, atr_txt, C'24,32,45', clrGold, 8, true);
+      cur_y += 24;
+   }
+   
+   // 7. Stop Loss (pts)
+   if(InpShowSLSection)
+   {
+      CreateButton("Chk_SL", offset_x, cur_y + 1, 18, 18, m_sl_active ? "X" : "", m_sl_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, clrWhite, 9, true);
+      CreateLabel("Lbl_SL", offset_x + 24, cur_y + 3, "Stop Loss (pts)", COLOR_TEXT_MAIN, 9, false);
+      CreateButton("Btn_SL_Dec", offset_x + 126, cur_y, 22, 20, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      CreateEdit("Edit_SL", offset_x + 150, cur_y, 64, 20, IntegerToString(m_sl_points), COLOR_EDIT_BG, COLOR_TEXT_MAIN, false, 9);
+      CreateButton("Btn_SL_Inc", offset_x + 216, cur_y, 22, 20, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      cur_y += 25;
+   }
+   
+   // 8. Take Profit (pts)
+   if(InpShowTPSection)
+   {
+      CreateButton("Chk_TP", offset_x, cur_y + 1, 18, 18, m_tp_active ? "X" : "", m_tp_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, clrWhite, 9, true);
+      CreateLabel("Lbl_TP", offset_x + 24, cur_y + 3, "Take Profit (pts)", COLOR_TEXT_MAIN, 9, false);
+      CreateButton("Btn_TP_Dec", offset_x + 126, cur_y, 22, 20, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      CreateEdit("Edit_TP", offset_x + 150, cur_y, 64, 20, IntegerToString(m_tp_points), COLOR_EDIT_BG, COLOR_TEXT_MAIN, false, 9);
+      CreateButton("Btn_TP_Inc", offset_x + 216, cur_y, 22, 20, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      cur_y += 25;
+   }
+   
+   // 9. Break Even (pts)
+   if(InpShowBESection)
+   {
+      CreateButton("Chk_BE", offset_x, cur_y + 1, 18, 18, m_be_active ? "X" : "", m_be_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, clrWhite, 9, true);
+      CreateLabel("Lbl_BE", offset_x + 24, cur_y + 3, "Break Even (pts)", COLOR_TEXT_MAIN, 9, false);
+      CreateButton("Btn_BE_Dec", offset_x + 126, cur_y, 22, 20, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      CreateEdit("Edit_BE", offset_x + 150, cur_y, 64, 20, IntegerToString(m_be_points), COLOR_EDIT_BG, COLOR_TEXT_MAIN, false, 9);
+      CreateButton("Btn_BE_Inc", offset_x + 216, cur_y, 22, 20, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      cur_y += 25;
+   }
+   
+   // 10. Trailing Stop (pts)
+   if(InpShowTSSection)
+   {
+      CreateButton("Chk_TS", offset_x, cur_y + 1, 18, 18, m_ts_active ? "X" : "", m_ts_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, clrWhite, 9, true);
+      CreateLabel("Lbl_TS", offset_x + 24, cur_y + 3, "Trailing Stop (pts)", COLOR_TEXT_MAIN, 9, false);
+      CreateButton("Btn_TS_Dec", offset_x + 126, cur_y, 22, 20, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      CreateEdit("Edit_TS", offset_x + 150, cur_y, 64, 20, IntegerToString(m_ts_points), COLOR_EDIT_BG, COLOR_TEXT_MAIN, false, 9);
+      CreateButton("Btn_TS_Inc", offset_x + 216, cur_y, 22, 20, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      cur_y += 27;
+   }
+   
+   // 11. Secao Parcial (Compacta e Uniforme com Checkbox)
+   if(InpShowParcialSection)
+   {
+      CreateButton("Chk_Parcial", offset_x, cur_y + 1, 18, 18, m_parcial_active ? "X" : "", m_parcial_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, clrWhite, 9, true);
+      CreateButton("Btn_Parcial_Toggle_Mode", offset_x + 24, cur_y, 36, 20, m_parcial_is_cash ? "$" : "Pts", m_parcial_is_cash ? COLOR_TOGGLE_CASH : COLOR_TOGGLE_PCT, COLOR_TEXT_MAIN, 8, true);
+      CreateLabel("Lbl_Parcial_Target", offset_x + 64, cur_y + 3, "Alvo Parcial", COLOR_TEXT_MAIN, 9, false);
+      CreateButton("Btn_Parcial_Dec", offset_x + 126, cur_y, 22, 20, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      string init_parcial_target = m_parcial_is_cash ? DoubleToString(m_parcial_target_cash, 2) : IntegerToString(m_parcial_target_pts);
+      CreateEdit("Edit_Parcial_Target", offset_x + 150, cur_y, 64, 20, init_parcial_target, COLOR_EDIT_BG, COLOR_TEXT_MAIN, false, 9);
+      CreateButton("Btn_Parcial_Inc", offset_x + 216, cur_y, 22, 20, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      cur_y += 24;
+      
+      CreateLabel("Lbl_Parcial_Vol", offset_x + 24, cur_y + 3, "Vol. Parcial (%)", COLOR_TEXT_MUTED, 8, false);
+      CreateButton("Btn_Parcial_Vol_Dec", offset_x + 126, cur_y, 22, 20, "-", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      CreateEdit("Edit_Parcial_Vol", offset_x + 150, cur_y, 64, 20, StringFormat("%.0f%%", m_parcial_vol_pct), COLOR_EDIT_BG, COLOR_TEXT_MAIN, false, 9);
+      CreateButton("Btn_Parcial_Vol_Inc", offset_x + 216, cur_y, 22, 20, "+", COLOR_STEP_BTN, COLOR_TEXT_MAIN, 9, true);
+      cur_y += 24;
+      
+      CreateButton("Chk_Parcial_BE", offset_x, cur_y + 1, 16, 16, m_parcial_move_be ? "X" : "", m_parcial_move_be ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT, clrWhite, 8, true);
+      CreateLabel("Lbl_Parcial_BE", offset_x + 22, cur_y + 3, "Mover SL p/ Zero a Zero pos Parcial", COLOR_TEXT_MUTED, 8, false);
+      cur_y += 25;
+   }
+   
+   // 12. Gaveta de Canais de Frequencia (Estritamente Manual)
+   if(InpShowChannelsSection)
+   {
+      string drawer_txt = m_channels_expanded ? "CANAIS DE FREQUENCIA (40x40)  [-]" : "CANAIS DE FREQUENCIA (40x40)  [+]";
+      CreateButton("Btn_Channels_Toggle", offset_x, cur_y, row_w, 22, drawer_txt, COLOR_DRAWER_BTN, clrGold, 8, true);
+      cur_y += 24;
+      
+      if(m_channels_expanded)
+      {
+         CreateRectangleLabel("Chan_Drawer_BG", offset_x, cur_y, row_w, 94, COLOR_SECTION_BG, COLOR_BORDER, ZORDER_PANEL_STRIP);
+         
+         CreateButton("Btn_Chan_Start", offset_x + 5, cur_y + 4, 122, 22, "1. Marcar 2 Linhas", COLOR_CHAN_START, clrWhite, 8, true);
+         CreateButton("Btn_Chan_Project", offset_x + 133, cur_y + 4, 122, 22, "2. Projetar 40 Canais", COLOR_CHAN_PROJ, clrWhite, 8, true);
+         
+         int y_sub = cur_y + 28;
+         CreateLabel("Lbl_Chan_Up", offset_x + 6, y_sub + 2, "Cima:", clrWhite, 8, true);
+         CreateButton("Btn_Chan_Up_Dec", offset_x + 40, y_sub, 18, 18, "-", COLOR_STEP_BTN, clrWhite, 7, true);
+         CreateEdit("Edit_Chan_Up", offset_x + 60, y_sub, 36, 18, IntegerToString(m_proj_up), COLOR_EDIT_BG, clrWhite, false, 8);
+         CreateButton("Btn_Chan_Up_Inc", offset_x + 98, y_sub, 18, 18, "+", COLOR_STEP_BTN, clrWhite, 7, true);
+         
+         CreateLabel("Lbl_Chan_Dn", offset_x + 130, y_sub + 2, "Baixo:", clrWhite, 8, true);
+         CreateButton("Btn_Chan_Dn_Dec", offset_x + 168, y_sub, 18, 18, "-", COLOR_STEP_BTN, clrWhite, 7, true);
+         CreateEdit("Edit_Chan_Dn", offset_x + 188, y_sub, 36, 18, IntegerToString(m_proj_down), COLOR_EDIT_BG, clrWhite, false, 8);
+         CreateButton("Btn_Chan_Dn_Inc", offset_x + 226, y_sub, 18, 18, "+", COLOR_STEP_BTN, clrWhite, 7, true);
+         
+         y_sub += 22;
+         CreateButton("Btn_Chan_HideShow", offset_x + 5, y_sub, 122, 20, m_chan_visible ? "Ocultar Linhas" : "Mostrar Linhas", C'45,48,60', clrWhite, 7, true);
+         CreateButton("Btn_Chan_Clear", offset_x + 133, y_sub, 122, 20, "Limpar Canais", COLOR_CLOSE_LSS_BTN, clrWhite, 7, true);
+         
+         y_sub += 22;
+         CreateLabel("Lbl_Chan_Status", offset_x + 8, y_sub, "Status: Pronto (40 canais manuais)", clrLimeGreen, 8, true);
+         
+         cur_y += 98;
+      }
+   }
+   
+   // 13. Botoes Operacionais (COMPRA e VENDA)
+   if(InpShowTradeButtons)
+   {
+      cur_y += 4;
+      int half_btn_w = (row_w - 6) / 2; // 127px
+      CreateButton("Btn_Buy", offset_x, cur_y, half_btn_w, 36, "[+] COMPRA", COLOR_BUY_BTN, COLOR_TEXT_MAIN, 11, true);
+      CreateButton("Btn_Sell", offset_x + half_btn_w + 6, cur_y, half_btn_w, 36, "[-] VENDA", COLOR_SELL_BTN, COLOR_TEXT_MAIN, 11, true);
+      cur_y += 40;
+   }
+   
+   // 14. Botao Inverter Posicao
+   if(InpShowInvertButton)
+   {
+      CreateButton("Btn_Invert", offset_x, cur_y, row_w, 26, "INVERTER POSICAO", COLOR_INVERT_BTN, COLOR_TEXT_MAIN, 9, true);
+      cur_y += 29;
+   }
+   
+   // 15. Botoes Zerar Lucro e Zerar Prejuizo
+   if(InpShowCloseButtons)
+   {
+      int half_btn_w = (row_w - 6) / 2; // 127px
+      CreateButton("Btn_CloseProfit", offset_x, cur_y, half_btn_w, 26, "Zerar Lucro", COLOR_CLOSE_PRF_BTN, COLOR_TEXT_MAIN, 9, true);
+      CreateButton("Btn_CloseLoss", offset_x + half_btn_w + 6, cur_y, half_btn_w, 26, "Zerar Prejuizo", COLOR_CLOSE_LSS_BTN, COLOR_TEXT_MAIN, 9, true);
+      cur_y += 30;
+   }
+   
+   // 16. Botao ZERAR TODAS (No Rodape)
+   if(InpShowCloseAll)
+   {
+      CreateButton("Btn_CloseAll", offset_x, cur_y, row_w, 36, "ZERAR TODAS AS ORDENS", COLOR_CLOSE_ALL_BTN, clrBlack, 11, true);
+      cur_y += 40;
+   }
    
    m_height = cur_y - m_y + 4;
    ObjectSetInteger(m_chart_id, PREFIX_GUI + "Panel_BG", OBJPROP_YSIZE, m_height);
@@ -1060,6 +1203,16 @@ void CBoletaMaster::UpdateLiveMetrics()
    
    CalculateDashboardStats();
    UpdateLiveSLTPLines();
+   
+   if(InpEnableATRAlvos && ObjectFind(m_chart_id, PREFIX_GUI + "Btn_ATR_Info") >= 0)
+   {
+      int atr_p = 0, sug_sl = 0, sug_tp = 0;
+      if(GetATRTargets(atr_p, sug_sl, sug_tp))
+      {
+         string atr_txt = StringFormat("ATR: %d pts | Sug: SL %d / TP %d [Aplicar]", atr_p, sug_sl, sug_tp);
+         ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_ATR_Info", OBJPROP_TEXT, atr_txt);
+      }
+   }
    
    // Atualiza os 4 Cartoes de Confianca HUD
    ObjectSetString(m_chart_id, PREFIX_GUI + "Lbl_Cap_Val", OBJPROP_TEXT, StringFormat("$%.2f", m_starting_capital));
@@ -1151,9 +1304,6 @@ void CBoletaMaster::UpdateLiveSLTPLines()
       if(ObjectFind(m_chart_id, line_tp) < 0)
       {
          ObjectCreate(m_chart_id, line_tp, OBJ_HLINE, 0, 0, tp_price);
-         ObjectSetInteger(m_chart_id, line_tp, OBJPROP_COLOR, C'34,197,94'); // Verde vibrante
-         ObjectSetInteger(m_chart_id, line_tp, OBJPROP_STYLE, STYLE_DASH);
-         ObjectSetInteger(m_chart_id, line_tp, OBJPROP_WIDTH, 1);
          ObjectSetInteger(m_chart_id, line_tp, OBJPROP_BACK, false);
          ObjectSetInteger(m_chart_id, line_tp, OBJPROP_SELECTABLE, false);
       }
@@ -1161,6 +1311,9 @@ void CBoletaMaster::UpdateLiveSLTPLines()
       {
          ObjectMove(m_chart_id, line_tp, 0, 0, tp_price);
       }
+      ObjectSetInteger(m_chart_id, line_tp, OBJPROP_COLOR, InpColorLiveTP);
+      ObjectSetInteger(m_chart_id, line_tp, OBJPROP_STYLE, InpStyleLiveTP);
+      ObjectSetInteger(m_chart_id, line_tp, OBJPROP_WIDTH, InpWidthLiveTP);
       ObjectSetString(m_chart_id, line_tp, OBJPROP_TEXT, tp_text);
       ObjectSetString(m_chart_id, line_tp, OBJPROP_TOOLTIP, tp_text);
    }
@@ -1176,9 +1329,6 @@ void CBoletaMaster::UpdateLiveSLTPLines()
       if(ObjectFind(m_chart_id, line_sl) < 0)
       {
          ObjectCreate(m_chart_id, line_sl, OBJ_HLINE, 0, 0, sl_price);
-         ObjectSetInteger(m_chart_id, line_sl, OBJPROP_COLOR, C'239,68,68'); // Vermelho vibrante
-         ObjectSetInteger(m_chart_id, line_sl, OBJPROP_STYLE, STYLE_DASH);
-         ObjectSetInteger(m_chart_id, line_sl, OBJPROP_WIDTH, 1);
          ObjectSetInteger(m_chart_id, line_sl, OBJPROP_BACK, false);
          ObjectSetInteger(m_chart_id, line_sl, OBJPROP_SELECTABLE, false);
       }
@@ -1186,6 +1336,9 @@ void CBoletaMaster::UpdateLiveSLTPLines()
       {
          ObjectMove(m_chart_id, line_sl, 0, 0, sl_price);
       }
+      ObjectSetInteger(m_chart_id, line_sl, OBJPROP_COLOR, InpColorLiveSL);
+      ObjectSetInteger(m_chart_id, line_sl, OBJPROP_STYLE, InpStyleLiveSL);
+      ObjectSetInteger(m_chart_id, line_sl, OBJPROP_WIDTH, InpWidthLiveSL);
       ObjectSetString(m_chart_id, line_sl, OBJPROP_TEXT, sl_text);
       ObjectSetString(m_chart_id, line_sl, OBJPROP_TOOLTIP, sl_text);
    }
@@ -2002,6 +2155,7 @@ void CBoletaMaster::HandleButtonClick(const string &obj_name)
    ObjectSetInteger(m_chart_id, obj_name, OBJPROP_STATE, false);
    
    if(short_name == "Btn_Min")              { ToggleMinimize(); return; }
+   if(short_name == "Btn_ATR_Info")         { ApplyATRTargets(); return; }
    if(short_name == "Btn_Close")            { Destroy(REASON_REMOVE); ExpertRemove(); return; }
    
    // Gaveta de Canais
@@ -2490,6 +2644,22 @@ void OnTick()
 {
    g_boleta.CheckForegroundState();
    g_boleta.UpdateLiveMetrics();
+   
+   if(InpEnableATRAlvos && InpAutoApplyATR)
+   {
+      int atr_p = 0, sug_sl = 0, sug_tp = 0;
+      if(g_boleta.GetATRTargets(atr_p, sug_sl, sug_tp))
+      {
+         if(g_boleta.GetSLPoints() != sug_sl || g_boleta.GetTPPoints() != sug_tp)
+         {
+            g_boleta.SetSLPoints(sug_sl);
+            g_boleta.SetTPPoints(sug_tp);
+            g_boleta.UpdateFieldValues();
+            g_boleta.UpdateLiveSLTPLines();
+         }
+      }
+   }
+   
    GerenciarPosicoesAbertas();
    g_boleta.CheckBreakout();
 }
