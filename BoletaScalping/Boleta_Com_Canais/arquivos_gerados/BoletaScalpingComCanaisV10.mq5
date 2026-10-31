@@ -80,10 +80,12 @@ input double          InpDefaultLot        = 0.04;               // Lote Operaci
 input double          InpRiskPercent       = 1.0;                // Risco Percentual Inicial (%) se ativado
 
 input group "=== ALVOS NATIVOS DO SET (SL 200 PTS / TP 300 PTS) ==="
-input bool            InpSLActive          = false;              // Stop Loss Inicial (Desmarcado por Padrao)
+input bool            InpSLActive          = true;               // Stop Loss Inicial (Ativo por Padrao no Set)
 input int             InpDefaultSL         = 200;                // Stop Loss Nativo do Set (pontos)
-input bool            InpTPActive          = false;              // Take Profit Inicial (Desmarcado por Padrao)
+input bool            InpTPActive          = true;               // Take Profit Inicial (Ativo por Padrao no Set)
 input int             InpDefaultTP         = 300;                // Take Profit Nativo do Set (pontos)
+input bool            InpLiveSLTPLines     = true;               // Linhas Dinamicas de SL e TP no Grafico (24/7)
+input bool            InpSimultaneousTrailing = true;            // Trailing Simultaneo SL & TP (Bracket Movel 24/7)
 input bool            InpBEActive          = false;              // Break Even Inicial (Desmarcado por Padrao)
 input int             InpDefaultBE         = 60;                 // Break Even Padrao (pontos)
 input bool            InpTSActive          = false;              // Trailing Stop Inicial (Desmarcado por Padrao)
@@ -394,6 +396,7 @@ public:
    void              BringToFront();
    void              CheckForegroundState();
    void              UpdateLiveMetrics();
+   void              UpdateLiveSLTPLines();
    void              UpdateFieldValues();
    bool              Contains(int x, int y) const;
    
@@ -407,6 +410,8 @@ public:
    bool              IsParcialActive()        const { return m_parcial_active; }
    bool              IsParcialCashMode()      const { return m_parcial_is_cash; }
    bool              IsParcialMoveBE()        const { return m_parcial_move_be; }
+   int               GetSLPoints()            const { return m_sl_points; }
+   int               GetTPPoints()            const { return m_tp_points; }
    int               GetBEPoints()            const { return m_be_points; }
    int               GetTSPoints()            const { return m_ts_points; }
    int               GetTSStepPoints()        const { return m_ts_step_pts; }
@@ -650,9 +655,9 @@ bool CBoletaMaster::Init(const string symbol, ulong magic, ulong slippage, int x
       m_risk_cash           = InpRiskCash;        // 150.0 Nativo
       m_risk_percent        = InpRiskPercent;
       m_manual_lot          = InpDefaultLot;       // Nativo 0.04
-      m_sl_active           = InpSLActive;         // false (desmarcado nativo)
+      m_sl_active           = InpSLActive;         // true (ativo nativo do set)
       m_sl_points           = InpDefaultSL;        // Nativo 200 pts
-      m_tp_active           = InpTPActive;         // false (desmarcado nativo)
+      m_tp_active           = InpTPActive;         // true (ativo nativo do set)
       m_tp_points           = InpDefaultTP;        // Nativo 300 pts
       m_be_active           = InpBEActive;         // false (desmarcado nativo)
       m_be_points           = InpDefaultBE;        // Nativo 60 pts
@@ -680,6 +685,7 @@ bool CBoletaMaster::Init(const string symbol, ulong magic, ulong slippage, int x
    SymbolSelect(m_symbol, true);
    ChartSetInteger(m_chart_id, CHART_FOREGROUND, false);
    ChartSetInteger(m_chart_id, CHART_EVENT_MOUSE_MOVE, true);
+   ChartSetInteger(m_chart_id, CHART_SHOW_OBJECT_DESCR, true);
    
    Render();
    RestaurarEstadoCanais();
@@ -1053,6 +1059,7 @@ void CBoletaMaster::UpdateLiveMetrics()
    ObjectSetString(m_chart_id, PREFIX_GUI + "Lbl_Mkt_Timer",  OBJPROP_TEXT, StringFormat("[%s] %s", tf_name, timer_str));
    
    CalculateDashboardStats();
+   UpdateLiveSLTPLines();
    
    // Atualiza os 4 Cartoes de Confianca HUD
    ObjectSetString(m_chart_id, PREFIX_GUI + "Lbl_Cap_Val", OBJPROP_TEXT, StringFormat("$%.2f", m_starting_capital));
@@ -1075,6 +1082,117 @@ void CBoletaMaster::UpdateLiveMetrics()
       ObjectSetString(m_chart_id, PREFIX_GUI + "Btn_CloseAll", OBJPROP_TEXT, "ZERAR TODAS AS ORDENS");
    }
    ChartRedraw(m_chart_id);
+}
+
+//+------------------------------------------------------------------+
+//| Linhas Dinamicas de SL e TP no Grafico (Movimento Simultaneo 24/7)|
+//+------------------------------------------------------------------+
+void CBoletaMaster::UpdateLiveSLTPLines()
+{
+   if(!InpLiveSLTPLines || (m_sl_points <= 0 && m_tp_points <= 0))
+   {
+      ObjectDelete(m_chart_id, PREFIX_GUI + "Line_Live_TP");
+      ObjectDelete(m_chart_id, PREFIX_GUI + "Line_Live_SL");
+      return;
+   }
+   
+   MqlTick tick;
+   if(!SymbolInfoTick(m_symbol, tick)) return;
+   double point = SymbolInfoDouble(m_symbol, SYMBOL_POINT);
+   if(point <= 0.0) return;
+   
+   // Inspeciona se ha posicao ativa de venda para inverter os niveis visuais
+   CPositionInfo pos;
+   bool has_sell = false;
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   {
+      if(pos.SelectByIndex(i) && (!InpFilterSymbolOnly || pos.Symbol() == m_symbol))
+      {
+         if(pos.PositionType() == POSITION_TYPE_SELL)
+         {
+            has_sell = true;
+            break;
+         }
+      }
+   }
+   
+   double tp_price = 0.0, sl_price = 0.0;
+   string tp_text = "", sl_text = "";
+   double lot = GetEffectiveLot();
+   double tick_val = SymbolInfoDouble(m_symbol, SYMBOL_TRADE_TICK_VALUE);
+   if(tick_val <= 0.0) tick_val = 1.0;
+   double tick_size = SymbolInfoDouble(m_symbol, SYMBOL_TRADE_TICK_SIZE);
+   double pts_per_tick = (tick_size > 0 && point > 0) ? (tick_size / point) : 1.0;
+   if(pts_per_tick <= 0.0) pts_per_tick = 1.0;
+   double val_per_pt = (tick_val / pts_per_tick) * lot;
+   
+   double tp_usd = m_tp_points * val_per_pt;
+   double sl_usd = m_sl_points * val_per_pt;
+   
+   if(has_sell)
+   {
+      tp_price = tick.bid - (m_tp_points * point);
+      sl_price = tick.ask + (m_sl_points * point);
+      tp_text  = StringFormat("TAKE [SELL -%d pts | +$%.2f]", m_tp_points, tp_usd);
+      sl_text  = StringFormat("STOP [SELL +%d pts | -$%.2f]", m_sl_points, sl_usd);
+   }
+   else
+   {
+      tp_price = tick.ask + (m_tp_points * point);
+      sl_price = tick.bid - (m_sl_points * point);
+      tp_text  = StringFormat("TAKE [BUY +%d pts | +$%.2f]", m_tp_points, tp_usd);
+      sl_text  = StringFormat("STOP [BUY -%d pts | -$%.2f]", m_sl_points, sl_usd);
+   }
+   
+   // 1. Linha Dinamica de Take Profit
+   if(m_tp_points > 0 && (m_tp_active || InpLiveSLTPLines))
+   {
+      string line_tp = PREFIX_GUI + "Line_Live_TP";
+      if(ObjectFind(m_chart_id, line_tp) < 0)
+      {
+         ObjectCreate(m_chart_id, line_tp, OBJ_HLINE, 0, 0, tp_price);
+         ObjectSetInteger(m_chart_id, line_tp, OBJPROP_COLOR, C'34,197,94'); // Verde vibrante
+         ObjectSetInteger(m_chart_id, line_tp, OBJPROP_STYLE, STYLE_DASH);
+         ObjectSetInteger(m_chart_id, line_tp, OBJPROP_WIDTH, 1);
+         ObjectSetInteger(m_chart_id, line_tp, OBJPROP_BACK, false);
+         ObjectSetInteger(m_chart_id, line_tp, OBJPROP_SELECTABLE, false);
+      }
+      else
+      {
+         ObjectMove(m_chart_id, line_tp, 0, 0, tp_price);
+      }
+      ObjectSetString(m_chart_id, line_tp, OBJPROP_TEXT, tp_text);
+      ObjectSetString(m_chart_id, line_tp, OBJPROP_TOOLTIP, tp_text);
+   }
+   else
+   {
+      ObjectDelete(m_chart_id, PREFIX_GUI + "Line_Live_TP");
+   }
+   
+   // 2. Linha Dinamica de Stop Loss
+   if(m_sl_points > 0 && (m_sl_active || InpLiveSLTPLines))
+   {
+      string line_sl = PREFIX_GUI + "Line_Live_SL";
+      if(ObjectFind(m_chart_id, line_sl) < 0)
+      {
+         ObjectCreate(m_chart_id, line_sl, OBJ_HLINE, 0, 0, sl_price);
+         ObjectSetInteger(m_chart_id, line_sl, OBJPROP_COLOR, C'239,68,68'); // Vermelho vibrante
+         ObjectSetInteger(m_chart_id, line_sl, OBJPROP_STYLE, STYLE_DASH);
+         ObjectSetInteger(m_chart_id, line_sl, OBJPROP_WIDTH, 1);
+         ObjectSetInteger(m_chart_id, line_sl, OBJPROP_BACK, false);
+         ObjectSetInteger(m_chart_id, line_sl, OBJPROP_SELECTABLE, false);
+      }
+      else
+      {
+         ObjectMove(m_chart_id, line_sl, 0, 0, sl_price);
+      }
+      ObjectSetString(m_chart_id, line_sl, OBJPROP_TEXT, sl_text);
+      ObjectSetString(m_chart_id, line_sl, OBJPROP_TOOLTIP, sl_text);
+   }
+   else
+   {
+      ObjectDelete(m_chart_id, PREFIX_GUI + "Line_Live_SL");
+   }
 }
 
 void CBoletaMaster::UpdateFieldValues()
@@ -1232,8 +1350,8 @@ void CBoletaMaster::ToggleRiskMode()
    UpdateFieldValues();
 }
 
-void CBoletaMaster::ToggleSL()          { m_sl_active = !m_sl_active; if(m_sl_active && m_risk_mode != RISK_MODE_MANUAL) RecalculateRiskLot(); SaveState(); UpdateFieldValues(); }
-void CBoletaMaster::ToggleTP()          { m_tp_active = !m_tp_active; SaveState(); UpdateFieldValues(); }
+void CBoletaMaster::ToggleSL()          { m_sl_active = !m_sl_active; if(m_sl_active && m_risk_mode != RISK_MODE_MANUAL) RecalculateRiskLot(); SaveState(); UpdateFieldValues(); UpdateLiveSLTPLines(); }
+void CBoletaMaster::ToggleTP()          { m_tp_active = !m_tp_active; SaveState(); UpdateFieldValues(); UpdateLiveSLTPLines(); }
 void CBoletaMaster::ToggleBE()          { m_be_active = !m_be_active; SaveState(); UpdateFieldValues(); }
 void CBoletaMaster::ToggleTS()          { m_ts_active = !m_ts_active; SaveState(); UpdateFieldValues(); }
 void CBoletaMaster::ToggleParcial()     { m_parcial_active = !m_parcial_active; SaveState(); UpdateFieldValues(); }
@@ -1280,6 +1398,7 @@ void CBoletaMaster::AdjustSL(int delta)
    if(m_risk_mode != RISK_MODE_MANUAL) RecalculateRiskLot();
    SaveState();
    UpdateFieldValues();
+   UpdateLiveSLTPLines();
 }
 
 void CBoletaMaster::AdjustTP(int delta)
@@ -1288,6 +1407,7 @@ void CBoletaMaster::AdjustTP(int delta)
    if(m_tp_points < 0) m_tp_points = 0;
    SaveState();
    UpdateFieldValues();
+   UpdateLiveSLTPLines();
 }
 
 void CBoletaMaster::AdjustBE(int delta)
@@ -1821,11 +1941,13 @@ void CBoletaMaster::HandleEndEdit(const string &obj_name)
       int sl = (int)StringToInteger(val_str);
       if(sl >= 0) m_sl_points = sl;
       if(m_risk_mode != RISK_MODE_MANUAL) RecalculateRiskLot();
+      UpdateLiveSLTPLines();
    }
    else if(short_name == "Edit_TP")
    {
       int tp = (int)StringToInteger(val_str);
       if(tp >= 0) m_tp_points = tp;
+      UpdateLiveSLTPLines();
    }
    else if(short_name == "Edit_Parcial_Target")
    {
@@ -2225,7 +2347,7 @@ void GerenciarPosicoesAbertas()
          }
       }
       
-      // 2. Break Even & Trailing Stop (BUY)
+      // 2. Break Even & Trailing Simultaneo de SL e TP (BUY)
       if(posType == POSITION_TYPE_BUY)
       {
          double profit_pts = (bid - openPrice) / point;
@@ -2245,18 +2367,35 @@ void GerenciarPosicoesAbertas()
          }
          else be_atingido = true;
          
-         if(ts_active && ts_pts > 0 && be_atingido)
+         // Trailing Simultaneo de Take e Stop junto com o movimento do ativo
+         int sl_pts = g_boleta.GetSLPoints();
+         int tp_pts = g_boleta.GetTPPoints();
+         
+         if((ts_active || InpSimultaneousTrailing) && sl_pts > 0 && be_atingido)
          {
-            double desired_sl = bid - (ts_pts * point);
+            int trail_dist = (ts_active && ts_pts > 0) ? ts_pts : sl_pts;
+            double desired_sl = bid - (trail_dist * point);
+            
+            // Move exclusivamente para frente/cima (nunca recua para tras contra a posicao)
             if(desired_sl >= openPrice)
             {
                double min_step = point * ts_step_pts;
                if(curSL == 0.0 || desired_sl >= curSL + min_step)
-                  trade.PositionModify(ticket, desired_sl, curTP);
+               {
+                  double desired_tp = curTP;
+                  if(tp_pts > 0)
+                  {
+                     // Move o Take simultaneamente junto com o Stop, mantendo a distancia de alvo
+                     desired_tp = bid + (tp_pts * point);
+                  }
+                  trade.PositionModify(ticket, desired_sl, desired_tp);
+                  curSL = desired_sl;
+                  curTP = desired_tp;
+               }
             }
          }
       }
-      // 3. Break Even & Trailing Stop (SELL)
+      // 3. Break Even & Trailing Simultaneo de SL e TP (SELL)
       else if(posType == POSITION_TYPE_SELL)
       {
          double profit_pts = (openPrice - ask) / point;
@@ -2276,14 +2415,31 @@ void GerenciarPosicoesAbertas()
          }
          else be_atingido = true;
          
-         if(ts_active && ts_pts > 0 && be_atingido)
+         // Trailing Simultaneo de Take e Stop junto com o movimento do ativo
+         int sl_pts = g_boleta.GetSLPoints();
+         int tp_pts = g_boleta.GetTPPoints();
+         
+         if((ts_active || InpSimultaneousTrailing) && sl_pts > 0 && be_atingido)
          {
-            double desired_sl = ask + (ts_pts * point);
+            int trail_dist = (ts_active && ts_pts > 0) ? ts_pts : sl_pts;
+            double desired_sl = ask + (trail_dist * point);
+            
+            // Move exclusivamente para frente/baixo (nunca recua para tras contra a posicao)
             if(desired_sl <= openPrice)
             {
                double min_step = point * ts_step_pts;
                if(curSL == 0.0 || desired_sl <= curSL - min_step)
-                  trade.PositionModify(ticket, desired_sl, curTP);
+               {
+                  double desired_tp = curTP;
+                  if(tp_pts > 0)
+                  {
+                     // Move o Take simultaneamente junto com o Stop, mantendo a distancia de alvo
+                     desired_tp = ask - (tp_pts * point);
+                  }
+                  trade.PositionModify(ticket, desired_sl, desired_tp);
+                  curSL = desired_sl;
+                  curTP = desired_tp;
+               }
             }
          }
       }
