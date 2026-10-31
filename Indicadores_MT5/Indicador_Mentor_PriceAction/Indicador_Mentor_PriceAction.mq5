@@ -5,13 +5,12 @@
 //+------------------------------------------------------------------+
 #property copyright "Burgo585 & O Mentor"
 #property link      "https://github.com/burgo585/burgo_eas"
-#property version   "3.60"
-#property description "Indicador Oficial de Price Action Puro do Mentor (Versão 3.60 Pro)"
-#property description "- Traçado Estrutural Hiper-Visível da Geometria dos Pivôs (V e W Empenado)"
-#property description "- Linha Projetada de Gatilho de Rompimento com Nível e Direção (↗ / ↘)"
-#property description "- Coloração Inteligente de Candles com Proteção Anti-Distorção de Escala"
-#property description "- Painel HUD Auto-Escalável [A+ / A-] com Sumário de Cores [📖] e Enquadramento Seguro"
-#property description "- Arraste Fluido e Atualizacao Instantanea sem Depender de Ticks"
+#property version   "3.70"
+#property description "Indicador Oficial de Price Action Puro do Mentor (Versão 3.70 Pro - Clean)"
+#property description "- Traçado Estrutural dos Pivôs com Filtro Anti-Ruído de Micro-Oscilações"
+#property description "- Linha Projetada no Espaço Futuro sem Poluir Candles com Rótulos Concisos"
+#property description "- Modo Gráfico Limpo: Apenas Topo e Fundo Ativos Rotulados (Fim da Sopa de Letras)"
+#property description "- Painel HUD Auto-Escalável [A+ / A-] com Sumário de Cores e Arraste Fluido"
 #property description "- Monitoramento em Tempo Real do Candle 0, Pavio, Tempo e Ação Imediata"
 
 #property indicator_chart_window
@@ -29,13 +28,13 @@
 #property indicator_label2  "Compra Pivô (Gatilho)"
 #property indicator_type2   DRAW_ARROW
 #property indicator_color2  clrLime
-#property indicator_width2  4
+#property indicator_width2  2
 
 //--- Plot 3: Seta de Venda
 #property indicator_label3  "Venda Pivô (Gatilho)"
 #property indicator_type3   DRAW_ARROW
 #property indicator_color3  clrMagenta
-#property indicator_width3  4
+#property indicator_width3  2
 
 //--- Plot 4: Coloração Personalizada de Candles
 #property indicator_label4  "Mentor Candles"
@@ -53,29 +52,32 @@ enum ENUM_EMA_TYPE
 //| Inputs do Indicador                                              |
 //+------------------------------------------------------------------+
 input group "=== TAMANHO DO PAINEL E ESCALA DAS FONTES ==="
-input double             InpPanelScale        = 1.0;              // Escala Geral do Painel (0.75 a 2.0)
-input int                InpBaseFontSize      = 9;                // Tamanho Base da Fonte (8 a 16)
-input bool               InpShowLegendAtStart = false;            // Iniciar com Sumário de Cores Aberto [📖]
+input double             InpPanelScale           = 1.0;              // Escala Geral do Painel (0.75 a 2.0)
+input int                InpBaseFontSize         = 9;                // Tamanho Base da Fonte (8 a 16)
+input bool               InpShowLegendAtStart    = false;            // Iniciar com Sumário de Cores Aberto [📖]
 
 input group "=== CONFIGURAÇÃO DA MÉDIA DE 200 (BÚSSOLA) ==="
-input int                InpEmaPeriod         = 200;              // Período da Média
-input ENUM_EMA_TYPE      InpEmaMethod         = EMA_EXPONENCIAL;  // Tipo de Média Móvel
-input ENUM_APPLIED_PRICE InpEmaApplied        = PRICE_CLOSE;      // Preço Aplicado
+input int                InpEmaPeriod            = 200;              // Período da Média
+input ENUM_EMA_TYPE      InpEmaMethod            = EMA_EXPONENCIAL;  // Tipo de Média Móvel
+input ENUM_APPLIED_PRICE InpEmaApplied           = PRICE_CLOSE;      // Preço Aplicado
 
 input group "=== ESTRUTURA VISUAL DOS PIVÔS (V E W EMPENADO) ==="
-input int                InpSwingStrength     = 2;                // Sensibilidade dos Swings (2=Dinâmico, 3=Conservador)
-input int                InpMaxHistoryBars    = 600;              // Histórico de Barras Avaliadas
-input bool               InpDrawPivotLines    = true;             // Desenhar Zigue-Zague Estrutural do Pivô
-input color              InpPivotLineColor    = clrCyan;          // Cor da Estrutura do Pivô
-input int                InpPivotLineWidth    = 3;                // Espessura da Estrutura (1 a 5)
-input bool               InpShowPivotBadges   = true;             // Exibir Rótulos nos Topos (H) e Fundos (L)
+input int                InpSwingStrength        = 3;                // Sensibilidade dos Swings (3=Equilibrado, 4=Conservador)
+input int                InpMinSwingPoints       = 35;               // Amplitude Mínima do Swing em Pontos (Filtro Anti-Ruído)
+input int                InpMaxHistoryBars       = 600;              // Histórico de Barras Avaliadas
+input bool               InpDrawPivotLines       = true;             // Desenhar Zigue-Zague Estrutural do Pivô
+input color              InpPivotLineColor       = clrCyan;          // Cor da Estrutura do Pivô
+input int                InpPivotLineWidth       = 2;                // Espessura da Estrutura (1 a 5)
+input bool               InpShowPivotBadges      = true;             // Exibir Rótulos nos Pivôs
+input bool               InpShowOnlyActiveBadges = true;             // Exibir APENAS Topo e Fundo Ativos (Gráfico 100% Limpo)
+input int                InpArrowWidth           = 2;                // Tamanho das Setas de Gatilho (1=Discreta, 2=Padrão, 3=Grande)
 
 input group "=== LINHA DE GATILHO DE ROMPIMENTO E DIREÇÃO ==="
-input bool               InpShowTriggerLines  = true;             // Exibir Linhas de Rompimento Projetadas
-input color              InpColorTriggerBuy   = clrGold;          // Cor da Linha de Gatilho de Compra
-input color              InpColorTriggerSell  = clrDeepPink;      // Cor da Linha de Gatilho de Venda
-input int                InpTriggerLineWidth  = 2;                // Espessura da Linha de Rompimento
-input bool               InpShowDirectionSign = true;             // Exibir Setas e Texto de Direção na Linha
+input bool               InpShowTriggerLines     = true;             // Exibir Linhas de Rompimento Projetadas
+input color              InpColorTriggerBuy      = clrGold;          // Cor da Linha de Gatilho de Compra
+input color              InpColorTriggerSell     = clrDeepPink;      // Cor da Linha de Gatilho de Venda
+input int                InpTriggerLineWidth     = 2;                // Espessura da Linha de Rompimento
+input bool               InpShowDirectionSign    = true;             // Exibir Setas e Texto de Direção na Linha
 
 input group "=== COLORAÇÃO DINÂMICA DE CANDLES ==="
 input bool               InpColorizeCandles   = true;             // Ativar Coloração Especial de Candles
@@ -236,6 +238,8 @@ int OnInit()
 
    PlotIndexSetInteger(1, PLOT_ARROW, 233); // Seta de Compra
    PlotIndexSetInteger(2, PLOT_ARROW, 234); // Seta de Venda
+   PlotIndexSetInteger(1, PLOT_LINE_WIDTH, InpArrowWidth);
+   PlotIndexSetInteger(2, PLOT_LINE_WIDTH, InpArrowWidth);
 
    PlotIndexSetInteger(3, PLOT_DRAW_TYPE, InpColorizeCandles ? DRAW_COLOR_CANDLES : DRAW_NONE);
    PlotIndexSetInteger(3, PLOT_LINE_COLOR, 0, InpColorBull);
@@ -253,8 +257,10 @@ int OnInit()
    }
 
    ChartSetInteger(0, CHART_EVENT_MOUSE_MOVE, true);
+   ChartSetInteger(0, CHART_SHIFT, true);
+   ChartSetDouble(0, CHART_SHIFT_SIZE, 12.0);
 
-   string shortName = StringFormat("Mentor Price Action v3.60 Pro (EMA %d | 3:1)", InpEmaPeriod);
+   string shortName = StringFormat("Mentor Price Action v3.70 Pro - Clean (EMA %d | 3:1)", InpEmaPeriod);
    IndicatorSetString(INDICATOR_SHORTNAME, shortName);
    IndicatorSetInteger(INDICATOR_DIGITS, _Digits);
 
@@ -339,6 +345,9 @@ int OnCalculate(const int rates_total,
    ArrayResize(confirmedHighs, 0);
    ArrayResize(confirmedLows, 0);
 
+   int lastBrokenHighIdx = -1;
+   int lastBrokenLowIdx  = -1;
+
    for (int i = limit; i >= 1; i--)
    {
       int swBar = i + InpSwingStrength;
@@ -358,21 +367,41 @@ int OnCalculate(const int rates_total,
          if (isH)
          {
             int sz = ArraySize(confirmedHighs);
-            ArrayResize(confirmedHighs, sz + 1);
-            confirmedHighs[sz].time     = time[swBar];
-            confirmedHighs[sz].price    = hVal;
-            confirmedHighs[sz].barIndex = swBar;
-            confirmedHighs[sz].isHigh   = true;
+            int lastLsz = ArraySize(confirmedLows);
+            bool acceptH = true;
+            if (lastLsz > 0)
+            {
+               double distPts = (hVal - confirmedLows[lastLsz - 1].price) / _Point;
+               if (distPts < InpMinSwingPoints) acceptH = false;
+            }
+            if (acceptH)
+            {
+               ArrayResize(confirmedHighs, sz + 1);
+               confirmedHighs[sz].time     = time[swBar];
+               confirmedHighs[sz].price    = hVal;
+               confirmedHighs[sz].barIndex = swBar;
+               confirmedHighs[sz].isHigh   = true;
+            }
          }
 
          if (isL)
          {
             int sz = ArraySize(confirmedLows);
-            ArrayResize(confirmedLows, sz + 1);
-            confirmedLows[sz].time     = time[swBar];
-            confirmedLows[sz].price    = lVal;
-            confirmedLows[sz].barIndex = swBar;
-            confirmedLows[sz].isHigh   = false;
+            int lastHsz = ArraySize(confirmedHighs);
+            bool acceptL = true;
+            if (lastHsz > 0)
+            {
+               double distPts = (confirmedHighs[lastHsz - 1].price - lVal) / _Point;
+               if (distPts < InpMinSwingPoints) acceptL = false;
+            }
+            if (acceptL)
+            {
+               ArrayResize(confirmedLows, sz + 1);
+               confirmedLows[sz].time     = time[swBar];
+               confirmedLows[sz].price    = lVal;
+               confirmedLows[sz].barIndex = swBar;
+               confirmedLows[sz].isHigh   = false;
+            }
          }
       }
 
@@ -407,90 +436,98 @@ int OnCalculate(const int rates_total,
                BufferCandleColor[i] = 4.0;
          }
 
-         // Gatilho de Compra
+         // Gatilho de Compra Único e Limpo por Rompimento de Topo
          if (cClose > lastHigh && (cOpen <= lastHigh || cLow <= lastHigh) && (cClose - cOpen) >= minBody)
          {
-            if (lowerWick >= minWick)
+            if (lastBrokenHighIdx != (nH - 1))
             {
-               double stopLoss = lastLow - (15 * _Point);
-               double risk     = cClose - stopLoss;
-
-               if (risk >= (25 * _Point))
+               if (lowerWick >= minWick)
                {
-                  double takeProfit = cClose + (risk * InpRiskRewardRatio);
+                  double stopLoss = lastLow - (15 * _Point);
+                  double risk     = cClose - stopLoss;
 
-                  BufferBuy[i]        = cLow - (20 * _Point);
-                  BufferStopLoss[i]   = stopLoss;
-                  BufferTakeProfit[i] = takeProfit;
-
-                  if (InpColorizeCandles)
-                     BufferCandleColor[i] = 2.0;
-
-                  string padrao = "Pivô de Alta em V";
-                  if (nL >= 2 && MathAbs(confirmedLows[nL-1].price - confirmedLows[nL-2].price) <= (150 * _Point))
-                     padrao = "Pivô em W Empenado";
-
-                  if (i <= 50 && time[i] >= gLastSignalTime)
+                  if (risk >= (25 * _Point))
                   {
-                     gLastSignalType  = "COMPRA";
-                     gLastEntryPrice  = cClose;
-                     gLastStopLoss    = stopLoss;
-                     gLastTakeProfit  = takeProfit;
-                     gLastSignalTime  = time[i];
-                     gLastPatternDesc = padrao;
+                     lastBrokenHighIdx = nH - 1; // Registra sinal único para este topo
+                     double takeProfit = cClose + (risk * InpRiskRewardRatio);
 
-                     if (InpShowLines)
-                        DesenharLinhasOperacionais("COMPRA", cClose, stopLoss, takeProfit);
+                     BufferBuy[i]        = cLow - (15 * _Point);
+                     BufferStopLoss[i]   = stopLoss;
+                     BufferTakeProfit[i] = takeProfit;
 
-                     if (i == 1 && time[1] != lastAlertTime)
+                     if (InpColorizeCandles)
+                        BufferCandleColor[i] = 2.0;
+
+                     string padrao = "Pivô de Alta em V";
+                     if (nL >= 2 && MathAbs(confirmedLows[nL-1].price - confirmedLows[nL-2].price) <= (150 * _Point))
+                        padrao = "Pivô em W Empenado";
+
+                     if (i <= 50 && time[i] >= gLastSignalTime)
                      {
-                        lastAlertTime = time[1];
-                        DispararAlerta("COMPRA (" + padrao + ")", cClose, stopLoss, takeProfit);
+                        gLastSignalType  = "COMPRA";
+                        gLastEntryPrice  = cClose;
+                        gLastStopLoss    = stopLoss;
+                        gLastTakeProfit  = takeProfit;
+                        gLastSignalTime  = time[i];
+                        gLastPatternDesc = padrao;
+
+                        if (InpShowLines)
+                           DesenharLinhasOperacionais("COMPRA", cClose, stopLoss, takeProfit);
+
+                        if (i == 1 && time[1] != lastAlertTime)
+                        {
+                           lastAlertTime = time[1];
+                           DispararAlerta("COMPRA (" + padrao + ")", cClose, stopLoss, takeProfit);
+                        }
                      }
                   }
                }
             }
          }
 
-         // Gatilho de Venda
+         // Gatilho de Venda Único e Limpo por Perda de Fundo
          if (cClose < lastLow && (cOpen >= lastLow || cHigh >= lastLow) && (cOpen - cClose) >= minBody)
          {
-            if (upperWick >= minWick)
+            if (lastBrokenLowIdx != (nL - 1))
             {
-               double stopLoss = lastHigh + (15 * _Point);
-               double risk     = stopLoss - cClose;
-
-               if (risk >= (25 * _Point))
+               if (upperWick >= minWick)
                {
-                  double takeProfit = cClose - (risk * InpRiskRewardRatio);
+                  double stopLoss = lastHigh + (15 * _Point);
+                  double risk     = stopLoss - cClose;
 
-                  BufferSell[i]       = cHigh + (20 * _Point);
-                  BufferStopLoss[i]   = stopLoss;
-                  BufferTakeProfit[i] = takeProfit;
-
-                  if (InpColorizeCandles)
-                     BufferCandleColor[i] = 3.0;
-
-                  string padrao = "Pivô de Baixa em V";
-                  if (nH >= 2 && MathAbs(confirmedHighs[nH-1].price - confirmedHighs[nH-2].price) <= (150 * _Point))
-                     padrao = "Topo Duplo (M)";
-
-                  if (i <= 50 && time[i] >= gLastSignalTime)
+                  if (risk >= (25 * _Point))
                   {
-                     gLastSignalType  = "VENDA";
-                     gLastEntryPrice  = cClose;
-                     gLastStopLoss    = stopLoss;
-                     gLastTakeProfit  = takeProfit;
-                     gLastSignalTime  = time[i];
-                     gLastPatternDesc = padrao;
+                     lastBrokenLowIdx = nL - 1; // Registra sinal único para este fundo
+                     double takeProfit = cClose - (risk * InpRiskRewardRatio);
 
-                     if (InpShowLines)
-                        DesenharLinhasOperacionais("VENDA", cClose, stopLoss, takeProfit);
+                     BufferSell[i]       = cHigh + (15 * _Point);
+                     BufferStopLoss[i]   = stopLoss;
+                     BufferTakeProfit[i] = takeProfit;
 
-                     if (i == 1 && time[1] != lastAlertTime)
+                     if (InpColorizeCandles)
+                        BufferCandleColor[i] = 3.0;
+
+                     string padrao = "Pivô de Baixa em V";
+                     if (nH >= 2 && MathAbs(confirmedHighs[nH-1].price - confirmedHighs[nH-2].price) <= (150 * _Point))
+                        padrao = "Topo Duplo (M)";
+
+                     if (i <= 50 && time[i] >= gLastSignalTime)
                      {
-                        lastAlertTime = time[1];
-                        DispararAlerta("VENDA (" + padrao + ")", cClose, stopLoss, takeProfit);
+                        gLastSignalType  = "VENDA";
+                        gLastEntryPrice  = cClose;
+                        gLastStopLoss    = stopLoss;
+                        gLastTakeProfit  = takeProfit;
+                        gLastSignalTime  = time[i];
+                        gLastPatternDesc = padrao;
+
+                        if (InpShowLines)
+                           DesenharLinhasOperacionais("VENDA", cClose, stopLoss, takeProfit);
+
+                        if (i == 1 && time[1] != lastAlertTime)
+                        {
+                           lastAlertTime = time[1];
+                           DispararAlerta("VENDA (" + padrao + ")", cClose, stopLoss, takeProfit);
+                        }
                      }
                   }
                }
@@ -696,27 +733,48 @@ void DesenharEstruturaPivos(const SwingPoint &highs[], const SwingPoint &lows[])
 
    if (InpShowPivotBadges)
    {
-      for (int i = 0; i < totalP; i++)
+      if (InpShowOnlyActiveBadges)
       {
-         string badgeName = prefixObjects + "BADGE_" + IntegerToString(i);
-         string textBadge;
-         color  badgeColor;
-
-         if (allPoints[i].isHigh)
+         // MODO CIRÚRGICO: Apenas 2 rótulos no gráfico inteiro (Topo Ativo e Fundo Ativo)
+         if (nH > 0)
          {
-            textBadge = StringFormat("▲ TOPO (H: %.2f)", allPoints[i].price);
-            badgeColor = clrGold;
-            CriarTextoGrafico(badgeName, allPoints[i].time, allPoints[i].price + (15 * _Point), textBadge, badgeColor, 8, true);
+            string bHigh = prefixObjects + "BADGE_ACTIVE_H";
+            string tHigh = StringFormat("▲ TOPO ATIVO (%.2f)", highs[nH - 1].price);
+            CriarTextoGrafico(bHigh, highs[nH - 1].time, highs[nH - 1].price + (15 * _Point), tHigh, clrGold, 8, true);
          }
-         else
+         if (nL > 0)
          {
+            string bLow = prefixObjects + "BADGE_ACTIVE_L";
             bool isW = false;
-            if (i >= 2 && !allPoints[i-2].isHigh && MathAbs(allPoints[i].price - allPoints[i-2].price) <= (150 * _Point))
+            if (nL >= 2 && MathAbs(lows[nL-1].price - lows[nL-2].price) <= (150 * _Point))
                isW = true;
 
-            textBadge = isW ? StringFormat("▼ W EMPENADO (L: %.2f)", allPoints[i].price) : StringFormat("▼ FUNDO (L: %.2f)", allPoints[i].price);
-            badgeColor = isW ? clrSpringGreen : clrDeepSkyBlue;
-            CriarTextoGrafico(badgeName, allPoints[i].time, allPoints[i].price - (15 * _Point), textBadge, badgeColor, 8, true);
+            string tLow = isW ? StringFormat("▼ W EMPENADO (%.2f)", lows[nL - 1].price) : StringFormat("▼ FUNDO ATIVO (%.2f)", lows[nL - 1].price);
+            color  cLow = isW ? clrSpringGreen : clrDeepSkyBlue;
+            CriarTextoGrafico(bLow, lows[nL - 1].time, lows[nL - 1].price - (15 * _Point), tLow, cLow, 8, true);
+         }
+      }
+      else
+      {
+         // Modo completo com rótulos compactos e discretos
+         for (int i = 0; i < totalP; i++)
+         {
+            string badgeName = prefixObjects + "BADGE_" + IntegerToString(i);
+            string textBadge;
+            color  badgeColor;
+
+            if (allPoints[i].isHigh)
+            {
+               textBadge = StringFormat("▲ %.2f", allPoints[i].price);
+               badgeColor = clrGold;
+               CriarTextoGrafico(badgeName, allPoints[i].time, allPoints[i].price + (12 * _Point), textBadge, badgeColor, 7, false);
+            }
+            else
+            {
+               textBadge = StringFormat("▼ %.2f", allPoints[i].price);
+               badgeColor = clrDeepSkyBlue;
+               CriarTextoGrafico(badgeName, allPoints[i].time, allPoints[i].price - (12 * _Point), textBadge, badgeColor, 7, false);
+            }
          }
       }
    }
@@ -727,7 +785,8 @@ void DesenharEstruturaPivos(const SwingPoint &highs[], const SwingPoint &lows[])
 //+------------------------------------------------------------------+
 void AtualizarLinhasDeGatilho(datetime curTime, double curClose)
 {
-   datetime projTime = curTime + (PeriodSeconds() * 8);
+   datetime projTime  = curTime + (PeriodSeconds() * 16);
+   datetime labelTime = curTime + (PeriodSeconds() * 4); // Projetado à frente dos candles, no espaço livre!
 
    string lineBuyName  = prefixObjects + "LINE_TRIGGER_BUY";
    string labelBuyName = prefixObjects + "LBL_TRIGGER_BUY";
@@ -738,12 +797,12 @@ void AtualizarLinhasDeGatilho(datetime curTime, double curClose)
 
    double distBuyPts = (gActivePivotHigh - curClose) / _Point;
    string txtBuy = (distBuyPts > 0) ?
-                   StringFormat("⚡ GATILHO COMPRA PIVÔ: Romper %.2f ↗ (Faltam %.0f pts) -> Alvo: Média 200 / 3:1", gActivePivotHigh, distBuyPts) :
-                   StringFormat("⚡ GATILHO COMPRA PIVÔ: ROMPENDO AGORA (%.2f) ↗ -> SEGUIR COMPRA!", gActivePivotHigh);
+                   StringFormat("⚡ GATILHO COMPRA: %.2f ↗ [Faltam %.0f pts]", gActivePivotHigh, distBuyPts) :
+                   StringFormat("⚡ GATILHO COMPRA: ROMPENDO AGORA (%.2f) ↗", gActivePivotHigh);
 
    if (InpShowDirectionSign)
    {
-      CriarTextoGrafico(labelBuyName, curTime + (PeriodSeconds() * 2), gActivePivotHigh + (8 * _Point), txtBuy, InpColorTriggerBuy, 9, true);
+      CriarTextoGrafico(labelBuyName, labelTime, gActivePivotHigh + (8 * _Point), txtBuy, InpColorTriggerBuy, 8, true);
       CriarSetaGrafica(arrowBuyName, projTime, gActivePivotHigh, 241, InpColorTriggerBuy);
    }
 
@@ -756,12 +815,12 @@ void AtualizarLinhasDeGatilho(datetime curTime, double curClose)
 
    double distSellPts = (curClose - gActivePivotLow) / _Point;
    string txtSell = (distSellPts > 0) ?
-                    StringFormat("⚡ GATILHO VENDA PIVÔ: Romper %.2f ↘ (Faltam %.0f pts) -> Alvo: Suporte / 3:1", gActivePivotLow, distSellPts) :
-                    StringFormat("⚡ GATILHO VENDA PIVÔ: PERDENDO AGORA (%.2f) ↘ -> SEGUIR VENDA!", gActivePivotLow);
+                    StringFormat("⚡ GATILHO VENDA: %.2f ↘ [Faltam %.0f pts]", gActivePivotLow, distSellPts) :
+                    StringFormat("⚡ GATILHO VENDA: PERDENDO AGORA (%.2f) ↘", gActivePivotLow);
 
    if (InpShowDirectionSign)
    {
-      CriarTextoGrafico(labelSellName, curTime + (PeriodSeconds() * 2), gActivePivotLow - (18 * _Point), txtSell, InpColorTriggerSell, 9, true);
+      CriarTextoGrafico(labelSellName, labelTime, gActivePivotLow - (18 * _Point), txtSell, InpColorTriggerSell, 8, true);
       CriarSetaGrafica(arrowSellName, projTime, gActivePivotLow, 242, InpColorTriggerSell);
    }
 }
@@ -775,9 +834,12 @@ void DesenharLinhasOperacionais(string tipo, double entrada, double stop, double
    string nameStop   = prefixObjects + "EXEC_STOP";
    string nameTarget = prefixObjects + "EXEC_TARGET";
 
-   CriarLinhaHorizontal(nameEntry, entrada, InpColorEntry, STYLE_SOLID, 2, "ENTRADA (" + tipo + "): " + DoubleToString(entrada, _Digits));
-   CriarLinhaHorizontal(nameStop, stop, InpColorStop, STYLE_DASH, 2, "STOP TÉCNICO: " + DoubleToString(stop, _Digits));
-   CriarLinhaHorizontal(nameTarget, alvo, InpColorTarget, STYLE_SOLID, 2, "ALVO 3:1 DO MENTOR: " + DoubleToString(alvo, _Digits));
+   datetime tStart = (gLastSignalTime > 0) ? gLastSignalTime : TimeCurrent();
+   datetime tEnd   = TimeCurrent() + (PeriodSeconds() * 16);
+
+   CriarLinhaTendencia(nameEntry, tStart, entrada, tEnd, entrada, InpColorEntry, STYLE_SOLID, 2);
+   CriarLinhaTendencia(nameStop, tStart, stop, tEnd, stop, InpColorStop, STYLE_DASH, 2);
+   CriarLinhaTendencia(nameTarget, tStart, alvo, tEnd, alvo, InpColorTarget, STYLE_SOLID, 2);
 }
 
 void CriarLinhaTendencia(string name, datetime t1, double p1, datetime t2, double p2, color clr, ENUM_LINE_STYLE style, int width)
@@ -829,6 +891,7 @@ void CriarTextoGrafico(string name, datetime t, double p, string text, color clr
    {
       ObjectCreate(0, name, OBJ_TEXT, 0, t, p);
       ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+      ObjectSetInteger(0, name, OBJPROP_ANCHOR, ANCHOR_LEFT);
    }
    ObjectSetInteger(0, name, OBJPROP_TIME, 0, t);
    ObjectSetDouble(0, name, OBJPROP_PRICE, 0, p);
@@ -836,6 +899,7 @@ void CriarTextoGrafico(string name, datetime t, double p, string text, color clr
    ObjectSetString(0, name, OBJPROP_FONT, isBold ? "Arial Bold" : "Arial");
    ObjectSetInteger(0, name, OBJPROP_FONTSIZE, fontSize);
    ObjectSetInteger(0, name, OBJPROP_COLOR, clr);
+   ObjectSetInteger(0, name, OBJPROP_ANCHOR, ANCHOR_LEFT);
 }
 
 void CriarSetaGrafica(string name, datetime t, double p, int arrowCode, color clr)
@@ -844,12 +908,13 @@ void CriarSetaGrafica(string name, datetime t, double p, int arrowCode, color cl
    {
       ObjectCreate(0, name, OBJ_ARROW, 0, t, p);
       ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+      ObjectSetInteger(0, name, OBJPROP_ANCHOR, ANCHOR_CENTER);
    }
    ObjectSetInteger(0, name, OBJPROP_TIME, 0, t);
    ObjectSetDouble(0, name, OBJPROP_PRICE, 0, p);
    ObjectSetInteger(0, name, OBJPROP_ARROWCODE, arrowCode);
    ObjectSetInteger(0, name, OBJPROP_COLOR, clr);
-   ObjectSetInteger(0, name, OBJPROP_WIDTH, 3);
+   ObjectSetInteger(0, name, OBJPROP_WIDTH, 2);
 }
 
 void DispararAlerta(string tipo, double entrada, double stop, double alvo)
