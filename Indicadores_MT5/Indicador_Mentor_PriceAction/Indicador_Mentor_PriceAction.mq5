@@ -5,14 +5,14 @@
 //+------------------------------------------------------------------+
 #property copyright "Burgo585 & O Mentor"
 #property link      "https://github.com/burgo585/burgo_eas"
-#property version   "3.50"
-#property description "Indicador Oficial de Price Action Puro do Mentor (Versão 3.50 Pro)"
+#property version   "3.60"
+#property description "Indicador Oficial de Price Action Puro do Mentor (Versão 3.60 Pro)"
 #property description "- Traçado Estrutural Hiper-Visível da Geometria dos Pivôs (V e W Empenado)"
 #property description "- Linha Projetada de Gatilho de Rompimento com Nível e Direção (↗ / ↘)"
-#property description "- Coloração Inteligente de Candles (Rompimento, Pavios de Setup e Vela Careca)"
+#property description "- Coloração Inteligente de Candles com Proteção Anti-Distorção de Escala"
 #property description "- Painel HUD Auto-Escalável [A+ / A-] com Sumário de Cores [📖] e Enquadramento Seguro"
+#property description "- Arraste Fluido e Atualizacao Instantanea sem Depender de Ticks"
 #property description "- Monitoramento em Tempo Real do Candle 0, Pavio, Tempo e Ação Imediata"
-#property description "- Otimizado para Contas Pequenas ($300 - Lote 0.01)"
 
 #property indicator_chart_window
 #property indicator_buffers 10
@@ -155,6 +155,24 @@ double   gActivePivotLow   = 0.0;
 datetime gActiveHighTime   = 0;
 datetime gActiveLowTime    = 0;
 
+// Cache de Dados para Atualização do HUD sem Dependência de Ticks
+double   gCachePrice       = 0.0;
+double   gCacheEma         = 0.0;
+datetime gCacheTimeBar     = 0;
+double   gCacheOpen        = 0.0;
+double   gCacheHigh        = 0.0;
+double   gCacheLow         = 0.0;
+double   gCacheClose       = 0.0;
+double   gCacheDistToBuy   = 9999.0;
+double   gCacheDistToSell  = 9999.0;
+string   gCacheFormacaoStatus = "Aguardando Leitura";
+color    gCacheFormacaoColor  = clrLightSkyBlue;
+string   gCacheAcaoMsg     = "Aguardando";
+color    gCacheAcaoTxt     = clrWhite;
+color    gCacheAcaoBg      = C'15,30,45';
+string   gCacheWickStr     = "";
+color    gCacheWickColor   = clrWhite;
+
 // Funções de Escala Proporcional
 int sW(int w) { return (int)MathRound(w * gPanelScale); }
 int sH(int h) { return (int)MathRound(h * gPanelScale); }
@@ -169,11 +187,11 @@ void CriarLinhaHorizontal(string name, double price, color clr, ENUM_LINE_STYLE 
 void CriarTextoGrafico(string name, datetime t, double p, string text, color clr, int fontSize, bool isBold);
 void CriarSetaGrafica(string name, datetime t, double p, int arrowCode, color clr);
 void DispararAlerta(string tipo, double entrada, double stop, double alvo);
-void AtualizarPainelHUD(double price, double emaVal, const datetime &time[], const double &open[], const double &high[], const double &low[], const double &close[], int nH, int nL, const SwingPoint &highs[], const SwingPoint &lows[]);
+void DesenharOuAtualizarHUD();
 void LimparTodosLabelsHUD();
-void CriarRetanguloHUD(string name, int x, int y, int w, int h, color bgClr, color borderClr);
-void CriarLabelHUD(string name, int x, int y, string text, color clr, int fontSize, bool isBold);
-void CriarBotaoHUD(string name, int x, int y, int w, int h, string text, color txtClr, color bgClr, int fontSize = 8);
+void CriarOuAtualizarRetanguloHUD(string name, int x, int y, int w, int h, color bgClr, color borderClr);
+void CriarOuAtualizarLabelHUD(string name, int x, int y, string text, color clr, int fontSize, bool isBold);
+void CriarOuAtualizarBotaoHUD(string name, int x, int y, int w, int h, string text, color txtClr, color bgClr, int fontSize = 8);
 void ApagarElementoHUD(string name);
 void CalculateDirectEma(int total, const double &close[]);
 
@@ -210,10 +228,14 @@ int OnInit()
    ArraySetAsSeries(BufferStopLoss,    true);
    ArraySetAsSeries(BufferTakeProfit,  true);
 
+   // CRUCIAL: Definir EMPTY_VALUE para NUNCA distorcer a escala do gráfico no Zoom!
+   PlotIndexSetDouble(0, PLOT_EMPTY_VALUE, EMPTY_VALUE);
+   PlotIndexSetDouble(1, PLOT_EMPTY_VALUE, EMPTY_VALUE);
+   PlotIndexSetDouble(2, PLOT_EMPTY_VALUE, EMPTY_VALUE);
+   PlotIndexSetDouble(3, PLOT_EMPTY_VALUE, EMPTY_VALUE);
+
    PlotIndexSetInteger(1, PLOT_ARROW, 233); // Seta de Compra
    PlotIndexSetInteger(2, PLOT_ARROW, 234); // Seta de Venda
-   PlotIndexSetDouble(1, PLOT_EMPTY_VALUE, 0.0);
-   PlotIndexSetDouble(2, PLOT_EMPTY_VALUE, 0.0);
 
    PlotIndexSetInteger(3, PLOT_DRAW_TYPE, InpColorizeCandles ? DRAW_COLOR_CANDLES : DRAW_NONE);
    PlotIndexSetInteger(3, PLOT_LINE_COLOR, 0, InpColorBull);
@@ -232,7 +254,7 @@ int OnInit()
 
    ChartSetInteger(0, CHART_EVENT_MOUSE_MOVE, true);
 
-   string shortName = StringFormat("Mentor Price Action v3.50 Pro (EMA %d | 3:1)", InpEmaPeriod);
+   string shortName = StringFormat("Mentor Price Action v3.60 Pro (EMA %d | 3:1)", InpEmaPeriod);
    IndicatorSetString(INDICATOR_SHORTNAME, shortName);
    IndicatorSetInteger(INDICATOR_DIGITS, _Digits);
 
@@ -278,14 +300,14 @@ int OnCalculate(const int rates_total,
    if (copyCount <= 0)
       CalculateDirectEma(rates_total, close);
 
-   int limit = InpMaxHistoryBars;
-   if (limit > rates_total - InpSwingStrength - 5)
-      limit = rates_total - InpSwingStrength - 5;
+   // Preencher TODOS os candles para a escala vertical do gráfico ser 100% perfeita
+   int startCandle = (prev_calculated > 0) ? (rates_total - prev_calculated + 2) : (rates_total - 1);
+   if (startCandle >= rates_total) startCandle = rates_total - 1;
 
-   for (int i = 0; i <= limit; i++)
+   for (int i = startCandle; i >= 0; i--)
    {
-      BufferBuy[i]  = 0.0;
-      BufferSell[i] = 0.0;
+      BufferBuy[i]  = EMPTY_VALUE;
+      BufferSell[i] = EMPTY_VALUE;
 
       if (InpColorizeCandles)
       {
@@ -295,7 +317,19 @@ int OnCalculate(const int rates_total,
          BufferCandleClose[i] = close[i];
          BufferCandleColor[i] = (close[i] >= open[i]) ? 0.0 : 1.0;
       }
+      else
+      {
+         BufferCandleOpen[i]  = EMPTY_VALUE;
+         BufferCandleHigh[i]  = EMPTY_VALUE;
+         BufferCandleLow[i]   = EMPTY_VALUE;
+         BufferCandleClose[i] = EMPTY_VALUE;
+         BufferCandleColor[i] = EMPTY_VALUE;
+      }
    }
+
+   int limit = InpMaxHistoryBars;
+   if (limit > rates_total - InpSwingStrength - 5)
+      limit = rates_total - InpSwingStrength - 5;
 
    ObjectsDeleteAll(0, prefixObjects + "PV_");
    ObjectsDeleteAll(0, prefixObjects + "BADGE_");
@@ -364,9 +398,9 @@ int OnCalculate(const int rates_total,
          if (InpColorizeCandles)
          {
             if (cClose > cOpen && lowerWick < (minWick * 0.4) && (cHigh - cClose) < (minWick * 0.4))
-               BufferCandleColor[i] = 5.0; // Vela Careca de Alta (Cinza / Alerta)
+               BufferCandleColor[i] = 5.0; // Vela Careca Alta (Cinza / Alerta)
             else if (cOpen > cClose && upperWick < (minWick * 0.4) && (cClose - cLow) < (minWick * 0.4))
-               BufferCandleColor[i] = 5.0; // Vela Careca de Baixa
+               BufferCandleColor[i] = 5.0; // Vela Careca Baixa
             else if (cClose > cOpen && lowerWick >= minWick)
                BufferCandleColor[i] = 4.0; // Pavio de Setup Válido (Dourado)
             else if (cOpen > cClose && upperWick >= minWick)
@@ -481,7 +515,130 @@ int OnCalculate(const int rates_total,
          AtualizarLinhasDeGatilho(time[0], close[0]);
    }
 
-   AtualizarPainelHUD(close[0], BufferEMA200[0], time, open, high, low, close, nH, nL, confirmedHighs, confirmedLows);
+   // Atualizar Cache do HUD
+   gCachePrice      = close[0];
+   gCacheEma        = BufferEMA200[0];
+   gCacheTimeBar    = time[0];
+   gCacheOpen       = open[0];
+   gCacheHigh       = high[0];
+   gCacheLow        = low[0];
+   gCacheClose      = close[0];
+   gCacheDistToBuy  = (gActivePivotHigh > 0) ? (gActivePivotHigh - close[0]) / _Point : 9999.0;
+   gCacheDistToSell = (gActivePivotLow > 0)  ? (close[0] - gActivePivotLow) / _Point  : 9999.0;
+
+   double cLowerWick = (MathMin(open[0], close[0]) - low[0]) / _Point;
+   double cUpperWick = (high[0] - MathMax(open[0], close[0])) / _Point;
+
+   if (close[0] >= open[0])
+   {
+      if (cLowerWick >= InpMinWickPoints)
+      {
+         gCacheWickStr   = StringFormat("Pavio Inf: %.0f pts (OK - Mola Pronta)", cLowerWick);
+         gCacheWickColor = clrSpringGreen;
+      }
+      else
+      {
+         gCacheWickStr   = StringFormat("Pavio Inf: %.0f pts (CUIDADO: Vela Careca!)", cLowerWick);
+         gCacheWickColor = clrDimGray;
+      }
+   }
+   else
+   {
+      if (cUpperWick >= InpMinWickPoints)
+      {
+         gCacheWickStr   = StringFormat("Pavio Sup: %.0f pts (OK - Mola Pronta)", cUpperWick);
+         gCacheWickColor = clrSpringGreen;
+      }
+      else
+      {
+         gCacheWickStr   = StringFormat("Pavio Sup: %.0f pts (CUIDADO: Vela Careca!)", cUpperWick);
+         gCacheWickColor = clrDimGray;
+      }
+   }
+
+   // Formação em Andamento
+   if (gCacheDistToBuy <= 45 && gCacheDistToBuy > 0)
+   {
+      gCacheFormacaoStatus = StringFormat("Testando Topo em %.2f (Faltam %.0f pts) ↗", gActivePivotHigh, gCacheDistToBuy);
+      gCacheFormacaoColor  = clrGold;
+   }
+   else if (gCacheDistToSell <= 45 && gCacheDistToSell > 0)
+   {
+      gCacheFormacaoStatus = StringFormat("Testando Fundo em %.2f (Faltam %.0f pts) ↘", gActivePivotLow, gCacheDistToSell);
+      gCacheFormacaoColor  = clrGold;
+   }
+   else if (nL >= 2 && MathAbs(confirmedLows[nL-1].price - confirmedLows[nL-2].price) <= (150 * _Point) && close[0] > confirmedLows[nL-1].price)
+   {
+      gCacheFormacaoStatus = "Padrão W Empenado Armado (Acumulação Compradora) ↗";
+      gCacheFormacaoColor  = clrSpringGreen;
+   }
+   else if (nH >= 2 && MathAbs(confirmedHighs[nH-1].price - confirmedHighs[nH-2].price) <= (150 * _Point) && close[0] < confirmedHighs[nH-1].price)
+   {
+      gCacheFormacaoStatus = "Padrão Topo Duplo M Armado (Pressão Vendedora) ↘";
+      gCacheFormacaoColor  = clrLightCoral;
+   }
+   else
+   {
+      gCacheFormacaoStatus = "Consolidação Neutra no Miolo do Pivô";
+      gCacheFormacaoColor  = clrLightGray;
+   }
+
+   // Ação Exata do Mentor
+   bool isCurrentBald = (close[0] >= open[0]) ? (cLowerWick < InpMinWickPoints * 0.4) : (cUpperWick < InpMinWickPoints * 0.4);
+
+   if (gLastSignalTime >= time[1])
+   {
+      if (gLastSignalType == "COMPRA")
+      {
+         gCacheAcaoMsg = "🚀 AÇÃO: EXECUTAR COMPRA! Rompimento confirmado com pavio!";
+         gCacheAcaoTxt = clrLime;
+         gCacheAcaoBg  = C'10,40,25';
+      }
+      else if (gLastSignalType == "VENDA")
+      {
+         gCacheAcaoMsg = "📉 AÇÃO: EXECUTAR VENDA! Perda de fundo confirmada com pavio!";
+         gCacheAcaoTxt = clrMagenta;
+         gCacheAcaoBg  = C'40,15,30';
+      }
+   }
+   else if (gCacheDistToBuy <= 40 && gCacheDistToBuy > 0)
+   {
+      if (isCurrentBald)
+      {
+         gCacheAcaoMsg = "⛔ AÇÃO: NÃO COMPRAR! Vela careca em andamento (risco de armadilha)!";
+         gCacheAcaoTxt = clrYellow;
+         gCacheAcaoBg  = C'45,30,10';
+      }
+      else
+      {
+         gCacheAcaoMsg = StringFormat("⚠️ AÇÃO: PREPARAR COMPRA! Faltam %.0f pts para o Topo!", gCacheDistToBuy);
+         gCacheAcaoTxt = clrGold;
+         gCacheAcaoBg  = C'35,35,15';
+      }
+   }
+   else if (gCacheDistToSell <= 40 && gCacheDistToSell > 0)
+   {
+      if (isCurrentBald)
+      {
+         gCacheAcaoMsg = "⛔ AÇÃO: NÃO VENDER! Vela careca em andamento (risco de armadilha)!";
+         gCacheAcaoTxt = clrYellow;
+         gCacheAcaoBg  = C'45,30,10';
+      }
+      else
+      {
+         gCacheAcaoMsg = StringFormat("⚠️ AÇÃO: PREPARAR VENDA! Faltam %.0f pts para o Fundo!", gCacheDistToSell);
+         gCacheAcaoTxt = clrGold;
+         gCacheAcaoBg  = C'35,35,15';
+      }
+   }
+   else
+   {
+      gCacheAcaoMsg = "⏳ AÇÃO: AGUARDAR - Paciência institucional até o rompimento.";
+      gCacheAcaoTxt = clrAqua;
+      gCacheAcaoBg  = C'15,30,45';
+   }
+
+   DesenharOuAtualizarHUD();
 
    ChartRedraw();
    return rates_total;
@@ -717,288 +874,154 @@ void DispararAlerta(string tipo, double entrada, double stop, double alvo)
 }
 
 //+------------------------------------------------------------------+
-//| Painel Visual HUD Auto-Escalável e Enquadrado                    |
+//| Atualização Dinâmica do HUD com Enquadramento Seguro e Sem Ticks |
 //+------------------------------------------------------------------+
-void AtualizarPainelHUD(double price, double emaVal,
-                        const datetime &time[], const double &open[], const double &high[], const double &low[], const double &close[],
-                        int nH, int nL, const SwingPoint &highs[], const SwingPoint &lows[])
+void DesenharOuAtualizarHUD()
 {
-   int baseWidth  = panelMinimized ? 240 : (gShowLegend ? 460 : 400);
-   int baseHeight = panelMinimized ? 40  : (gShowLegend ? 430 : 295);
+   int baseWidth  = panelMinimized ? 220 : (gShowLegend ? 440 : 380);
+   int baseHeight = panelMinimized ? 34  : (gShowLegend ? 425 : 290);
 
    int width  = sW(baseWidth);
    int height = sH(baseHeight);
-   int hdrH   = sH(32);
+   int hdrH   = sH(30);
    int lineH  = sH(23);
 
    // 1. Fundo do Painel
-   string bgName = prefixObjects + "HUD_BG";
-   CriarRetanguloHUD(bgName, panelX, panelY, width, height, C'13,19,33', C'56,189,248');
+   CriarOuAtualizarRetanguloHUD(prefixObjects + "HUD_BG", panelX, panelY, width, height, C'13,19,33', C'56,189,248');
 
-   // 2. Barra de Título (Cabeçalho Arrastável)
-   string hdrName = prefixObjects + "HUD_HDR";
-   CriarRetanguloHUD(hdrName, panelX, panelY, width, hdrH, C'26,36,54', C'71,85,105');
+   // 2. Cabeçalho Arrastável
+   CriarOuAtualizarRetanguloHUD(prefixObjects + "HUD_HDR", panelX, panelY, width, hdrH, C'26,36,54', C'71,85,105');
 
    // Título com Escala
-   string titleText = panelMinimized ? "📊 MENTOR PA" : StringFormat("📊 MENTOR PA PRO (x%.2f)", gPanelScale);
-   CriarLabelHUD(prefixObjects + "HUD_TITLE", panelX + sW(10), panelY + sH(7), titleText, clrDeepSkyBlue, sF(gBaseFontSize), true);
+   string titleText = panelMinimized ? "📊 MENTOR PA" : StringFormat("📊 MENTOR PA (x%.2f)", gPanelScale);
+   CriarOuAtualizarLabelHUD(prefixObjects + "HUD_TITLE", panelX + sW(10), panelY + sH(7), titleText, clrDeepSkyBlue, sF(gBaseFontSize), true);
 
-   // Botões do Cabeçalho: [📖 GUIA] [A-] [A+] [- / +]
-   int btnW = sW(28);
-   int btnH = sH(20);
-   int curBtnX = panelX + width - sW(10) - btnW;
+   // Botões do Cabeçalho: [📖 Guia] [A-] [A+] [- / +]
+   int btnW = sW(26);
+   int btnH = sH(19);
+   int curBtnX = panelX + width - sW(8) - btnW;
 
    // Botão Minimizar [-] / [+]
    string minLabel = panelMinimized ? "[+]" : "[-]";
-   CriarBotaoHUD(prefixObjects + "BTN_MIN", curBtnX, panelY + sH(6), btnW, btnH, minLabel, clrYellow, C'45,55,75', sF(8));
+   CriarOuAtualizarBotaoHUD(prefixObjects + "BTN_MIN", curBtnX, panelY + sH(5), btnW, btnH, minLabel, clrYellow, C'45,55,75', sF(8));
    curBtnX -= (btnW + sW(4));
 
    // Botão Zoom Mais [A+]
-   CriarBotaoHUD(prefixObjects + "BTN_ZOOM_IN", curBtnX, panelY + sH(6), btnW, btnH, "A+", clrWhite, C'45,55,75', sF(8));
+   CriarOuAtualizarBotaoHUD(prefixObjects + "BTN_ZOOM_IN", curBtnX, panelY + sH(5), btnW, btnH, "A+", clrWhite, C'45,55,75', sF(8));
    curBtnX -= (btnW + sW(4));
 
    // Botão Zoom Menos [A-]
-   CriarBotaoHUD(prefixObjects + "BTN_ZOOM_OUT", curBtnX, panelY + sH(6), btnW, btnH, "A-", clrWhite, C'45,55,75', sF(8));
-   curBtnX -= (sW(36) + sW(4));
+   CriarOuAtualizarBotaoHUD(prefixObjects + "BTN_ZOOM_OUT", curBtnX, panelY + sH(5), btnW, btnH, "A-", clrWhite, C'45,55,75', sF(8));
+   curBtnX -= (sW(42) + sW(4));
 
    // Botão Sumário / Guia de Cores [📖]
    string legLabel = gShowLegend ? "📖 Fechar" : "📖 Guia";
    color  legBg    = gShowLegend ? clrDodgerBlue : C'45,55,75';
-   CriarBotaoHUD(prefixObjects + "BTN_LEGEND", curBtnX, panelY + sH(6), sW(36), btnH, legLabel, clrAqua, legBg, sF(8));
+   CriarOuAtualizarBotaoHUD(prefixObjects + "BTN_LEGEND", curBtnX, panelY + sH(5), sW(42), btnH, legLabel, clrAqua, legBg, sF(8));
 
-   // Se estiver minimizado, limpa o interior e encerra
+   // Se estiver minimizado, oculta o interior e encerra
    if (panelMinimized)
    {
       LimparTodosLabelsHUD();
       return;
    }
 
-   // Variáveis de Cálculo e Microestrutura do Candle 0
-   double distEmaPts = (price - emaVal) / _Point;
-   string trendStr   = (price >= emaVal) ? "ALTA (Acima da 200)" : "BAIXA (Abaixo da 200)";
-   color  trendClr   = (price >= emaVal) ? clrLimeGreen : clrCrimson;
-
-   double cOpen  = open[0];
-   double cClose = close[0];
-   double cHigh  = high[0];
-   double cLow   = low[0];
-   double lowerWick = (MathMin(cOpen, cClose) - cLow) / _Point;
-   double upperWick = (cHigh - MathMax(cOpen, cClose)) / _Point;
-
-   // Tempo restante da barra atual
-   datetime barT = time[0];
+   // Calcular tempo restante do candle atual
+   datetime barT = (gCacheTimeBar > 0) ? gCacheTimeBar : TimeCurrent();
    datetime nowT = TimeCurrent();
    int elapsedSec = (int)(nowT - barT);
    int remainSec  = PeriodSeconds() - elapsedSec;
    if (remainSec < 0) remainSec = 0;
    string timerStr = StringFormat("%02d:%02d", remainSec / 60, remainSec % 60);
 
-   // Status do Pavio Atual
-   string wickStr;
-   color  wickClr;
-   if (cClose >= cOpen)
-   {
-      if (lowerWick >= InpMinWickPoints)
-      {
-         wickStr = StringFormat("Pavio Inf: %.0f pts (OK - Mola Pronta)", lowerWick);
-         wickClr = clrSpringGreen;
-      }
-      else
-      {
-         wickStr = StringFormat("Pavio Inf: %.0f pts (CUIDADO: Vela Careca!)", lowerWick);
-         wickClr = clrDimGray;
-      }
-   }
-   else
-   {
-      if (upperWick >= InpMinWickPoints)
-      {
-         wickStr = StringFormat("Pavio Sup: %.0f pts (OK - Mola Pronta)", upperWick);
-         wickClr = clrSpringGreen;
-      }
-      else
-      {
-         wickStr = StringFormat("Pavio Sup: %.0f pts (CUIDADO: Vela Careca!)", upperWick);
-         wickClr = clrDimGray;
-      }
-   }
+   double distEmaPts = (gCachePrice - gCacheEma) / _Point;
+   string trendStr   = (gCachePrice >= gCacheEma) ? "ALTA (Acima da 200)" : "BAIXA (Abaixo da 200)";
+   color  trendClr   = (gCachePrice >= gCacheEma) ? clrLimeGreen : clrCrimson;
 
-   // Avaliação da Formação em Andamento
-   double distToBuy  = (gActivePivotHigh > 0) ? (gActivePivotHigh - price) / _Point : 9999;
-   double distToSell = (gActivePivotLow > 0)  ? (price - gActivePivotLow) / _Point  : 9999;
-
-   string formacaoStatus = "";
-   color  formacaoCor    = clrLightSkyBlue;
-
-   if (distToBuy <= 45 && distToBuy > 0)
-   {
-      formacaoStatus = StringFormat("Testando Topo em %.2f (Faltam %.0f pts) ↗", gActivePivotHigh, distToBuy);
-      formacaoCor    = clrGold;
-   }
-   else if (distToSell <= 45 && distToSell > 0)
-   {
-      formacaoStatus = StringFormat("Testando Fundo em %.2f (Faltam %.0f pts) ↘", gActivePivotLow, distToSell);
-      formacaoCor    = clrGold;
-   }
-   else if (nL >= 2 && MathAbs(lows[nL-1].price - lows[nL-2].price) <= (150 * _Point) && price > lows[nL-1].price)
-   {
-      formacaoStatus = "Padrão W Empenado Armado (Acumulação Compradora) ↗";
-      formacaoCor    = clrSpringGreen;
-   }
-   else if (nH >= 2 && MathAbs(highs[nH-1].price - highs[nH-2].price) <= (150 * _Point) && price < highs[nH-1].price)
-   {
-      formacaoStatus = "Padrão Topo Duplo M Armado (Pressão Vendedora) ↘";
-      formacaoCor    = clrLightCoral;
-   }
-   else
-   {
-      formacaoStatus = "Consolidação Neutra no Miolo do Pivô";
-      formacaoCor    = clrLightGray;
-   }
-
-   // Caixa de Ação Exata do Mentor
-   string acaoMsg = "";
-   color  acaoBg  = C'20,30,45';
-   color  acaoTxt = clrWhite;
-
-   bool isCurrentBald = (cClose >= cOpen) ? (lowerWick < InpMinWickPoints * 0.4) : (upperWick < InpMinWickPoints * 0.4);
-
-   if (gLastSignalTime >= time[1])
-   {
-      if (gLastSignalType == "COMPRA")
-      {
-         acaoMsg = "🚀 AÇÃO: EXECUTAR COMPRA! Rompimento confirmado com pavio!";
-         acaoTxt = clrLime;
-         acaoBg  = C'10,40,25';
-      }
-      else if (gLastSignalType == "VENDA")
-      {
-         acaoMsg = "📉 AÇÃO: EXECUTAR VENDA! Perda de fundo confirmada com pavio!";
-         acaoTxt = clrMagenta;
-         acaoBg  = C'40,15,30';
-      }
-   }
-   else if (distToBuy <= 40 && distToBuy > 0)
-   {
-      if (isCurrentBald)
-      {
-         acaoMsg = "⛔ AÇÃO: NÃO COMPRAR! Vela careca em andamento (risco de armadilha)!";
-         acaoTxt = clrYellow;
-         acaoBg  = C'45,30,10';
-      }
-      else
-      {
-         acaoMsg = StringFormat("⚠️ AÇÃO: PREPARAR COMPRA! Faltam %.0f pts para o Topo!", distToBuy);
-         acaoTxt = clrGold;
-         acaoBg  = C'35,35,15';
-      }
-   }
-   else if (distToSell <= 40 && distToSell > 0)
-   {
-      if (isCurrentBald)
-      {
-         acaoMsg = "⛔ AÇÃO: NÃO VENDER! Vela careca em andamento (risco de armadilha)!";
-         acaoTxt = clrYellow;
-         acaoBg  = C'45,30,10';
-      }
-      else
-      {
-         acaoMsg = StringFormat("⚠️ AÇÃO: PREPARAR VENDA! Faltam %.0f pts para o Fundo!", distToSell);
-         acaoTxt = clrGold;
-         acaoBg  = C'35,35,15';
-      }
-   }
-   else
-   {
-      acaoMsg = "⏳ AÇÃO: AGUARDAR - Paciência institucional até o rompimento.";
-      acaoTxt = clrAqua;
-      acaoBg  = C'15,30,45';
-   }
-
-   // RENDERIZAÇÃO DAS LINHAS DO PAINEL COM ENQUADRAMENTO PERFEITO
+   // Renderização das Linhas Internas com Espaçamento e Enquadramento Garantidos
    int curY = panelY + hdrH + sH(6);
 
    // Linha 1: Gestão de Banca
-   CriarLabelHUD(prefixObjects + "L1", panelX + sW(12), curY,
-                 StringFormat("💰 BANCA: $%.0f | LOTE SEGURO: %.2f", InpAccountBalance, InpLotSize), clrYellow, sF(gBaseFontSize), true);
+   CriarOuAtualizarLabelHUD(prefixObjects + "L1", panelX + sW(12), curY,
+                           StringFormat("💰 BANCA: $%.0f | LOTE SEGURO: %.2f", InpAccountBalance, InpLotSize), clrYellow, sF(gBaseFontSize), true);
    curY += lineH;
 
    // Linha 2: Média 200 & Tendência
-   CriarLabelHUD(prefixObjects + "L2", panelX + sW(12), curY,
-                 StringFormat("📈 200 EMA: %s | Dist: %+.0f pts", trendStr, distEmaPts), trendClr, sF(gBaseFontSize), false);
+   CriarOuAtualizarLabelHUD(prefixObjects + "L2", panelX + sW(12), curY,
+                           StringFormat("📈 200 EMA: %s | Dist: %+.0f pts", trendStr, distEmaPts), trendClr, sF(gBaseFontSize), false);
    curY += lineH;
 
    // Linha 3: Monitoramento do Candle Atual (Barra 0)
-   CriarLabelHUD(prefixObjects + "L3", panelX + sW(12), curY,
-                 StringFormat("⏱️ Vela [%s]: %s | %s", timerStr, (_Period == PERIOD_M1 ? "M1" : (_Period == PERIOD_M5 ? "M5" : "TF")), wickStr), wickClr, sF(gBaseFontSize), true);
+   CriarOuAtualizarLabelHUD(prefixObjects + "L3", panelX + sW(12), curY,
+                           StringFormat("⏱️ Vela [%s]: %s | %s", timerStr, (_Period == PERIOD_M1 ? "M1" : (_Period == PERIOD_M5 ? "M5" : "TF")), gCacheWickStr), gCacheWickColor, sF(gBaseFontSize), true);
    curY += lineH;
 
    // Linha 4: Formação em Andamento
-   CriarLabelHUD(prefixObjects + "L4", panelX + sW(12), curY,
-                 "🔍 Em Andamento: " + formacaoStatus, formacaoCor, sF(gBaseFontSize), false);
+   CriarOuAtualizarLabelHUD(prefixObjects + "L4", panelX + sW(12), curY,
+                           "🔍 Em Andamento: " + gCacheFormacaoStatus, gCacheFormacaoColor, sF(gBaseFontSize), false);
    curY += lineH;
 
    // Linha 5: Gatilho Projetado
-   string gatilhoStr = (distToBuy <= 150) ? StringFormat("⚡ Rompimento Alta: %.2f (Faltam %.0f pts) ↗", gActivePivotHigh, distToBuy) :
-                       ((distToSell <= 150) ? StringFormat("⚡ Rompimento Baixa: %.2f (Faltam %.0f pts) ↘", gActivePivotLow, distToSell) :
+   string gatilhoStr = (gCacheDistToBuy <= 150) ? StringFormat("⚡ Rompimento Alta: %.2f (Faltam %.0f pts) ↗", gActivePivotHigh, gCacheDistToBuy) :
+                       ((gCacheDistToSell <= 150) ? StringFormat("⚡ Rompimento Baixa: %.2f (Faltam %.0f pts) ↘", gActivePivotLow, gCacheDistToSell) :
                        "⚡ Gatilho: Aguardando aproximação da linha projetada");
-   CriarLabelHUD(prefixObjects + "L5", panelX + sW(12), curY, gatilhoStr, clrGold, sF(gBaseFontSize), true);
+   CriarOuAtualizarLabelHUD(prefixObjects + "L5", panelX + sW(12), curY, gatilhoStr, clrGold, sF(gBaseFontSize), true);
    curY += lineH;
 
-   // Linha 6: Último Sinal Executado
+   // Linha 6: Sinal
    if (gLastSignalType != "AGUARDANDO")
    {
       double riscoUSD = MathAbs(gLastEntryPrice - gLastStopLoss) * 100.0 * InpLotSize;
       double alvoUSD  = MathAbs(gLastTakeProfit - gLastEntryPrice) * 100.0 * InpLotSize;
 
-      CriarLabelHUD(prefixObjects + "L6", panelX + sW(12), curY,
-                    StringFormat("Sinal: %s | Stop: %s (-$%.2f) | Alvo: %s (+$%.2f)",
-                                 gLastSignalType, DoubleToString(gLastStopLoss, _Digits), riscoUSD,
-                                 DoubleToString(gLastTakeProfit, _Digits), alvoUSD), clrSpringGreen, sF(gBaseFontSize - 1), false);
+      CriarOuAtualizarLabelHUD(prefixObjects + "L6", panelX + sW(12), curY,
+                              StringFormat("Sinal: %s | Stop: %s (-$%.2f) | Alvo: %s (+$%.2f)",
+                                           gLastSignalType, DoubleToString(gLastStopLoss, _Digits), riscoUSD,
+                                           DoubleToString(gLastTakeProfit, _Digits), alvoUSD), clrSpringGreen, sF(gBaseFontSize - 1), false);
    }
    else
    {
-      CriarLabelHUD(prefixObjects + "L6", panelX + sW(12), curY,
-                    "Regra de Ouro: Proibido operar vela careca sem pavio prévio!", clrAqua, sF(gBaseFontSize - 1), false);
+      CriarOuAtualizarLabelHUD(prefixObjects + "L6", panelX + sW(12), curY,
+                              "Regra de Ouro: Proibido operar vela careca sem pavio prévio!", clrAqua, sF(gBaseFontSize - 1), false);
    }
    curY += lineH;
 
    // Linha 7: CAIXA DE AÇÃO EXATA DO MENTOR
    int boxH = sH(28);
-   CriarRetanguloHUD(prefixObjects + "BOX_ACAO", panelX + sW(8), curY, width - sW(16), boxH, acaoBg, acaoTxt);
-   CriarLabelHUD(prefixObjects + "L_ACAO", panelX + sW(14), curY + sH(6), acaoMsg, acaoTxt, sF(gBaseFontSize), true);
+   CriarOuAtualizarRetanguloHUD(prefixObjects + "BOX_ACAO", panelX + sW(8), curY, width - sW(16), boxH, gCacheAcaoBg, gCacheAcaoTxt);
+   CriarOuAtualizarLabelHUD(prefixObjects + "L_ACAO", panelX + sW(14), curY + sH(6), gCacheAcaoMsg, gCacheAcaoTxt, sF(gBaseFontSize), true);
    curY += boxH + sH(6);
 
    // Linha 8: Disciplina da Meta
-   CriarLabelHUD(prefixObjects + "L_META", panelX + sW(12), curY,
-                 "🔒 Bateu a meta (+10$ a +20$)? FECHE O METATRADER 5!", clrOrange, sF(gBaseFontSize - 1), true);
+   CriarOuAtualizarLabelHUD(prefixObjects + "L_META", panelX + sW(12), curY,
+                           "🔒 Bateu a meta (+10$ a +20$)? FECHE O METATRADER 5!", clrOrange, sF(gBaseFontSize - 1), true);
    curY += lineH;
 
    // SEÇÃO EXPANSÍVEL: SUMÁRIO E LEGENDA DAS CORES [📖 GUIA]
    if (gShowLegend)
    {
-      CriarRetanguloHUD(prefixObjects + "LEG_BG", panelX + sW(8), curY, width - sW(16), sH(125), C'18,25,38', C'71,85,105');
+      CriarOuAtualizarRetanguloHUD(prefixObjects + "LEG_BG", panelX + sW(8), curY, width - sW(16), sH(125), C'18,25,38', C'71,85,105');
       int legY = curY + sH(6);
 
-      CriarLabelHUD(prefixObjects + "LEG_TITLE", panelX + sW(14), legY, "📖 SUMÁRIO OFICIAL DE CORES E SINAIS:", clrAqua, sF(gBaseFontSize), true);
+      CriarOuAtualizarLabelHUD(prefixObjects + "LEG_TITLE", panelX + sW(14), legY, "📖 SUMÁRIO OFICIAL DE CORES E SINAIS:", clrAqua, sF(gBaseFontSize), true);
       legY += sH(18);
 
-      CriarLabelHUD(prefixObjects + "LEG_1", panelX + sW(14), legY, "🟢 Verde Neon: Rompimento Compra ↗ (Corpo sobre Topo + Pavio)", clrLime, sF(gBaseFontSize - 1), false);
+      CriarOuAtualizarLabelHUD(prefixObjects + "LEG_1", panelX + sW(14), legY, "🟢 Verde Neon: Rompimento Compra ↗ (Corpo sobre Topo + Pavio)", clrLime, sF(gBaseFontSize - 1), false);
       legY += sH(16);
 
-      CriarLabelHUD(prefixObjects + "LEG_2", panelX + sW(14), legY, "🟣 Magenta: Rompimento Venda ↘ (Corpo sob Fundo + Pavio)", clrMagenta, sF(gBaseFontSize - 1), false);
+      CriarOuAtualizarLabelHUD(prefixObjects + "LEG_2", panelX + sW(14), legY, "🟣 Magenta: Rompimento Venda ↘ (Corpo sob Fundo + Pavio)", clrMagenta, sF(gBaseFontSize - 1), false);
       legY += sH(16);
 
-      CriarLabelHUD(prefixObjects + "LEG_3", panelX + sW(14), legY, "🟡 Dourado: Candle com Pavio Válido (Mola Armada) / Linha Compra", clrGold, sF(gBaseFontSize - 1), false);
+      CriarOuAtualizarLabelHUD(prefixObjects + "LEG_3", panelX + sW(14), legY, "🟡 Dourado: Candle com Pavio Válido (Mola Armada) / Linha Compra", clrGold, sF(gBaseFontSize - 1), false);
       legY += sH(16);
 
-      CriarLabelHUD(prefixObjects + "LEG_4", panelX + sW(14), legY, "🔘 Cinza Escuro: Vela Careca / Armadilha (NÃO OPERAR!)", clrDimGray, sF(gBaseFontSize - 1), true);
+      CriarOuAtualizarLabelHUD(prefixObjects + "LEG_4", panelX + sW(14), legY, "🔘 Cinza Escuro: Vela Careca / Armadilha (NÃO OPERAR!)", clrDimGray, sF(gBaseFontSize - 1), true);
       legY += sH(16);
 
-      CriarLabelHUD(prefixObjects + "LEG_5", panelX + sW(14), legY, "🟦 Ciano Grosso: Estrutura Zigue-Zague | 🔵 Média 200: Alvo Ímã", clrDeepSkyBlue, sF(gBaseFontSize - 1), false);
+      CriarOuAtualizarLabelHUD(prefixObjects + "LEG_5", panelX + sW(14), legY, "🟦 Ciano Grosso: Estrutura Zigue-Zague | 🔵 Média 200: Alvo Ímã", clrDeepSkyBlue, sF(gBaseFontSize - 1), false);
       legY += sH(16);
 
-      CriarLabelHUD(prefixObjects + "LEG_6", panelX + sW(14), legY, "⚡ Linha Projetada: Nível Exato onde vai romper + Seta Direcional", clrYellow, sF(gBaseFontSize - 1), false);
+      CriarOuAtualizarLabelHUD(prefixObjects + "LEG_6", panelX + sW(14), legY, "⚡ Linha Projetada: Nível Exato onde vai romper + Seta Direcional", clrYellow, sF(gBaseFontSize - 1), false);
    }
    else
    {
@@ -1010,11 +1033,11 @@ void AtualizarPainelHUD(double price, double emaVal,
 }
 
 //+------------------------------------------------------------------+
-//| Limpeza Segura dos Objetos do Painel                             |
+//| Limpeza dos Labels Internos                                      |
 //+------------------------------------------------------------------+
 void LimparTodosLabelsHUD()
 {
-   for (int k = 1; k <= 8; k++)
+   for (int k = 1; k <= 6; k++)
       ApagarElementoHUD(prefixObjects + "L" + IntegerToString(k));
 
    ApagarElementoHUD(prefixObjects + "BOX_ACAO");
@@ -1035,45 +1058,50 @@ void OnChartEvent(const int id,
                   const double &dparam,
                   const string &sparam)
 {
+   // 1. CLIQUE EM BOTÕES DO PAINEL
    if (id == CHARTEVENT_OBJECT_CLICK)
    {
-      // Botão Minimizar
       if (sparam == prefixObjects + "BTN_MIN")
       {
          panelMinimized = !panelMinimized;
          ObjectSetInteger(0, prefixObjects + "BTN_MIN", OBJPROP_STATE, false);
          LimparTodosLabelsHUD();
+         DesenharOuAtualizarHUD();
          ChartRedraw();
+         return;
       }
-      // Botão Sumário / Guia de Cores
       else if (sparam == prefixObjects + "BTN_LEGEND")
       {
          gShowLegend = !gShowLegend;
          ObjectSetInteger(0, prefixObjects + "BTN_LEGEND", OBJPROP_STATE, false);
          LimparTodosLabelsHUD();
+         DesenharOuAtualizarHUD();
          ChartRedraw();
+         return;
       }
-      // Botão Zoom Mais [A+]
       else if (sparam == prefixObjects + "BTN_ZOOM_IN")
       {
          gPanelScale += 0.15;
-         if (gPanelScale > 2.2) gPanelScale = 2.2;
+         if (gPanelScale > 2.0) gPanelScale = 2.0;
          ObjectSetInteger(0, prefixObjects + "BTN_ZOOM_IN", OBJPROP_STATE, false);
          LimparTodosLabelsHUD();
+         DesenharOuAtualizarHUD();
          ChartRedraw();
+         return;
       }
-      // Botão Zoom Menos [A-]
       else if (sparam == prefixObjects + "BTN_ZOOM_OUT")
       {
          gPanelScale -= 0.15;
          if (gPanelScale < 0.75) gPanelScale = 0.75;
          ObjectSetInteger(0, prefixObjects + "BTN_ZOOM_OUT", OBJPROP_STATE, false);
          LimparTodosLabelsHUD();
+         DesenharOuAtualizarHUD();
          ChartRedraw();
+         return;
       }
    }
 
-   // Arrastar Painel com Mouse
+   // 2. ARRASTAR O PAINEL COM O MOUSE (DRAG & DROP REAL FLUIDO)
    if (id == CHARTEVENT_MOUSE_MOVE)
    {
       int mouseX = (int)lparam;
@@ -1084,14 +1112,19 @@ void OnChartEvent(const int id,
 
       if (leftButtonDown && !isDragging)
       {
-         int w = sW(panelMinimized ? 240 : (gShowLegend ? 460 : 400));
-         int h = sH(32);
+         int w = sW(panelMinimized ? 220 : (gShowLegend ? 440 : 380));
+         int hdrH = sH(30);
+
+         // Clicou no cabeçalho fora dos botões?
          if (mouseX >= panelX && mouseX <= panelX + w &&
-             mouseY >= panelY && mouseY <= panelY + h)
+             mouseY >= panelY && mouseY <= panelY + hdrH)
          {
-            isDragging = true;
-            dragOffsetX = mouseX - panelX;
-            dragOffsetY = mouseY - panelY;
+            if (mouseX < panelX + w - sW(120)) // Área do título
+            {
+               isDragging = true;
+               dragOffsetX = mouseX - panelX;
+               dragOffsetY = mouseY - panelY;
+            }
          }
       }
       else if (leftButtonDown && isDragging)
@@ -1099,9 +1132,15 @@ void OnChartEvent(const int id,
          panelX = mouseX - dragOffsetX;
          panelY = mouseY - dragOffsetY;
 
-         if (panelX < 5) panelX = 5;
-         if (panelY < 20) panelY = 20;
+         int chartW = (int)ChartGetInteger(0, CHART_WIDTH_IN_PIXELS);
+         int chartH = (int)ChartGetInteger(0, CHART_HEIGHT_IN_PIXELS);
 
+         if (panelX < 5) panelX = 5;
+         if (panelY < 15) panelY = 15;
+         if (panelX > chartW - 100) panelX = chartW - 100;
+         if (panelY > chartH - 50)  panelY = chartH - 50;
+
+         DesenharOuAtualizarHUD();
          ChartRedraw();
       }
       else if (!leftButtonDown && isDragging)
@@ -1112,9 +1151,9 @@ void OnChartEvent(const int id,
 }
 
 //+------------------------------------------------------------------+
-//| Auxiliares Gráficos do Painel HUD                               |
+//| Auxiliares Gráficos Ultra-Rápidos sem Recriação Desnecessária    |
 //+------------------------------------------------------------------+
-void CriarRetanguloHUD(string name, int x, int y, int w, int h, color bgClr, color borderClr)
+void CriarOuAtualizarRetanguloHUD(string name, int x, int y, int w, int h, color bgClr, color borderClr)
 {
    if (ObjectFind(0, name) < 0)
    {
@@ -1130,7 +1169,7 @@ void CriarRetanguloHUD(string name, int x, int y, int w, int h, color bgClr, col
    ObjectSetInteger(0, name, OBJPROP_BORDER_COLOR, borderClr);
 }
 
-void CriarLabelHUD(string name, int x, int y, string text, color clr, int fontSize, bool isBold)
+void CriarOuAtualizarLabelHUD(string name, int x, int y, string text, color clr, int fontSize, bool isBold)
 {
    if (ObjectFind(0, name) < 0)
    {
@@ -1146,7 +1185,7 @@ void CriarLabelHUD(string name, int x, int y, string text, color clr, int fontSi
    ObjectSetInteger(0, name, OBJPROP_COLOR, clr);
 }
 
-void CriarBotaoHUD(string name, int x, int y, int w, int h, string text, color txtClr, color bgClr, int fontSize = 8)
+void CriarOuAtualizarBotaoHUD(string name, int x, int y, int w, int h, string text, color txtClr, color bgClr, int fontSize = 8)
 {
    if (ObjectFind(0, name) < 0)
    {
