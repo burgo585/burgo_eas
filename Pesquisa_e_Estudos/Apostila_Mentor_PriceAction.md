@@ -181,6 +181,27 @@ Preço
    - Linha Inferior (Ciano/Rosa): Marcador `↘` indicando que a perda do nível acionará **VENDA**.
 3. **Painel de Distância Dinâmica**: O indicador calcula em tempo real quantos pontos faltam para o toque na linha (`Faltam 35 pts para romper ↗`), permitindo ao trader preparar a boleta com antecedência.
 
+### 5.3 O Painel HUD Auto-Escalável, Sumário Expansível [📖] e Enquadramento Seguro
+Para garantir conforto visual sem poluir o gráfico:
+1. **Escala e Zoom Dinâmico [A+ / A-]**: O operador pode aumentar ou diminuir o painel e o tamanho de todas as fontes diretamente com cliques em [A+] e [A-] no cabeçalho ou pelo input InpPanelScale. A geometria calcula largura, altura e espaçamento proporcionalmente, **eliminando qualquer risco de letras vazando para fora do enquadramento**.
+2. **Sumário e Legenda das Cores [📖 Guia]**: Clicando no botão [📖 Guia], uma gaveta compacta abre dentro do próprio painel com a legenda completa de todas as cores de candles, zigue-zague e linhas projetadas. Quando fechado, o gráfico permanece 100% limpo e sem poluição visual sobre as velas do ativo.
+3. **Caixa de Ação Imediata do Mentor**: Um bloco em alto contraste no painel informa exatamente o que fazer a cada instante:
+   - 🚀 EXECUTAR COMPRA! (Rompimento confirmado com pavio prévio).
+   - 📉 EXECUTAR VENDA! (Fundo rompido com pavio superior prévio).
+   - ⚠️ PREPARAR BOLETA! (Preço a menos de 40 pontos da linha de gatilho).
+   - ⛔ NÃO OPERAR! (Vela careca em andamento / risco de armadilha).
+   - ⏳ AGUARDAR! (Consolidação no miolo do pivô / sem gatilho maduro).
+
+### 5.4 Monitoramento em Tempo Real do Candle 0 e Formações em Andamento
+A cada novo tick recebido, o indicador audita a barra ativa:
+* **Cronômetro Regressivo**: Tempo exato restante para o fechamento da vela (MM:SS).
+* **Auditoria de Pavio em Tempo Real**: Mede o pavio inferior (em velas de alta) ou superior (em velas de baixa), classificando imediatamente como [OK - Mola Pronta] ou [CUIDADO: Vela Careca].
+* **Identificação de Formações em Andamento**:
+  - Testando Topo do Pivô em 4065.50 (Faltam X pts) ↗
+  - Padrão W Empenado Armado (Acumulação Compradora) ↗
+  - Padrão Topo Duplo M Armado (Pressão Vendedora) ↘
+  - Consolidação Neutra no Miolo do Pivô
+
 ---
 
 ## MÓDULO 6: O GATILHO CIRÚRGICO DO PAVIO (MICROESTRUTURA FORENSE)
