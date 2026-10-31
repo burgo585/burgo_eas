@@ -37,45 +37,72 @@ Este documento é o manual oficial e minucioso da **Boleta Scalping Pro v10**. E
 
 ---
 
-## 2. Anatomia Visual da Interface
+## 2. Mapa Visual e Anatomia da Interface (Onde Fica Cada Botão)
 
-A interface foi projetada em Dark Mode com alinhamento geométrico estrito (*Zero Overflow*):
+Para total familiarização visual, consulte o infográfico mapeado abaixo com **20 pins numerados** identificando a posição exata de cada botão e mostrador:
+
+![Mapa Visual Mapeado com Pins da Boleta](boleta_mapeada.png)
+
+### 📌 Tabela de Reconhecimento Rápido dos 20 Controles Numerados:
+
+| Pin | Controle / Botão | Posição no Painel | Padrão Nativo | Função e Como Operar |
+|:---:|:---|:---|:---:|:---|
+| **1** | **Botão de Zoom [115%]** | Cabeçalho (Direita) | `115%` | Alterna instantaneamente o tamanho da boleta entre 100%, 115%, 130% e 150% sem vazar fontes. |
+| **2** | **Minimizar `[-]` e Fechar `[X]`** | Canto Superior Direito | Ativos | `[-]` recolhe a boleta em uma barra compacta; `[X]` encerra o robô e limpa os objetos da tela. |
+| **3** | **Faixa de Mercado (Strip)** | Abaixo do Cabeçalho | Automático | Exibe o símbolo ativo (ex: `GOLD#`), o **Spread real** e a contagem regressiva da vela `[M15] 08:44`. |
+| **4** | **Cartão: Capital Inicial ($)** | HUD (Superior Esquerdo) | Dinâmico | Calcula o saldo com que você iniciou o período selecionado para medir sua evolução real. |
+| **5** | **Cartão: Lote Atual** | HUD (Superior Direito) | `0.04` | Mostra em destaque dourado o volume que será enviado na próxima ordem de compra ou venda. |
+| **6** | **Cartão: Lucro do Período ($)** | HUD (Inferior Esquerdo) | Dinâmico | Resultado líquido fechado já descontando swap e comissões (Verde no lucro, Vermelho no prejuízo). |
+| **7** | **Cartão: % Acertos (Win Rate)** | HUD (Inferior Direito) | Dinâmico | Taxa percentual de acerto acompanhada do contador de vitórias e total de trades `(Vitórias/Total)`. |
+| **8** | **Barra de Períodos Rápidos** | Centro Superior | `Hoje` | Botões `[Hoje]`, `[7D]`, `[Geral]` e campo de data personalizada (ex: `2026.10.01` + `[OK]`). |
+| **9** | **Alternador de Escopo** | Barra de Períodos | `[Conta]` | Comuta a leitura do histórico entre **todos os ativos da conta** (`[Conta]`) ou **só o ativo do gráfico** (`[Ativo]`). |
+| **10** | **Gestão de Risco Automático** | Linha de Risco | Desmarcado `[ ]` | Quando ativado `[X]`, calcula o lote automaticamente para limitar o risco em `$150.00` ou `%` da conta. |
+| **11** | **Lote Operacional** | Linha de Lote | `0.04` | Ajuste manual rápido de lote via botões `[-]` e `[+]` ou digitação direta na caixa de texto. |
+| **12** | **Stop Loss Nativo (pts)** | Linha de Proteção SL | Marcado `[X] 200` | Ativado de fábrica com **200 pontos**. Ajustável via `[-]` e `[+]` de 10 em 10 pontos. |
+| **13** | **Take Profit Nativo (pts)** | Linha de Alvo TP | Marcado `[X] 300` | Ativado de fábrica com **300 pontos** (relação risco/retorno favorável de 1.5x). |
+| **14** | **Break Even e Trailing Stop** | Linhas de Proteção Dinâmica | Desmarcados | `Break Even` puxa o SL para o preço de entrada aos 60 pts; `Trailing Stop` persegue a tendência a cada 2 pts. |
+| **15** | **Realização Parcial Inteligente** | Linha de Parcial | Desmarcada | Encerra 50% da posição no primeiro alvo (`Pts` ou `$`) e pode mover o restante para o zero a zero. |
+| **16** | **Gaveta de Canais 40x40** | Faixa Central Dourada | Recolhida `[+]` | Expande o painel para marcar 2 linhas de referência e projetar até 40 canais matemáticos no gráfico. |
+| **17** | **Botões `[+] COMPRA` e `[-] VENDA`**| Área Central de Operação | Prontos | Grandes botões para envio imediato de ordens a mercado com alvos automáticos acoplados. |
+| **18** | **Botão INVERTER POSIÇÃO** | Abaixo da Compra/Venda | Roxo Índigo | Liquida a posição atual e abre uma nova ordem de sentido oposto no mesmo tick sem delay. |
+| **19** | **Zerar Lucro e Zerar Prejuízo** | Linha de Saída Seletiva | Prontos | Fechamentos cirúrgicos: encerra apenas as ordens positivas ou apenas as ordens perdedoras. |
+| **20** | **ZERAR TODAS AS ORDENS** | Rodapé (Dourado Âmbar) | Emergência | Botão de pânico: encerra 100% das posições abertas na conta e cancela todas as ordens pendentes. |
 
 ```
 +-------------------------------------------------------------+
-| SCALP PRO v10                          [115%]  [-]  [X]     |  <- Cabeçalho & Zoom
+| SCALP PRO v10                          [115%]  [-]  [X]     |  <- (1, 2) Cabeçalho & Zoom
 +-------------------------------------------------------------+
-| GOLD#                     Sp: 20             [M15] 08:44    |  <- Faixa de Mercado
+| GOLD#                     Sp: 20             [M15] 08:44    |  <- (3) Faixa de Mercado
 +------------------------------+------------------------------+
-| CAP. INICIAL                 | LOTE ATUAL                   |
-| $1,000.00                    | 0.04                         |  <- Cartões HUD
+| CAP. INICIAL                 | LOTE ATUAL                   |  <- (4, 5) Cartões HUD Topo
+| $1,000.00                    | 0.04                         |
 +------------------------------+------------------------------+
-| LUCRO HOJE                   | % ACERTOS (CONTA)            |
+| LUCRO HOJE                   | % ACERTOS (CONTA)            |  <- (6, 7) Lucro & Win Rate
 | +$148.50                     | 56.1% (193/344)              |
 +------------------------------+------------------------------+
-| [Hoje]  [7D]  [Geral]  [Conta]  [2026.10.01]  [OK]          |  <- Barra de Apuração
+| [Hoje]  [7D]  [Geral]  [Conta]  [2026.10.01]  [OK]          |  <- (8, 9) Barra de Datas & Escopo
 +-------------------------------------------------------------+
-| [ ] Risco: $                 [-]   150.00   [+]             |  <- Gestão de Risco
-|     Lote Operacional         [-]     0.04   [+]             |  <- Lote Nativo
+| [ ] Risco: $                 [-]   150.00   [+]             |  <- (10) Gestão de Risco ($150)
+|     Lote Operacional         [-]     0.04   [+]             |  <- (11) Lote Operacional (0.04)
 +-------------------------------------------------------------+
-| [X] Stop Loss (pts)          [-]      200   [+]             |  <- SL Nativo 200
-| [X] Take Profit (pts)        [-]      300   [+]             |  <- TP Nativo 300
-| [ ] Break Even (pts)         [-]       60   [+]             |
-| [ ] Trailing Stop (pts)      [-]      150   [+]             |
+| [X] Stop Loss (pts)          [-]      200   [+]             |  <- (12) Stop Loss Nativo 200
+| [X] Take Profit (pts)        [-]      300   [+]             |  <- (13) Take Profit Nativo 300
+| [ ] Break Even (pts)         [-]       60   [+]             |  <- (14) Break Even
+| [ ] Trailing Stop (pts)      [-]      150   [+]             |  <- (14) Trailing Stop
 +-------------------------------------------------------------+
-| [ ] [Pts] Alvo Parcial       [-]      150   [+]             |  <- Parcial
+| [ ] [Pts] Alvo Parcial       [-]      150   [+]             |  <- (15) Realização Parcial
 |     Vol. Parcial (%)         [-]      50%   [+]             |
 | [ ] Mover SL p/ Zero a Zero pós Parcial                     |
 +-------------------------------------------------------------+
-| CANAIS DE FREQUENCIA (40x40)  [+]                           |  <- Grade 40x40
+| CANAIS DE FREQUENCIA (40x40)  [+]                           |  <- (16) Gaveta de Canais
 +------------------------------+------------------------------+
-|        [+] COMPRA            |          [-] VENDA           |  <- Execução Rápida
+|        [+] COMPRA            |          [-] VENDA           |  <- (17) Execução Rápida
 +------------------------------+------------------------------+
-|                     INVERTER POSICAO                        |
+|                     INVERTER POSICAO                        |  <- (18) Inversão de Mão
 +------------------------------+------------------------------+
-|         Zerar Lucro          |        Zerar Prejuizo        |
+|         Zerar Lucro          |        Zerar Prejuizo        |  <- (19) Fechamentos Seletivos
 +-------------------------------------------------------------+
-|                    ZERAR TODAS AS ORDENS                    |
+|                    ZERAR TODAS AS ORDENS                    |  <- (20) Pânico / Zera Tudo
 +-------------------------------------------------------------+
 ```
 
