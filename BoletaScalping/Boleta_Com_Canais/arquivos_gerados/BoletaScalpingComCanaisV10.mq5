@@ -57,6 +57,15 @@
 #define ZORDER_PANEL_TXT     1000030
 
 //--- Enumeradores
+enum ENUM_STATS_PERIOD
+{
+   STATS_PERIOD_TODAY,     // Apenas Hoje (Desde 00:00 de Hoje ate o Momento)
+   STATS_PERIOD_CUSTOM,    // A partir da Data Escolhida ate o Momento Atual
+   STATS_PERIOD_7D,        // Ultimos 7 Dias ate o Momento Atual
+   STATS_PERIOD_30D,       // Ultimos 30 Dias ate o Momento Atual
+   STATS_PERIOD_ALL        // Todo o Historico da Conta ate o Momento
+};
+
 enum ENUM_RISK_MODE
 {
    RISK_MODE_MANUAL,   // Lote Fixo Manual (Padrao Desmarcado)
@@ -123,6 +132,11 @@ input bool            InpShowTradeButtons  = true;               // Exibir Botoe
 input bool            InpShowInvertButton  = true;               // Exibir Botao Inverter Posicao
 input bool            InpShowCloseButtons  = true;               // Exibir Botoes Zerar Lucro / Zerar Prejuizo
 input bool            InpShowCloseAll      = true;               // Exibir Botao Zerar Todas as Ordens (Rodape)
+
+input group "=== APURACAO DE % ACERTOS E METRICAS ==="
+input ENUM_STATS_PERIOD InpStatsPeriod        = STATS_PERIOD_TODAY;       // Periodo de Apuracao (% Acertos: Hoje, Data Escolhida ou Geral)
+input datetime          InpStatsCustomDate   = D'2026.10.01 00:00';      // Data Inicial de Apuracao (Ano.Mes.Dia)
+input bool              InpShowStatsDateBar  = true;                     // Exibir Barra de Selecao de Data no Painel
 
 input group "=== REALIZACAO PARCIAL ==="
 input bool            InpParcialActive     = false;              // Parcial Inicial (Desmarcado por Padrao)
@@ -390,7 +404,10 @@ private:
    double            m_parcial_target_cash;
    double            m_parcial_vol_pct;
    
-   // Metricas Live do Painel
+   // Metricas Live do Painel e Periodo de Apuracao
+   ENUM_STATS_PERIOD m_stats_period;
+   datetime          m_stats_custom_date;
+   string            m_stats_date_str;
    double            m_today_closed_profit;
    double            m_today_closed_loss;
    double            m_today_closed_net;
@@ -450,6 +467,14 @@ public:
    void              SetTPPoints(int pts)     { m_tp_points = pts; }
    bool              GetATRTargets(int &out_atr_pts, int &out_sug_sl, int &out_sug_tp);
    void              ApplyATRTargets();
+   
+   // Gestao do Periodo de Apuracao (% Acertos ate o Momento)
+   void              SetStatsPeriod(ENUM_STATS_PERIOD p);
+   void              CycleStatsPeriod();
+   void              ApplyStatsCustomDate();
+   datetime          ParseCustomDate(string s);
+   ENUM_STATS_PERIOD GetStatsPeriod()       const { return m_stats_period; }
+   datetime          GetStatsCustomDate()    const { return m_stats_custom_date; }
    int               GetBEPoints()            const { return m_be_points; }
    int               GetTSPoints()            const { return m_ts_points; }
    int               GetTSStepPoints()        const { return m_ts_step_pts; }
@@ -556,6 +581,9 @@ CBoletaMaster::CBoletaMaster()
      m_parcial_target_pts(150),
      m_parcial_target_cash(25.0),
      m_parcial_vol_pct(50.0),
+     m_stats_period(STATS_PERIOD_TODAY),
+     m_stats_custom_date(D'2026.10.01 00:00'),
+     m_stats_date_str("2026.10.01"),
      m_today_closed_profit(0.0),
      m_today_closed_loss(0.0),
      m_today_closed_net(0.0),
@@ -607,6 +635,8 @@ void CBoletaMaster::SaveState()
    GlobalVariableSet(p + "pos_x", (double)m_x);
    GlobalVariableSet(p + "pos_y", (double)m_y);
    GlobalVariableSet(p + "minimized", m_is_minimized ? 1.0 : 0.0);
+   GlobalVariableSet(p + "stats_period", (double)m_stats_period);
+   GlobalVariableSet(p + "stats_date", (double)m_stats_custom_date);
 }
 
 bool CBoletaMaster::LoadState()
@@ -639,6 +669,9 @@ bool CBoletaMaster::LoadState()
    if(GlobalVariableCheck(p + "pos_x"))           m_x                   = (int)GlobalVariableGet(p + "pos_x");
    if(GlobalVariableCheck(p + "pos_y"))           m_y                   = (int)GlobalVariableGet(p + "pos_y");
    if(GlobalVariableCheck(p + "minimized"))       m_is_minimized        = (GlobalVariableGet(p + "minimized") > 0.5);
+   if(GlobalVariableCheck(p + "stats_period"))    m_stats_period        = (ENUM_STATS_PERIOD)(int)GlobalVariableGet(p + "stats_period");
+   if(GlobalVariableCheck(p + "stats_date"))      m_stats_custom_date   = (datetime)GlobalVariableGet(p + "stats_date");
+   m_stats_date_str = TimeToString(m_stats_custom_date, TIME_DATE);
    
    return true;
 }
@@ -672,6 +705,8 @@ void CBoletaMaster::ClearState()
    GlobalVariableDel(p + "pos_x");
    GlobalVariableDel(p + "pos_y");
    GlobalVariableDel(p + "minimized");
+   GlobalVariableDel(p + "stats_period");
+   GlobalVariableDel(p + "stats_date");
 }
 
 //+------------------------------------------------------------------+
@@ -714,6 +749,9 @@ bool CBoletaMaster::Init(const string symbol, ulong magic, ulong slippage, int x
       m_channels_expanded   = false;
       m_chan_visible        = true;
       m_is_minimized        = false;
+      m_stats_period        = InpStatsPeriod;
+      m_stats_custom_date   = InpStatsCustomDate;
+      m_stats_date_str      = TimeToString(m_stats_custom_date, TIME_DATE);
    }
    
    m_trade.SetExpertMagicNumber(m_magic);
@@ -769,6 +807,92 @@ bool CBoletaMaster::Contains(int x, int y) const
 {
    int cur_h = m_is_minimized ? m_header_h : m_height;
    return (x >= m_x && x <= m_x + m_width && y >= m_y && y <= m_y + cur_h);
+}
+
+//+------------------------------------------------------------------+
+//| Gestao do Periodo de Apuracao (% Acertos ate o Momento)          |
+//+------------------------------------------------------------------+
+datetime CBoletaMaster::ParseCustomDate(string s)
+{
+   StringTrimLeft(s);
+   StringTrimRight(s);
+   StringReplace(s, "/", ".");
+   StringReplace(s, "-", ".");
+   
+   string parts[];
+   int count = StringSplit(s, '.', parts);
+   if(count >= 3)
+   {
+      // Se estiver no formato brasileiro DD.MM.YYYY (ex: 01.10.2026)
+      if(StringLen(parts[0]) <= 2 && StringLen(parts[2]) == 4)
+      {
+         s = parts[2] + "." + parts[1] + "." + parts[0];
+      }
+   }
+   
+   datetime t = StringToTime(s);
+   if(t <= 0)
+   {
+      MqlDateTime dt;
+      TimeToStruct(TimeCurrent(), dt);
+      dt.hour = 0; dt.min = 0; dt.sec = 0;
+      t = StructToTime(dt);
+   }
+   return t;
+}
+
+void CBoletaMaster::SetStatsPeriod(ENUM_STATS_PERIOD p)
+{
+   m_stats_period = p;
+   if(p == STATS_PERIOD_TODAY)
+   {
+      MqlDateTime dt;
+      TimeToStruct(TimeCurrent(), dt);
+      dt.hour = 0; dt.min = 0; dt.sec = 0;
+      m_stats_date_str = TimeToString(StructToTime(dt), TIME_DATE);
+   }
+   else if(p == STATS_PERIOD_7D)
+   {
+      m_stats_date_str = TimeToString(TimeCurrent() - 7 * 86400, TIME_DATE);
+   }
+   else if(p == STATS_PERIOD_30D)
+   {
+      m_stats_date_str = TimeToString(TimeCurrent() - 30 * 86400, TIME_DATE);
+   }
+   else if(p == STATS_PERIOD_ALL)
+   {
+      m_stats_date_str = "GERAL";
+   }
+   CalculateDashboardStats();
+   Render();
+   UpdateFieldValues();
+   UpdateLiveMetrics();
+   SaveState();
+}
+
+void CBoletaMaster::CycleStatsPeriod()
+{
+   if(m_stats_period == STATS_PERIOD_TODAY)
+      SetStatsPeriod(STATS_PERIOD_CUSTOM);
+   else if(m_stats_period == STATS_PERIOD_CUSTOM)
+      SetStatsPeriod(STATS_PERIOD_7D);
+   else if(m_stats_period == STATS_PERIOD_7D)
+      SetStatsPeriod(STATS_PERIOD_ALL);
+   else
+      SetStatsPeriod(STATS_PERIOD_TODAY);
+}
+
+void CBoletaMaster::ApplyStatsCustomDate()
+{
+   string val_str = ObjectGetString(m_chart_id, PREFIX_GUI + "Edit_Stats_Date", OBJPROP_TEXT);
+   m_stats_custom_date = ParseCustomDate(val_str);
+   m_stats_date_str    = TimeToString(m_stats_custom_date, TIME_DATE);
+   m_stats_period      = STATS_PERIOD_CUSTOM;
+   CalculateDashboardStats();
+   Render();
+   UpdateFieldValues();
+   UpdateLiveMetrics();
+   SaveState();
 }
 
 void CBoletaMaster::CheckForegroundState()
@@ -879,15 +1003,34 @@ void CBoletaMaster::CalculateDashboardStats()
    m_today_total_closed  = 0;
    m_floating_pnl        = 0.0;
    
-   MqlDateTime dt;
    datetime cur_time = TimeCurrent();
-   TimeToStruct(cur_time, dt);
-   dt.hour = 0;
-   dt.min  = 0;
-   dt.sec  = 0;
-   datetime start_of_day = StructToTime(dt);
+   datetime start_time = 0;
    
-   if(HistorySelect(start_of_day, cur_time))
+   if(m_stats_period == STATS_PERIOD_TODAY)
+   {
+      MqlDateTime dt;
+      TimeToStruct(cur_time, dt);
+      dt.hour = 0; dt.min = 0; dt.sec = 0;
+      start_time = StructToTime(dt);
+   }
+   else if(m_stats_period == STATS_PERIOD_CUSTOM)
+   {
+      start_time = m_stats_custom_date;
+   }
+   else if(m_stats_period == STATS_PERIOD_7D)
+   {
+      start_time = cur_time - (7 * 86400);
+   }
+   else if(m_stats_period == STATS_PERIOD_30D)
+   {
+      start_time = cur_time - (30 * 86400);
+   }
+   else // STATS_PERIOD_ALL
+   {
+      start_time = 0;
+   }
+   
+   if(HistorySelect(start_time, cur_time))
    {
       int deals = HistoryDealsTotal();
       for(int i = 0; i < deals; i++)
@@ -1047,6 +1190,22 @@ void CBoletaMaster::Render()
       CreateLabel("Lbl_Win_Title", offset_x + card_w + 12, cur_y + 1, "% ACERTOS", COLOR_TEXT_MUTED, 7, false);
       CreateLabel("Lbl_Win_Val",   offset_x + card_w + 12, cur_y + 11, "0.0%", COLOR_CHECK_ACTIVE, 9, true);
       cur_y += 31;
+      
+      // Barra de Selecao de Data / Periodo da % de Acertos
+      if(InpShowStatsDateBar)
+      {
+         color c_today = (m_stats_period == STATS_PERIOD_TODAY)  ? COLOR_CHECK_ACTIVE : COLOR_STEP_BTN;
+         color c_cust  = (m_stats_period == STATS_PERIOD_CUSTOM) ? COLOR_CHECK_ACTIVE : COLOR_STEP_BTN;
+         color c_7d    = (m_stats_period == STATS_PERIOD_7D)     ? COLOR_CHECK_ACTIVE : COLOR_STEP_BTN;
+         color c_all   = (m_stats_period == STATS_PERIOD_ALL)    ? COLOR_CHECK_ACTIVE : COLOR_STEP_BTN;
+         
+         CreateButton("Btn_Stats_Today", offset_x, cur_y, 44, 20, "Hoje", c_today, (m_stats_period == STATS_PERIOD_TODAY) ? clrBlack : clrWhite, 8, true);
+         CreateButton("Btn_Stats_7D",    offset_x + 46, cur_y, 36, 20, "7D", c_7d, (m_stats_period == STATS_PERIOD_7D) ? clrBlack : clrWhite, 8, true);
+         CreateButton("Btn_Stats_All",   offset_x + 84, cur_y, 44, 20, "Geral", c_all, (m_stats_period == STATS_PERIOD_ALL) ? clrBlack : clrWhite, 8, true);
+         CreateEdit("Edit_Stats_Date",   offset_x + 130, cur_y, 96, 20, m_stats_date_str, COLOR_EDIT_BG, (m_stats_period == STATS_PERIOD_CUSTOM) ? clrGold : COLOR_TEXT_MAIN, false, 8);
+         CreateButton("Btn_Stats_Apply", offset_x + 228, cur_y, 32, 20, "OK", c_cust, (m_stats_period == STATS_PERIOD_CUSTOM) ? clrBlack : clrWhite, 8, true);
+         cur_y += 24;
+      }
    }
    
    // 4. Secao Gestao de Risco (Risco $150 Desmarcado por Padrao)
@@ -1270,6 +1429,35 @@ void CBoletaMaster::UpdateLiveMetrics()
    ObjectSetString(m_chart_id, PREFIX_GUI + "Lbl_Cap_Val", OBJPROP_TEXT, StringFormat("$%.2f", m_starting_capital));
    ObjectSetString(m_chart_id, PREFIX_GUI + "Lbl_Lot_Val", OBJPROP_TEXT, DoubleToString(GetEffectiveLot(), 2));
    
+   string pnl_title = "LUCRO HOJE";
+   string win_title = "% ACERTOS (HOJE)";
+   
+   if(m_stats_period == STATS_PERIOD_CUSTOM)
+   {
+      MqlDateTime dt;
+      TimeToStruct(m_stats_custom_date, dt);
+      pnl_title = StringFormat("LUCRO (%02d/%02d)", dt.day, dt.mon);
+      win_title = StringFormat("%% ACERTOS (%02d/%02d)", dt.day, dt.mon);
+   }
+   else if(m_stats_period == STATS_PERIOD_7D)
+   {
+      pnl_title = "LUCRO 7 DIAS";
+      win_title = "% ACERTOS (7D)";
+   }
+   else if(m_stats_period == STATS_PERIOD_30D)
+   {
+      pnl_title = "LUCRO 30 DIAS";
+      win_title = "% ACERTOS (30D)";
+   }
+   else if(m_stats_period == STATS_PERIOD_ALL)
+   {
+      pnl_title = "LUCRO GERAL";
+      win_title = "% ACERTOS (GERAL)";
+   }
+   
+   ObjectSetString(m_chart_id, PREFIX_GUI + "Lbl_Pnl_Title", OBJPROP_TEXT, pnl_title);
+   ObjectSetString(m_chart_id, PREFIX_GUI + "Lbl_Win_Title", OBJPROP_TEXT, win_title);
+
    string pnl_str = StringFormat("%s$%.2f", (m_today_closed_net >= 0.0) ? "+" : "-", MathAbs(m_today_closed_net));
    ObjectSetString(m_chart_id, PREFIX_GUI + "Lbl_Pnl_Val", OBJPROP_TEXT, pnl_str);
    ObjectSetInteger(m_chart_id, PREFIX_GUI + "Lbl_Pnl_Val", OBJPROP_COLOR, (m_today_closed_net >= 0.0) ? COLOR_PROFIT_GREEN : COLOR_LOSS_RED);
@@ -1452,6 +1640,30 @@ void CBoletaMaster::UpdateFieldValues()
    ObjectSetString(m_chart_id, PREFIX_GUI + "Chk_TS", OBJPROP_TEXT, m_ts_active ? "X" : "");
    ObjectSetInteger(m_chart_id, PREFIX_GUI + "Chk_TS", OBJPROP_BGCOLOR, m_ts_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT);
    
+   // Periodo de Apuracao das Metricas
+   if(InpShowStatsDateBar)
+   {
+      ObjectSetString(m_chart_id, PREFIX_GUI + "Edit_Stats_Date", OBJPROP_TEXT, m_stats_date_str);
+      
+      bool is_today = (m_stats_period == STATS_PERIOD_TODAY);
+      bool is_7d    = (m_stats_period == STATS_PERIOD_7D);
+      bool is_all   = (m_stats_period == STATS_PERIOD_ALL);
+      bool is_cust  = (m_stats_period == STATS_PERIOD_CUSTOM);
+      
+      ObjectSetInteger(m_chart_id, PREFIX_GUI + "Btn_Stats_Today", OBJPROP_BGCOLOR, is_today ? COLOR_CHECK_ACTIVE : COLOR_STEP_BTN);
+      ObjectSetInteger(m_chart_id, PREFIX_GUI + "Btn_Stats_Today", OBJPROP_COLOR,   is_today ? clrBlack : clrWhite);
+      
+      ObjectSetInteger(m_chart_id, PREFIX_GUI + "Btn_Stats_7D",    OBJPROP_BGCOLOR, is_7d ? COLOR_CHECK_ACTIVE : COLOR_STEP_BTN);
+      ObjectSetInteger(m_chart_id, PREFIX_GUI + "Btn_Stats_7D",    OBJPROP_COLOR,   is_7d ? clrBlack : clrWhite);
+      
+      ObjectSetInteger(m_chart_id, PREFIX_GUI + "Btn_Stats_All",   OBJPROP_BGCOLOR, is_all ? COLOR_CHECK_ACTIVE : COLOR_STEP_BTN);
+      ObjectSetInteger(m_chart_id, PREFIX_GUI + "Btn_Stats_All",   OBJPROP_COLOR,   is_all ? clrBlack : clrWhite);
+      
+      ObjectSetInteger(m_chart_id, PREFIX_GUI + "Btn_Stats_Apply", OBJPROP_BGCOLOR, is_cust ? COLOR_CHECK_ACTIVE : COLOR_STEP_BTN);
+      ObjectSetInteger(m_chart_id, PREFIX_GUI + "Btn_Stats_Apply", OBJPROP_COLOR,   is_cust ? clrBlack : clrWhite);
+      ObjectSetInteger(m_chart_id, PREFIX_GUI + "Edit_Stats_Date", OBJPROP_COLOR,   is_cust ? clrGold : COLOR_TEXT_MAIN);
+   }
+
    // Parcial (Checkbox unificado)
    ObjectSetString(m_chart_id, PREFIX_GUI + "Chk_Parcial", OBJPROP_TEXT, m_parcial_active ? "X" : "");
    ObjectSetInteger(m_chart_id, PREFIX_GUI + "Chk_Parcial", OBJPROP_BGCOLOR, m_parcial_active ? COLOR_CHECK_ACTIVE : COLOR_CHECK_INACT);
@@ -2146,6 +2358,18 @@ void CBoletaMaster::HandleEndEdit(const string &obj_name)
       double l = StringToDouble(val_str);
       if(l > 0.0) m_manual_lot = l;
    }
+   else if(short_name == "Edit_Stats_Date")
+   {
+      m_stats_custom_date = ParseCustomDate(val_str);
+      m_stats_date_str    = TimeToString(m_stats_custom_date, TIME_DATE);
+      m_stats_period      = STATS_PERIOD_CUSTOM;
+      CalculateDashboardStats();
+      Render();
+      UpdateFieldValues();
+      UpdateLiveMetrics();
+      SaveState();
+      return;
+   }
    else if(short_name == "Edit_SL")
    {
       int sl = (int)StringToInteger(val_str);
@@ -2212,6 +2436,15 @@ void CBoletaMaster::HandleButtonClick(const string &obj_name)
    ObjectSetInteger(m_chart_id, obj_name, OBJPROP_STATE, false);
    
    if(short_name == "Btn_Min")              { ToggleMinimize(); return; }
+   if(short_name == "Btn_Stats_Today")      { SetStatsPeriod(STATS_PERIOD_TODAY); return; }
+   if(short_name == "Btn_Stats_7D")         { SetStatsPeriod(STATS_PERIOD_7D); return; }
+   if(short_name == "Btn_Stats_All")        { SetStatsPeriod(STATS_PERIOD_ALL); return; }
+   if(short_name == "Btn_Stats_Apply")      { ApplyStatsCustomDate(); return; }
+   if(short_name == "Card_Win_BG" || short_name == "Lbl_Win_Title" || short_name == "Lbl_Win_Val")
+   {
+      CycleStatsPeriod();
+      return;
+   }
    if(short_name == "Btn_ATR_Info")         { ApplyATRTargets(); return; }
    if(short_name == "Btn_Close")            { Destroy(REASON_REMOVE); ExpertRemove(); return; }
    
