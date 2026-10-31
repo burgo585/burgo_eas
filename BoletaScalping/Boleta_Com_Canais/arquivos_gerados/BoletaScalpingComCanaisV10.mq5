@@ -679,6 +679,7 @@ bool CBoletaMaster::Init(const string symbol, ulong magic, ulong slippage, int x
    
    SymbolSelect(m_symbol, true);
    ChartSetInteger(m_chart_id, CHART_FOREGROUND, false);
+   ChartSetInteger(m_chart_id, CHART_EVENT_MOUSE_MOVE, true);
    
    Render();
    RestaurarEstadoCanais();
@@ -719,6 +720,10 @@ void CBoletaMaster::CheckForegroundState()
       ChartSetInteger(m_chart_id, CHART_FOREGROUND, false);
       ChartRedraw(m_chart_id);
    }
+   if(ChartGetInteger(m_chart_id, CHART_EVENT_MOUSE_MOVE) == 0)
+   {
+      ChartSetInteger(m_chart_id, CHART_EVENT_MOUSE_MOVE, true);
+   }
 }
 
 void CBoletaMaster::BringToFront()
@@ -726,6 +731,7 @@ void CBoletaMaster::BringToFront()
    if(m_is_dragging) return;
    if(ChartGetInteger(m_chart_id, CHART_FOREGROUND) != 0)
       ChartSetInteger(m_chart_id, CHART_FOREGROUND, false);
+   ChartSetInteger(m_chart_id, CHART_EVENT_MOUSE_MOVE, true);
    
    Render();
    UpdateFieldValues();
@@ -1155,6 +1161,8 @@ void CBoletaMaster::MovePanel(int new_x, int new_y)
 {
    int dx = new_x - m_x;
    int dy = new_y - m_y;
+   if(dx == 0 && dy == 0) return;
+   
    m_x = new_x;
    m_y = new_y;
    
@@ -1170,7 +1178,6 @@ void CBoletaMaster::MovePanel(int new_x, int new_y)
          ObjectSetInteger(m_chart_id, name, OBJPROP_YDISTANCE, obj_y + dy);
       }
    }
-   SaveState();
    ChartRedraw(m_chart_id);
 }
 
@@ -1973,14 +1980,19 @@ void CBoletaMaster::OnChartEvent(const int id, const long &lparam, const double 
       uint flags  = (uint)StringToInteger(sparam);
       bool lbutton_down = ((flags & 1) == 1);
       
-      // Arrastar Painel de Forma Fluida e sem Gargalos
+      // Arrastar Painel pelo Cabecalho ou pela Faixa de Mercado (Pegada Ampla de 56px)
       if(lbutton_down)
       {
          if(!m_is_dragging)
          {
+            int drag_h = m_is_minimized ? m_header_h : (m_header_h + 30);
             if(mouse_x >= m_x && mouse_x <= m_x + m_width &&
-               mouse_y >= m_y && mouse_y <= m_y + m_header_h)
+               mouse_y >= m_y && mouse_y <= m_y + drag_h)
             {
+               // Nao arrastar se o clique foi nos botoes de minimizar ou fechar
+               if(mouse_y <= m_y + m_header_h && mouse_x >= m_x + m_width - 55)
+                  return;
+               
                m_is_dragging   = true;
                m_drag_offset_x = mouse_x - m_x;
                m_drag_offset_y = mouse_y - m_y;
@@ -1992,6 +2004,12 @@ void CBoletaMaster::OnChartEvent(const int id, const long &lparam, const double 
             int next_y = mouse_y - m_drag_offset_y;
             if(next_x < 0) next_x = 0;
             if(next_y < 0) next_y = 0;
+            
+            long chart_w = ChartGetInteger(m_chart_id, CHART_WIDTH_IN_PIXELS);
+            long chart_h = ChartGetInteger(m_chart_id, CHART_HEIGHT_IN_PIXELS);
+            if(chart_w > 0 && next_x > chart_w - 50) next_x = (int)chart_w - 50;
+            if(chart_h > 0 && next_y > chart_h - 30) next_y = (int)chart_h - 30;
+            
             MovePanel(next_x, next_y);
          }
       }
@@ -2000,6 +2018,7 @@ void CBoletaMaster::OnChartEvent(const int id, const long &lparam, const double 
          if(m_is_dragging)
          {
             m_is_dragging = false;
+            SaveState(); // Salva posicao final exata apos soltar o clique
             BringToFront();
          }
          m_is_dragging = false;
@@ -2278,6 +2297,7 @@ void GerenciarPosicoesAbertas()
 int OnInit()
 {
    ChartSetInteger(ChartID(), CHART_FOREGROUND, false);
+   ChartSetInteger(ChartID(), CHART_EVENT_MOUSE_MOVE, true);
    
    if(!g_boleta.Init(InpSymbol, InpMagicNumber, InpSlippage, InpPanelX, InpPanelY))
    {
